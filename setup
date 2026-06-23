@@ -82,7 +82,8 @@ SKILL_PREFIX=1
 SKILL_PREFIX_FLAG=0
 TEAM_MODE=0
 NO_TEAM_MODE=0
-PLAN_TUNE_HOOKS_MODE="" # "" = resolve from env/config/prompt; "yes"/"no" = explicit
+PLAN_TUNE_HOOKS_MODE=""    # "" = resolve from env/config/prompt; "yes"/"no" = explicit
+SKILL_INSTALL_MODE_FLAG="" # "" = resolve from config; else explicit (per-project|global)
 while [ $# -gt 0 ]; do
 	case "$1" in
 	--host)
@@ -126,6 +127,14 @@ while [ $# -gt 0 ]; do
 		;;
 	--plan-tune-hooks=*)
 		PLAN_TUNE_HOOKS_MODE="${1#--plan-tune-hooks=}"
+		shift
+		;;
+	--opt-in)
+		SKILL_INSTALL_MODE_FLAG="per-project"
+		shift
+		;;
+	--global)
+		SKILL_INSTALL_MODE_FLAG="global"
 		shift
 		;;
 	-q | --quiet)
@@ -221,6 +230,17 @@ else
 	# Flag was passed explicitly — persist the choice
 	"$GSTACK_CONFIG" set skill_prefix "$([ "$SKILL_PREFIX" -eq 1 ] && echo true || echo false)" 2>/dev/null || true
 fi
+
+# ─── Resolve skill install mode ───────────────────────────────────
+# global = link all skills into ~/.claude/skills (default, legacy behavior)
+# per-project = opt-in; skills are materialized per repo by gstack-profile
+if [ -n "$SKILL_INSTALL_MODE_FLAG" ]; then
+	SKILL_INSTALL_MODE="$SKILL_INSTALL_MODE_FLAG"
+	"$GSTACK_CONFIG" set skill_install_mode "$SKILL_INSTALL_MODE" 2>/dev/null || true
+else
+	SKILL_INSTALL_MODE="$("$GSTACK_CONFIG" get skill_install_mode 2>/dev/null || echo global)"
+fi
+[ "$SKILL_INSTALL_MODE" = "per-project" ] || SKILL_INSTALL_MODE="global"
 
 # --local: install to .claude/skills/ in the current working directory (deprecated)
 if [ "$LOCAL_INSTALL" -eq 1 ]; then
@@ -1024,37 +1044,43 @@ fi
 
 if [ "$INSTALL_CLAUDE" -eq 1 ]; then
 	if [ "$SKILLS_BASENAME" = "skills" ]; then
-		# Clean up stale symlinks from the opposite prefix mode
-		if [ "$SKILL_PREFIX" -eq 1 ]; then
+		if [ "$SKILL_INSTALL_MODE" = "per-project" ]; then
+			# Opt-in mode: never link skills globally. Remove any prior global
+			# install so leftovers don't leak into every project.
 			cleanup_old_claude_symlinks "$SOURCE_GSTACK_DIR" "$INSTALL_SKILLS_DIR"
-		else
 			cleanup_prefixed_claude_symlinks "$SOURCE_GSTACK_DIR" "$INSTALL_SKILLS_DIR"
-		fi
-		# Patch name: fields BEFORE creating symlinks so link_claude_skill_dirs
-		# reads the correct (patched) name: values for symlink naming
-		"$SOURCE_GSTACK_DIR/bin/gstack-patch-names" "$SOURCE_GSTACK_DIR" "$SKILL_PREFIX"
-		link_claude_skill_dirs "$SOURCE_GSTACK_DIR" "$INSTALL_SKILLS_DIR"
-		link_claude_root_skill_alias "$SOURCE_GSTACK_DIR" "$INSTALL_SKILLS_DIR"
-		# Self-healing: re-run gstack-relink to ensure name: fields and directory
-		# names are consistent with the config. This catches cases where an interrupted
-		# setup, stale git state, or gen:skill-docs left name: fields out of sync.
-		GSTACK_RELINK="$SOURCE_GSTACK_DIR/bin/gstack-relink"
-		if [ -x "$GSTACK_RELINK" ]; then
-			GSTACK_SKILLS_DIR="$INSTALL_SKILLS_DIR" GSTACK_INSTALL_DIR="$SOURCE_GSTACK_DIR" "$GSTACK_RELINK" >/dev/null 2>&1 || true
-		fi
-		# Backwards-compat alias: /connect-chrome → /open-gstack-browser
-		_OGB_LINK="$INSTALL_SKILLS_DIR/connect-chrome"
-		if [ "$SKILL_PREFIX" -eq 1 ]; then
-			_OGB_LINK="$INSTALL_SKILLS_DIR/gstack-connect-chrome"
-		fi
-		if [ -L "$_OGB_LINK" ] || [ ! -e "$_OGB_LINK" ]; then
-			_link_or_copy "gstack/open-gstack-browser" "$_OGB_LINK"
-		fi
-		if [ "$LOCAL_INSTALL" -eq 1 ]; then
-			log "gstack ready (project-local)."
-			log "  skills: $INSTALL_SKILLS_DIR"
+			rm -rf "$INSTALL_SKILLS_DIR/_gstack-command"
+			# connect-chrome alias is a global skill too — drop both name variants.
+			rm -rf "$INSTALL_SKILLS_DIR/connect-chrome" "$INSTALL_SKILLS_DIR/gstack-connect-chrome"
+			log "gstack ready (per-project / opt-in)."
+			log "  enable skills per repo: gstack-profile init && gstack-profile enable <skill>"
 		else
-			log "gstack ready (claude)."
+			# Clean up stale symlinks from the opposite prefix mode
+			if [ "$SKILL_PREFIX" -eq 1 ]; then
+				cleanup_old_claude_symlinks "$SOURCE_GSTACK_DIR" "$INSTALL_SKILLS_DIR"
+			else
+				cleanup_prefixed_claude_symlinks "$SOURCE_GSTACK_DIR" "$INSTALL_SKILLS_DIR"
+			fi
+			"$SOURCE_GSTACK_DIR/bin/gstack-patch-names" "$SOURCE_GSTACK_DIR" "$SKILL_PREFIX"
+			link_claude_skill_dirs "$SOURCE_GSTACK_DIR" "$INSTALL_SKILLS_DIR"
+			link_claude_root_skill_alias "$SOURCE_GSTACK_DIR" "$INSTALL_SKILLS_DIR"
+			GSTACK_RELINK="$SOURCE_GSTACK_DIR/bin/gstack-relink"
+			if [ -x "$GSTACK_RELINK" ]; then
+				GSTACK_SKILLS_DIR="$INSTALL_SKILLS_DIR" GSTACK_INSTALL_DIR="$SOURCE_GSTACK_DIR" "$GSTACK_RELINK" >/dev/null 2>&1 || true
+			fi
+			_OGB_LINK="$INSTALL_SKILLS_DIR/connect-chrome"
+			if [ "$SKILL_PREFIX" -eq 1 ]; then
+				_OGB_LINK="$INSTALL_SKILLS_DIR/gstack-connect-chrome"
+			fi
+			if [ -L "$_OGB_LINK" ] || [ ! -e "$_OGB_LINK" ]; then
+				_link_or_copy "gstack/open-gstack-browser" "$_OGB_LINK"
+			fi
+			if [ "$LOCAL_INSTALL" -eq 1 ]; then
+				log "gstack ready (project-local)."
+				log "  skills: $INSTALL_SKILLS_DIR"
+			else
+				log "gstack ready (claude)."
+			fi
 		fi
 		log "  browse: $BROWSE_BIN"
 	else
