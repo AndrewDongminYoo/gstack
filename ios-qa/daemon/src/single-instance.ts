@@ -5,11 +5,11 @@
 // Readiness protocol: daemon writes `READY: port=<n> pid=<pid>` to stdout
 // once both listeners are up; the spawner reads stdout with a 5s timeout.
 
-import { readFile, mkdir, unlink } from 'fs/promises';
-import { existsSync, openSync, writeSync, closeSync, unlinkSync } from 'fs';
-import { join, dirname } from 'path';
-import { homedir } from 'os';
-import { spawn } from 'child_process';
+import { readFile, mkdir, unlink } from "fs/promises";
+import { existsSync, openSync, writeSync, closeSync, unlinkSync } from "fs";
+import { join, dirname } from "path";
+import { homedir } from "os";
+import { spawn } from "child_process";
 
 export interface PidfileContents {
   pid: number;
@@ -18,8 +18,10 @@ export interface PidfileContents {
 }
 
 export function defaultPidfilePath(): string {
-  return process.env.GSTACK_IOS_DAEMON_PIDFILE
-    ?? join(homedir(), '.gstack', 'ios-qa-daemon.pid');
+  return (
+    process.env.GSTACK_IOS_DAEMON_PIDFILE ??
+    join(homedir(), ".gstack", "ios-qa-daemon.pid")
+  );
 }
 
 /**
@@ -43,7 +45,7 @@ export async function tryClaim(opts: {
   // Check for an existing pidfile.
   if (existsSync(path)) {
     try {
-      const raw = await readFile(path, 'utf-8');
+      const raw = await readFile(path, "utf-8");
       const existing = JSON.parse(raw) as PidfileContents;
       if (isAlive(existing.pid)) {
         return { claimed: false, existing };
@@ -71,13 +73,13 @@ export async function tryClaim(opts: {
   };
   let fd: number;
   try {
-    fd = openSync(path, 'wx', 0o600);
+    fd = openSync(path, "wx", 0o600);
   } catch (err: unknown) {
     const e = err as { code?: string };
-    if (e.code === 'EEXIST') {
+    if (e.code === "EEXIST") {
       // Race: another caller won.
-      const raw = await readFile(path, 'utf-8').catch(() => '{}');
-      const existing = JSON.parse(raw || '{}') as PidfileContents;
+      const raw = await readFile(path, "utf-8").catch(() => "{}");
+      const existing = JSON.parse(raw || "{}") as PidfileContents;
       return { claimed: false, existing };
     }
     throw err;
@@ -92,7 +94,7 @@ export async function tryClaim(opts: {
   const cleanup = async () => {
     try {
       // Verify we still own it before unlinking.
-      const raw = await readFile(path, 'utf-8');
+      const raw = await readFile(path, "utf-8");
       const cur = JSON.parse(raw) as PidfileContents;
       if (cur.pid === process.pid) {
         await unlink(path);
@@ -102,11 +104,19 @@ export async function tryClaim(opts: {
     }
   };
 
-  process.on('exit', () => {
-    try { unlinkSync(path); } catch { /* ignore */ }
+  process.on("exit", () => {
+    try {
+      unlinkSync(path);
+    } catch {
+      /* ignore */
+    }
   });
-  process.on('SIGINT', () => { cleanup().finally(() => process.exit(0)); });
-  process.on('SIGTERM', () => { cleanup().finally(() => process.exit(0)); });
+  process.on("SIGINT", () => {
+    cleanup().finally(() => process.exit(0));
+  });
+  process.on("SIGTERM", () => {
+    cleanup().finally(() => process.exit(0));
+  });
 
   return { claimed: true, release: cleanup };
 }
@@ -118,7 +128,7 @@ function isAlive(pid: number): boolean {
     return true;
   } catch (err: unknown) {
     const e = err as { code?: string };
-    return e.code !== 'ESRCH';
+    return e.code !== "ESRCH";
   }
 }
 
@@ -138,34 +148,39 @@ export async function spawnAndWaitReady(opts: {
 }): Promise<{ pid: number; port: number }> {
   const timeoutMs = opts.timeoutMs ?? 5000;
   const child = spawn(opts.cmd, opts.args, {
-    stdio: ['ignore', 'pipe', 'inherit'],
+    stdio: ["ignore", "pipe", "inherit"],
     detached: true,
     env: opts.env ?? process.env,
   });
 
   return new Promise((resolve, reject) => {
-    let buffer = '';
+    let buffer = "";
     const onTimeout = setTimeout(() => {
-      child.kill('SIGTERM');
+      child.kill("SIGTERM");
       reject(new Error(`daemon spawn timeout after ${timeoutMs}ms`));
     }, timeoutMs);
 
-    child.stdout?.on('data', (chunk: Buffer) => {
+    child.stdout?.on("data", (chunk: Buffer) => {
       buffer += chunk.toString();
       const match = buffer.match(/READY:\s*port=(\d+)\s+pid=(\d+)/);
       if (match) {
         clearTimeout(onTimeout);
         child.unref();
-        resolve({ pid: parseInt(match[2]!, 10), port: parseInt(match[1]!, 10) });
+        resolve({
+          pid: parseInt(match[2]!, 10),
+          port: parseInt(match[1]!, 10),
+        });
       }
     });
-    child.on('error', (err) => {
+    child.on("error", (err) => {
       clearTimeout(onTimeout);
       reject(err);
     });
-    child.on('exit', (code, signal) => {
+    child.on("exit", (code, signal) => {
       clearTimeout(onTimeout);
-      reject(new Error(`daemon exited before READY (code=${code} signal=${signal})`));
+      reject(
+        new Error(`daemon exited before READY (code=${code} signal=${signal})`),
+      );
     });
   });
 }

@@ -13,8 +13,8 @@
 // on-disk token file sees a dead credential. The Mac daemon holds the only
 // live token, which it scopes per-tailnet-session via /auth/mint.
 
-import { randomBytes } from 'crypto';
-import type { DeviceTunnel } from './proxy';
+import { randomBytes } from "crypto";
+import type { DeviceTunnel } from "./proxy";
 import {
   listDevices,
   resolveTunnelIPv6,
@@ -23,7 +23,7 @@ import {
   copyFileFromAppContainer,
   type SpawnImpl,
   type ResolveImpl,
-} from './devicectl';
+} from "./devicectl";
 
 export interface BootstrapOptions {
   /** Target device UDID. If null, picks the first connected paired device. */
@@ -47,24 +47,26 @@ export type BootstrapResult =
   | { ok: false; error: BootstrapErrorReason; detail?: string };
 
 export type BootstrapErrorReason =
-  | 'no_devices'
-  | 'no_paired_device'
-  | 'device_not_found'
-  | 'launch_failed'
-  | 'device_locked'
-  | 'state_server_unreachable'
-  | 'boot_token_unavailable'
-  | 'rotate_failed'
-  | 'resolve_failed';
+  | "no_devices"
+  | "no_paired_device"
+  | "device_not_found"
+  | "launch_failed"
+  | "device_locked"
+  | "state_server_unreachable"
+  | "boot_token_unavailable"
+  | "rotate_failed"
+  | "resolve_failed";
 
 /**
  * Bootstrap a real CoreDevice tunnel to an iOS app's StateServer. Used by
  * the daemon's default tunnelProvider when GSTACK_IOS_TARGET_UDID is set
  * (or when the user wants real-device control instead of a stub).
  */
-export async function bootstrapTunnel(opts: BootstrapOptions): Promise<BootstrapResult> {
+export async function bootstrapTunnel(
+  opts: BootstrapOptions,
+): Promise<BootstrapResult> {
   const port = opts.port ?? 9999;
-  const tokenPath = opts.bootTokenPath ?? 'tmp/gstack-ios-qa.token';
+  const tokenPath = opts.bootTokenPath ?? "tmp/gstack-ios-qa.token";
   const startupTimeoutMs = opts.startupTimeoutMs ?? 5_000;
   const spawn = opts.spawnImpl;
   const resolve = opts.resolveImpl;
@@ -73,18 +75,18 @@ export async function bootstrapTunnel(opts: BootstrapOptions): Promise<Bootstrap
   // Step 1: pick a device
   const devices = listDevices(spawn);
   if (devices.length === 0) {
-    return { ok: false, error: 'no_devices' };
+    return { ok: false, error: "no_devices" };
   }
   const target = opts.udid
     ? devices.find((d) => d.identifier === opts.udid)
-    : devices.find((d) => d.paired) ?? devices[0];
+    : (devices.find((d) => d.paired) ?? devices[0]);
   if (!target) {
-    return { ok: false, error: 'device_not_found', detail: opts.udid };
+    return { ok: false, error: "device_not_found", detail: opts.udid };
   }
   if (!target.paired) {
     return {
       ok: false,
-      error: 'no_paired_device',
+      error: "no_paired_device",
       detail: `device ${target.name} (${target.identifier}) is ${target.state}; run \`xcrun devicectl manage pair --device ${target.identifier}\` and tap Trust on the iPhone`,
     };
   }
@@ -93,7 +95,14 @@ export async function bootstrapTunnel(opts: BootstrapOptions): Promise<Bootstrap
   if (!isAppRunning(target.identifier, opts.bundleId, spawn)) {
     const launched = launchApp(target.identifier, opts.bundleId, spawn);
     if (!launched.ok) {
-      return { ok: false, error: launched.error === 'device_locked' ? 'device_locked' : 'launch_failed', detail: launched.error };
+      return {
+        ok: false,
+        error:
+          launched.error === "device_locked"
+            ? "device_locked"
+            : "launch_failed",
+        detail: launched.error,
+      };
     }
   }
 
@@ -113,7 +122,7 @@ export async function bootstrapTunnel(opts: BootstrapOptions): Promise<Bootstrap
     legacyResolve: resolve,
   });
   if (!ipv6) {
-    return { ok: false, error: 'resolve_failed', detail: target.name };
+    return { ok: false, error: "resolve_failed", detail: target.name };
   }
 
   // Step 4: wait for StateServer to become reachable, then scrape boot token.
@@ -125,12 +134,21 @@ export async function bootstrapTunnel(opts: BootstrapOptions): Promise<Bootstrap
       const r = await fetchFn(`http://[${ipv6}]:${port}/healthz`, {
         signal: AbortSignal.timeout(2_000),
       });
-      if (r.ok) { healthOK = true; break; }
-    } catch { /* retry */ }
+      if (r.ok) {
+        healthOK = true;
+        break;
+      }
+    } catch {
+      /* retry */
+    }
     await new Promise((res) => setTimeout(res, 250));
   }
   if (!healthOK) {
-    return { ok: false, error: 'state_server_unreachable', detail: `no /healthz response from [${ipv6}]:${port} within ${startupTimeoutMs}ms` };
+    return {
+      ok: false,
+      error: "state_server_unreachable",
+      detail: `no /healthz response from [${ipv6}]:${port} within ${startupTimeoutMs}ms`,
+    };
   }
 
   const bootToken = copyFileFromAppContainer({
@@ -140,26 +158,34 @@ export async function bootstrapTunnel(opts: BootstrapOptions): Promise<Bootstrap
     spawn,
   });
   if (!bootToken) {
-    return { ok: false, error: 'boot_token_unavailable', detail: `couldn't read ${tokenPath} from ${opts.bundleId}` };
+    return {
+      ok: false,
+      error: "boot_token_unavailable",
+      detail: `couldn't read ${tokenPath} from ${opts.bundleId}`,
+    };
   }
 
   // Step 5: rotate the boot token to a fresh in-memory-only one.
-  const rotatedToken = randomBytes(32).toString('base64url');
+  const rotatedToken = randomBytes(32).toString("base64url");
   try {
     const r = await fetchFn(`http://[${ipv6}]:${port}/auth/rotate`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Authorization': `Bearer ${bootToken}`,
-        'Content-Type': 'application/json',
+        Authorization: `Bearer ${bootToken}`,
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({ new_token: rotatedToken }),
       signal: AbortSignal.timeout(5_000),
     });
     if (!r.ok) {
-      return { ok: false, error: 'rotate_failed', detail: `HTTP ${r.status}` };
+      return { ok: false, error: "rotate_failed", detail: `HTTP ${r.status}` };
     }
   } catch (err) {
-    return { ok: false, error: 'rotate_failed', detail: (err as Error).message };
+    return {
+      ok: false,
+      error: "rotate_failed",
+      detail: (err as Error).message,
+    };
   }
 
   return {

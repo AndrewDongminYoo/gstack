@@ -1,9 +1,9 @@
 // Short-lived session token store. In-memory only (never disk). Refreshable
 // via /session/heartbeat. Listable and revokable from loopback listener.
 
-import { randomBytes } from 'crypto';
-import type { Capability, SessionToken } from './types';
-import { capabilityCovers } from './types';
+import { randomBytes } from "crypto";
+import type { Capability, SessionToken } from "./types";
+import { capabilityCovers } from "./types";
 
 const TOKEN_BYTES = 32; // 256-bit
 const DEFAULT_TTL_MS = 60 * 60 * 1000; // 1h per D9
@@ -13,9 +13,7 @@ export class SessionTokenStore {
   private tokens = new Map<string, SessionToken>();
   private mintsPerIdentity = new Map<string, number[]>(); // ts (ms) for rate limiting
 
-  constructor(
-    private now: () => number = () => Date.now(),
-  ) {}
+  constructor(private now: () => number = () => Date.now()) {}
 
   /**
    * Mint a session token. Returns null on rate limit.
@@ -25,13 +23,13 @@ export class SessionTokenStore {
     capability: Capability;
     ttlMs?: number;
     deviceUdid?: string | null;
-    origin: SessionToken['origin'];
-  }): SessionToken | { error: 'rate_limited' } {
+    origin: SessionToken["origin"];
+  }): SessionToken | { error: "rate_limited" } {
     if (!this.checkRateLimit(opts.identity)) {
-      return { error: 'rate_limited' };
+      return { error: "rate_limited" };
     }
     const ttl = Math.min(opts.ttlMs ?? DEFAULT_TTL_MS, MAX_TTL_MS);
-    const token = randomBytes(TOKEN_BYTES).toString('base64url');
+    const token = randomBytes(TOKEN_BYTES).toString("base64url");
     const expires_at = this.now() + ttl;
     const session: SessionToken = {
       token,
@@ -49,18 +47,28 @@ export class SessionTokenStore {
    * Validate a token. Returns the session if valid (token exists, not
    * expired). Otherwise returns null with a reason for the audit log.
    */
-  validate(token: string | null | undefined, need: Capability):
+  validate(
+    token: string | null | undefined,
+    need: Capability,
+  ):
     | { ok: true; session: SessionToken }
-    | { ok: false; reason: 'no_token' | 'invalid_token' | 'expired_token' | 'capability_insufficient' } {
-    if (!token) return { ok: false, reason: 'no_token' };
+    | {
+        ok: false;
+        reason:
+          | "no_token"
+          | "invalid_token"
+          | "expired_token"
+          | "capability_insufficient";
+      } {
+    if (!token) return { ok: false, reason: "no_token" };
     const s = this.tokens.get(token);
-    if (!s) return { ok: false, reason: 'invalid_token' };
+    if (!s) return { ok: false, reason: "invalid_token" };
     if (s.expires_at < this.now()) {
       this.tokens.delete(token);
-      return { ok: false, reason: 'expired_token' };
+      return { ok: false, reason: "expired_token" };
     }
     if (!capabilityCovers(s.capability, need)) {
-      return { ok: false, reason: 'capability_insufficient' };
+      return { ok: false, reason: "capability_insufficient" };
     }
     return { ok: true, session: s };
   }
@@ -76,7 +84,8 @@ export class SessionTokenStore {
       this.tokens.delete(token);
       return null;
     }
-    const newExpiry = this.now() + Math.min(ttlMs ?? DEFAULT_TTL_MS, MAX_TTL_MS);
+    const newExpiry =
+      this.now() + Math.min(ttlMs ?? DEFAULT_TTL_MS, MAX_TTL_MS);
     s.expires_at = newExpiry;
     return newExpiry;
   }
@@ -114,7 +123,7 @@ export class SessionTokenStore {
     const window = 60_000;
     const limit = 10;
     const hits = this.mintsPerIdentity.get(identity) ?? [];
-    const recent = hits.filter(t => now - t < window);
+    const recent = hits.filter((t) => now - t < window);
     if (recent.length >= limit) {
       this.mintsPerIdentity.set(identity, recent);
       return false;

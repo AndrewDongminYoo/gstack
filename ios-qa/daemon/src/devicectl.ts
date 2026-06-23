@@ -4,10 +4,10 @@
 // Production code uses the defaults: spawnSync('xcrun', [...]) and
 // dns.lookup('<host>.coredevice.local'). Tests inject stubs.
 
-import { spawnSync, type SpawnSyncReturns } from 'child_process';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
-import { tmpdir } from 'os';
-import { join } from 'path';
+import { spawnSync, type SpawnSyncReturns } from "child_process";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "fs";
+import { tmpdir } from "os";
+import { join } from "path";
 
 export interface DeviceEntry {
   identifier: string;
@@ -25,7 +25,8 @@ export interface ResolveImpl {
   (hostname: string): Promise<string[]>; // returns IPv6 addresses
 }
 
-const defaultSpawn: SpawnImpl = (cmd, args) => spawnSync(cmd, args, { stdio: 'pipe', timeout: 60_000 });
+const defaultSpawn: SpawnImpl = (cmd, args) =>
+  spawnSync(cmd, args, { stdio: "pipe", timeout: 60_000 });
 
 /**
  * Default resolver. Uses `dns.lookup` (getaddrinfo, goes through mDNSResponder
@@ -35,12 +36,20 @@ const defaultSpawn: SpawnImpl = (cmd, args) => spawnSync(cmd, args, { stdio: 'pi
  * Prefer the IPv6 record but fall back to whatever getaddrinfo returns.
  */
 const defaultResolve: ResolveImpl = async (hostname) => {
-  const dns = await import('dns');
+  const dns = await import("dns");
   return new Promise((resolve, reject) => {
     dns.lookup(hostname, { family: 6, all: true }, (err, addrs) => {
-      if (err) { reject(err); return; }
-      const ipv6 = (addrs ?? []).filter((a) => a.family === 6).map((a) => a.address);
-      if (ipv6.length === 0) { reject(new Error(`no IPv6 records for ${hostname}`)); return; }
+      if (err) {
+        reject(err);
+        return;
+      }
+      const ipv6 = (addrs ?? [])
+        .filter((a) => a.family === 6)
+        .map((a) => a.address);
+      if (ipv6.length === 0) {
+        reject(new Error(`no IPv6 records for ${hostname}`));
+        return;
+      }
       resolve(ipv6);
     });
   });
@@ -53,7 +62,7 @@ const defaultResolve: ResolveImpl = async (hostname) => {
  * on `defaultResolve` above.
  */
 const legacyResolve6: ResolveImpl = async (hostname) => {
-  const dns = await import('dns');
+  const dns = await import("dns");
   return new Promise((resolve, reject) => {
     dns.resolve6(hostname, (err, addrs) => {
       if (err) reject(err);
@@ -67,30 +76,45 @@ const legacyResolve6: ResolveImpl = async (hostname) => {
  * and pairing-in-progress devices.
  */
 export function listDevices(spawn: SpawnImpl = defaultSpawn): DeviceEntry[] {
-  const tmp = join(tmpdir(), `devicectl-list-${process.pid}-${Date.now()}.json`);
+  const tmp = join(
+    tmpdir(),
+    `devicectl-list-${process.pid}-${Date.now()}.json`,
+  );
   try {
-    const r = spawn('xcrun', ['devicectl', 'list', 'devices', '--json-output', tmp]);
+    const r = spawn("xcrun", [
+      "devicectl",
+      "list",
+      "devices",
+      "--json-output",
+      tmp,
+    ]);
     if (r.status !== 0) return [];
-    const raw = readFileSync(tmp, 'utf-8');
+    const raw = readFileSync(tmp, "utf-8");
     const obj = JSON.parse(raw);
     const list = (obj.result?.devices ?? []) as Array<Record<string, unknown>>;
     return list.map((d) => {
-      const conn = d.connectionProperties as Record<string, unknown> | undefined;
+      const conn = d.connectionProperties as
+        | Record<string, unknown>
+        | undefined;
       const props = d.deviceProperties as Record<string, unknown> | undefined;
       const hw = d.hardwareProperties as Record<string, unknown> | undefined;
-      const pairingState = String(conn?.pairingState ?? '');
+      const pairingState = String(conn?.pairingState ?? "");
       return {
-        identifier: String(d.identifier ?? ''),
-        name: String(props?.name ?? 'unknown'),
-        model: String(hw?.productType ?? 'unknown'),
-        state: String(conn?.tunnelState ?? 'unknown'),
-        paired: pairingState === 'paired',
+        identifier: String(d.identifier ?? ""),
+        name: String(props?.name ?? "unknown"),
+        model: String(hw?.productType ?? "unknown"),
+        state: String(conn?.tunnelState ?? "unknown"),
+        paired: pairingState === "paired",
       };
     });
   } catch {
     return [];
   } finally {
-    try { rmSync(tmp, { force: true }); } catch { /* ignore */ }
+    try {
+      rmSync(tmp, { force: true });
+    } catch {
+      /* ignore */
+    }
   }
 }
 
@@ -111,24 +135,44 @@ export function getDeviceTunnelIPv6FromDevicectl(
   udid: string,
   spawn: SpawnImpl = defaultSpawn,
 ): string | null {
-  const tmp = join(tmpdir(), `devicectl-details-${process.pid}-${Date.now()}.json`);
+  const tmp = join(
+    tmpdir(),
+    `devicectl-details-${process.pid}-${Date.now()}.json`,
+  );
   try {
-    const r = spawn('xcrun', ['devicectl', 'device', 'info', 'details', '--device', udid, '--json-output', tmp]);
+    const r = spawn("xcrun", [
+      "devicectl",
+      "device",
+      "info",
+      "details",
+      "--device",
+      udid,
+      "--json-output",
+      tmp,
+    ]);
     if (r.status !== 0) return null;
-    const raw = readFileSync(tmp, 'utf-8');
+    const raw = readFileSync(tmp, "utf-8");
     const obj = JSON.parse(raw);
     // `result.connectionProperties.tunnelIPAddress` is the canonical location.
     // Some Xcode/CoreDevice versions also surface it under `result.tunnel.ipAddress`
     // — accept either.
-    const conn = obj?.result?.connectionProperties as Record<string, unknown> | undefined;
+    const conn = obj?.result?.connectionProperties as
+      | Record<string, unknown>
+      | undefined;
     const tunnel = obj?.result?.tunnel as Record<string, unknown> | undefined;
-    const addr = (conn?.tunnelIPAddress ?? tunnel?.ipAddress) as string | undefined;
-    if (typeof addr === 'string' && addr.includes(':')) return addr;
+    const addr = (conn?.tunnelIPAddress ?? tunnel?.ipAddress) as
+      | string
+      | undefined;
+    if (typeof addr === "string" && addr.includes(":")) return addr;
     return null;
   } catch {
     return null;
   } finally {
-    try { rmSync(tmp, { force: true }); } catch { /* ignore */ }
+    try {
+      rmSync(tmp, { force: true });
+    } catch {
+      /* ignore */
+    }
   }
 }
 
@@ -160,14 +204,32 @@ export function startTunnelKeepalive(
     // Fire-and-forget: ignore result, the side-effect of the spawn is what
     // keeps the tunnel up. We deliberately do not use the JSON output here.
     try {
-      const tmp = join(tmpdir(), `devicectl-keepalive-${process.pid}-${Date.now()}.json`);
-      spawn('xcrun', ['devicectl', 'device', 'info', 'details', '--device', udid, '--json-output', tmp]);
-      try { rmSync(tmp, { force: true }); } catch { /* ignore */ }
-    } catch { /* ignore — next tick will retry */ }
+      const tmp = join(
+        tmpdir(),
+        `devicectl-keepalive-${process.pid}-${Date.now()}.json`,
+      );
+      spawn("xcrun", [
+        "devicectl",
+        "device",
+        "info",
+        "details",
+        "--device",
+        udid,
+        "--json-output",
+        tmp,
+      ]);
+      try {
+        rmSync(tmp, { force: true });
+      } catch {
+        /* ignore */
+      }
+    } catch {
+      /* ignore — next tick will retry */
+    }
   };
   const handle = setInterval(tick, intervalMs);
   // Don't keep the event loop alive just for this — daemon owns the lifecycle.
-  if (typeof handle.unref === 'function') handle.unref();
+  if (typeof handle.unref === "function") handle.unref();
   return {
     stop: () => {
       if (stopped) return;
@@ -190,11 +252,12 @@ export async function getDeviceTunnelIPv6(
   // CoreDevice mDNS host: lowercase, spaces and apostrophes → hyphens, plus
   // ".coredevice.local" suffix. Apple normalizes "Garry's Durendal" to
   // "Garrys-Durendal.coredevice.local".
-  const slug = deviceName
-    .replace(/['']/g, '')           // strip apostrophes
-    .replace(/[\s_]+/g, '-')        // spaces/underscores → hyphens
-    .replace(/[^a-zA-Z0-9-]/g, '')  // anything else not URL-safe → drop
-    + '.coredevice.local';
+  const slug =
+    deviceName
+      .replace(/['']/g, "") // strip apostrophes
+      .replace(/[\s_]+/g, "-") // spaces/underscores → hyphens
+      .replace(/[^a-zA-Z0-9-]/g, "") + // anything else not URL-safe → drop
+    ".coredevice.local";
   try {
     const addrs = await resolve(slug);
     return addrs[0] ?? null;
@@ -248,16 +311,32 @@ export function isAppRunning(
   bundleId: string,
   spawn: SpawnImpl = defaultSpawn,
 ): boolean {
-  const tmp = join(tmpdir(), `devicectl-procs-${process.pid}-${Date.now()}.json`);
+  const tmp = join(
+    tmpdir(),
+    `devicectl-procs-${process.pid}-${Date.now()}.json`,
+  );
   try {
-    const r = spawn('xcrun', ['devicectl', 'device', 'info', 'processes', '-d', udid, '--json-output', tmp]);
+    const r = spawn("xcrun", [
+      "devicectl",
+      "device",
+      "info",
+      "processes",
+      "-d",
+      udid,
+      "--json-output",
+      tmp,
+    ]);
     if (r.status !== 0) return false;
-    const raw = readFileSync(tmp, 'utf-8');
+    const raw = readFileSync(tmp, "utf-8");
     return raw.includes(`/${bundleId}/`) || raw.includes(`/${bundleId}.app/`);
   } catch {
     return false;
   } finally {
-    try { rmSync(tmp, { force: true }); } catch { /* ignore */ }
+    try {
+      rmSync(tmp, { force: true });
+    } catch {
+      /* ignore */
+    }
   }
 }
 
@@ -271,16 +350,24 @@ export function launchApp(
   bundleId: string,
   spawn: SpawnImpl = defaultSpawn,
 ): { ok: boolean; error?: string } {
-  const r = spawn('xcrun', ['devicectl', 'device', 'process', 'launch', '--device', udid, bundleId]);
+  const r = spawn("xcrun", [
+    "devicectl",
+    "device",
+    "process",
+    "launch",
+    "--device",
+    udid,
+    bundleId,
+  ]);
   if (r.status === 0) return { ok: true };
-  const err = (r.stderr?.toString() ?? '') + (r.stdout?.toString() ?? '');
-  if (err.includes('was not, or could not be, unlocked')) {
-    return { ok: false, error: 'device_locked' };
+  const err = (r.stderr?.toString() ?? "") + (r.stdout?.toString() ?? "");
+  if (err.includes("was not, or could not be, unlocked")) {
+    return { ok: false, error: "device_locked" };
   }
-  if (err.includes('FBSOpenApplicationServiceErrorDomain')) {
-    return { ok: false, error: 'launch_failed' };
+  if (err.includes("FBSOpenApplicationServiceErrorDomain")) {
+    return { ok: false, error: "launch_failed" };
   }
-  return { ok: false, error: err.split('\n')[0] ?? 'unknown' };
+  return { ok: false, error: err.split("\n")[0] ?? "unknown" };
 }
 
 /**
@@ -294,23 +381,35 @@ export function copyFileFromAppContainer(opts: {
   spawn?: SpawnImpl;
 }): string | null {
   const spawn = opts.spawn ?? defaultSpawn;
-  const dir = mkdtempSync(join(tmpdir(), 'gstack-ios-copy-'));
-  const dest = join(dir, 'fetched');
+  const dir = mkdtempSync(join(tmpdir(), "gstack-ios-copy-"));
+  const dest = join(dir, "fetched");
   try {
-    const r = spawn('xcrun', [
-      'devicectl', 'device', 'copy', 'from',
-      '--device', opts.udid,
-      '--domain-type', 'appDataContainer',
-      '--domain-identifier', opts.bundleId,
-      '--source', opts.sourceRelativePath,
-      '--destination', dest,
+    const r = spawn("xcrun", [
+      "devicectl",
+      "device",
+      "copy",
+      "from",
+      "--device",
+      opts.udid,
+      "--domain-type",
+      "appDataContainer",
+      "--domain-identifier",
+      opts.bundleId,
+      "--source",
+      opts.sourceRelativePath,
+      "--destination",
+      dest,
     ]);
     if (r.status !== 0) return null;
-    return readFileSync(dest, 'utf-8').replace(/[\r\n]+$/, '');
+    return readFileSync(dest, "utf-8").replace(/[\r\n]+$/, "");
   } catch {
     return null;
   } finally {
-    try { rmSync(dir, { recursive: true, force: true }); } catch { /* ignore */ }
+    try {
+      rmSync(dir, { recursive: true, force: true });
+    } catch {
+      /* ignore */
+    }
   }
 }
 
@@ -323,7 +422,20 @@ export function installApp(
   appBundlePath: string,
   spawn: SpawnImpl = defaultSpawn,
 ): { ok: boolean; error?: string } {
-  const r = spawn('xcrun', ['devicectl', 'device', 'install', 'app', '--device', udid, appBundlePath]);
+  const r = spawn("xcrun", [
+    "devicectl",
+    "device",
+    "install",
+    "app",
+    "--device",
+    udid,
+    appBundlePath,
+  ]);
   if (r.status === 0) return { ok: true };
-  return { ok: false, error: (r.stderr?.toString() ?? r.stdout?.toString() ?? 'unknown').split('\n')[0] };
+  return {
+    ok: false,
+    error: (r.stderr?.toString() ?? r.stdout?.toString() ?? "unknown").split(
+      "\n",
+    )[0],
+  };
 }

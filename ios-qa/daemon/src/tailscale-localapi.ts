@@ -7,12 +7,16 @@
 // distinguish "socket missing" (Tailscale not installed) from "WhoIs returned
 // unparseable response" (Tailscale broken) so the user knows what to fix.
 
-import { request as httpRequest } from 'http';
-import type { WhoIsResult } from './types';
+import { request as httpRequest } from "http";
+import type { WhoIsResult } from "./types";
 
 export interface TailscaleProbe {
   ok: boolean;
-  reason?: 'socket_missing' | 'permission_denied' | 'whois_unparseable' | 'unreachable';
+  reason?:
+    | "socket_missing"
+    | "permission_denied"
+    | "whois_unparseable"
+    | "unreachable";
   ownIdentity?: string;
 }
 
@@ -21,22 +25,27 @@ export interface TailscaleProbe {
  * tailnet listener. Returns ok=true only if WhoIs against the daemon's own
  * identity returns a parseable result.
  */
-export async function probeTailscale(socketPath: string = '/var/run/tailscale.sock'): Promise<TailscaleProbe> {
+export async function probeTailscale(
+  socketPath: string = "/var/run/tailscale.sock",
+): Promise<TailscaleProbe> {
   try {
-    const result = await whoIs('127.0.0.1:9999', socketPath);
+    const result = await whoIs("127.0.0.1:9999", socketPath);
     return { ok: true, ownIdentity: result.identity };
   } catch (err: unknown) {
     const e = err as { code?: string; message?: string };
-    if (e.code === 'ENOENT' || (e.message ?? '').includes('ENOENT')) {
-      return { ok: false, reason: 'socket_missing' };
+    if (e.code === "ENOENT" || (e.message ?? "").includes("ENOENT")) {
+      return { ok: false, reason: "socket_missing" };
     }
-    if (e.code === 'EACCES' || (e.message ?? '').includes('EACCES')) {
-      return { ok: false, reason: 'permission_denied' };
+    if (e.code === "EACCES" || (e.message ?? "").includes("EACCES")) {
+      return { ok: false, reason: "permission_denied" };
     }
-    if ((e.message ?? '').includes('unparseable') || (e.message ?? '').includes('JSON')) {
-      return { ok: false, reason: 'whois_unparseable' };
+    if (
+      (e.message ?? "").includes("unparseable") ||
+      (e.message ?? "").includes("JSON")
+    ) {
+      return { ok: false, reason: "whois_unparseable" };
     }
-    return { ok: false, reason: 'unreachable' };
+    return { ok: false, reason: "unreachable" };
   }
 }
 
@@ -48,36 +57,44 @@ export async function probeTailscale(socketPath: string = '/var/run/tailscale.so
  * - Tagged nodes: `tag:<name>` (lowercased)
  * - Node keys: `node:<hex>` (rare, prefer tags)
  */
-export async function whoIs(addr: string, socketPath: string = '/var/run/tailscale.sock'): Promise<WhoIsResult> {
+export async function whoIs(
+  addr: string,
+  socketPath: string = "/var/run/tailscale.sock",
+): Promise<WhoIsResult> {
   return new Promise((resolve, reject) => {
-    const req = httpRequest({
-      socketPath,
-      path: `/localapi/v0/whois?addr=${encodeURIComponent(addr)}`,
-      method: 'GET',
-      headers: { Host: 'local-tailscaled.sock' },
-    }, (res) => {
-      const chunks: Buffer[] = [];
-      res.on('data', (c) => chunks.push(c));
-      res.on('end', () => {
-        if (res.statusCode !== 200) {
-          reject(new Error(`whois http ${res.statusCode}`));
-          return;
-        }
-        try {
-          const raw = Buffer.concat(chunks).toString('utf-8');
-          const obj = JSON.parse(raw) as Record<string, unknown>;
-          const identity = canonicalize(obj);
-          if (!identity) {
-            reject(new Error('whois response unparseable'));
+    const req = httpRequest(
+      {
+        socketPath,
+        path: `/localapi/v0/whois?addr=${encodeURIComponent(addr)}`,
+        method: "GET",
+        headers: { Host: "local-tailscaled.sock" },
+      },
+      (res) => {
+        const chunks: Buffer[] = [];
+        res.on("data", (c) => chunks.push(c));
+        res.on("end", () => {
+          if (res.statusCode !== 200) {
+            reject(new Error(`whois http ${res.statusCode}`));
             return;
           }
-          resolve({ identity, raw: obj });
-        } catch (e) {
-          reject(new Error(`whois response unparseable: ${(e as Error).message}`));
-        }
-      });
-    });
-    req.on('error', reject);
+          try {
+            const raw = Buffer.concat(chunks).toString("utf-8");
+            const obj = JSON.parse(raw) as Record<string, unknown>;
+            const identity = canonicalize(obj);
+            if (!identity) {
+              reject(new Error("whois response unparseable"));
+              return;
+            }
+            resolve({ identity, raw: obj });
+          } catch (e) {
+            reject(
+              new Error(`whois response unparseable: ${(e as Error).message}`),
+            );
+          }
+        });
+      },
+    );
+    req.on("error", reject);
     req.end();
   });
 }
@@ -96,24 +113,24 @@ export function canonicalize(obj: Record<string, unknown>): string | null {
   const node = obj.Node as Record<string, unknown> | undefined;
   if (node) {
     const tags = node.Tags as string[] | undefined;
-    if (Array.isArray(tags) && tags.length > 0 && typeof tags[0] === 'string') {
+    if (Array.isArray(tags) && tags.length > 0 && typeof tags[0] === "string") {
       const tag = tags[0].toLowerCase();
       // Tags from Tailscale are already in `tag:foo` form.
-      return tag.startsWith('tag:') ? tag : `tag:${tag}`;
+      return tag.startsWith("tag:") ? tag : `tag:${tag}`;
     }
   }
   const profile = obj.UserProfile as Record<string, unknown> | undefined;
   if (profile) {
     const loginName = profile.LoginName as string | undefined;
-    if (typeof loginName === 'string' && loginName.includes('@')) {
+    if (typeof loginName === "string" && loginName.includes("@")) {
       return loginName.toLowerCase();
     }
   }
   // Fallback to node key — rare but possible.
   if (node) {
     const key = node.Key as string | undefined;
-    if (typeof key === 'string' && key.startsWith('nodekey:')) {
-      return `node:${key.replace('nodekey:', '')}`;
+    if (typeof key === "string" && key.startsWith("nodekey:")) {
+      return `node:${key.replace("nodekey:", "")}`;
     }
   }
   return null;

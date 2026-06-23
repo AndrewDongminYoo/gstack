@@ -4,13 +4,18 @@
 //
 // Invoked from bin/gstack-ios-qa-mint.
 
-import { grantIdentity, revokeIdentity, loadAllowlist, defaultAllowlistPath } from './allowlist';
-import type { Capability } from './types';
+import {
+  grantIdentity,
+  revokeIdentity,
+  loadAllowlist,
+  defaultAllowlistPath,
+} from "./allowlist";
+import type { Capability } from "./types";
 
-const CAPABILITIES: Capability[] = ['observe', 'interact', 'mutate', 'restore'];
+const CAPABILITIES: Capability[] = ["observe", "interact", "mutate", "restore"];
 
 interface ParsedArgs {
-  command: 'grant' | 'revoke' | 'list' | 'help';
+  command: "grant" | "revoke" | "list" | "help";
   identity: string | null;
   capability: Capability;
   ttlSeconds: number | null;
@@ -20,9 +25,9 @@ interface ParsedArgs {
 
 function parseArgs(argv: string[]): ParsedArgs {
   // Default: help. Recognized positional commands: grant | revoke | list.
-  let command: ParsedArgs['command'] = 'help';
+  let command: ParsedArgs["command"] = "help";
   let identity: string | null = null;
-  let capability: Capability = 'interact';
+  let capability: Capability = "interact";
   let ttlSeconds: number | null = null;
   let note: string | null = null;
   let path = defaultAllowlistPath();
@@ -30,36 +35,50 @@ function parseArgs(argv: string[]): ParsedArgs {
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     switch (a) {
-      case 'grant': command = 'grant'; break;
-      case 'revoke': command = 'revoke'; break;
-      case 'list': command = 'list'; break;
-      case '--help':
-      case '-h': command = 'help'; break;
-      case '--remote':
-      case '--identity':
+      case "grant":
+        command = "grant";
+        break;
+      case "revoke":
+        command = "revoke";
+        break;
+      case "list":
+        command = "list";
+        break;
+      case "--help":
+      case "-h":
+        command = "help";
+        break;
+      case "--remote":
+      case "--identity":
         identity = argv[++i] ?? null;
         break;
-      case '--capability':
-      case '--cap': {
+      case "--capability":
+      case "--cap": {
         const v = argv[++i];
         if (!CAPABILITIES.includes(v as Capability)) {
-          process.stderr.write(`unknown capability: ${v} (want one of ${CAPABILITIES.join(', ')})\n`);
+          process.stderr.write(
+            `unknown capability: ${v} (want one of ${CAPABILITIES.join(", ")})\n`,
+          );
           process.exit(2);
         }
         capability = v as Capability;
         break;
       }
-      case '--ttl': {
-        const v = parseInt(argv[++i] ?? '', 10);
+      case "--ttl": {
+        const v = parseInt(argv[++i] ?? "", 10);
         if (!Number.isFinite(v) || v <= 0) {
-          process.stderr.write('--ttl must be a positive integer (seconds)\n');
+          process.stderr.write("--ttl must be a positive integer (seconds)\n");
           process.exit(2);
         }
         ttlSeconds = v;
         break;
       }
-      case '--note': note = argv[++i] ?? null; break;
-      case '--allowlist-path': path = argv[++i] ?? path; break;
+      case "--note":
+        note = argv[++i] ?? null;
+        break;
+      case "--allowlist-path":
+        path = argv[++i] ?? path;
+        break;
     }
   }
   return { command, identity, capability, ttlSeconds, note, path };
@@ -95,32 +114,32 @@ self-service /auth/mint endpoint reads this file on every request.
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
 
-  if (args.command === 'help') {
+  if (args.command === "help") {
     printHelp();
     return;
   }
 
-  if (args.command === 'list') {
+  if (args.command === "list") {
     const allowlist = await loadAllowlist(args.path);
     if (allowlist.entries.length === 0) {
-      process.stdout.write('(empty allowlist)\n');
+      process.stdout.write("(empty allowlist)\n");
       return;
     }
     for (const e of allowlist.entries) {
-      const caps = e.capabilities.join(',');
-      const exp = e.expires_at ? ` expires=${e.expires_at}` : '';
-      const note = e.note ? ` note="${e.note}"` : '';
+      const caps = e.capabilities.join(",");
+      const exp = e.expires_at ? ` expires=${e.expires_at}` : "";
+      const note = e.note ? ` note="${e.note}"` : "";
       process.stdout.write(`${e.identity}  cap=${caps}${exp}${note}\n`);
     }
     return;
   }
 
   if (!args.identity) {
-    process.stderr.write('error: --remote <identity> required\n');
+    process.stderr.write("error: --remote <identity> required\n");
     process.exit(2);
   }
 
-  if (args.command === 'grant') {
+  if (args.command === "grant") {
     const result = await grantIdentity({
       identity: args.identity,
       capability: args.capability,
@@ -128,13 +147,16 @@ async function main(): Promise<void> {
       note: args.note ?? undefined,
       path: args.path,
     });
-    const entry = result.entries.find(e => e.identity === args.identity);
-    process.stdout.write(`granted ${args.identity} capability=${args.capability}` +
-      (entry?.expires_at ? ` expires=${entry.expires_at}` : '') + '\n');
+    const entry = result.entries.find((e) => e.identity === args.identity);
+    process.stdout.write(
+      `granted ${args.identity} capability=${args.capability}` +
+        (entry?.expires_at ? ` expires=${entry.expires_at}` : "") +
+        "\n",
+    );
     return;
   }
 
-  if (args.command === 'revoke') {
+  if (args.command === "revoke") {
     await revokeIdentity(args.identity, args.path);
     process.stdout.write(`revoked ${args.identity}\n`);
     return;
