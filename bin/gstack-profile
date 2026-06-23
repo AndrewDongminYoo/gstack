@@ -317,6 +317,36 @@ function cmdSync(): number {
   }
 }
 
+function cmdDoctor(): number {
+  const claudeSkills =
+    process.env.GSTACK_PROFILE_CLAUDE_SKILLS ||
+    path.join(process.env.HOME || "", ".claude", "skills");
+  const leftovers: string[] = [];
+  if (fs.existsSync(claudeSkills)) {
+    for (const entry of fs.readdirSync(claudeSkills)) {
+      if (
+        entry.startsWith("gstack-") ||
+        entry === "_gstack-command" ||
+        entry === "connect-chrome"
+      ) {
+        leftovers.push(entry);
+      }
+    }
+  }
+  if (leftovers.length === 0) {
+    console.log(
+      "doctor: clean — no global gstack skills found. Opt-in is intact.",
+    );
+    return 0;
+  }
+  console.warn(
+    `doctor: WARNING — ${leftovers.length} global gstack skill(s) under ${claudeSkills} will leak into every project:`,
+  );
+  for (const l of leftovers.sort()) console.warn(`  ${l}`);
+  console.warn("Fix: re-run './setup --opt-in' to remove the global install.");
+  return 0;
+}
+
 function cmdStatus(): number {
   const source = resolveSourceDir();
   const projectRoot = findProjectRoot(process.cwd());
@@ -362,6 +392,8 @@ function main(): number {
       return cmdDisable(process.argv.slice(3).filter((a) => !a.startsWith("-")));
     case "off":
       return cmdOff();
+    case "doctor":
+      return cmdDoctor();
     default:
       console.error(
         "Usage: gstack-profile {list|status|init|enable|disable|sync|off|doctor}",

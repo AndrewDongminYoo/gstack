@@ -1162,6 +1162,16 @@ if [ "$INSTALL_CLAUDE" -eq 1 ]; then
 	fi
 fi
 
+# Best-effort: expose gstack-profile on PATH if ~/.local/bin is used.
+if [ "$INSTALL_CLAUDE" -eq 1 ] && [ "$SKILL_INSTALL_MODE" = "per-project" ]; then
+	if printf '%s' ":$PATH:" | grep -q ":$HOME/.local/bin:"; then
+		mkdir -p "$HOME/.local/bin"
+		_link_or_copy "$SOURCE_GSTACK_DIR/bin/gstack-profile" "$HOME/.local/bin/gstack-profile"
+	else
+		log "  tip: add gstack-profile to PATH or run it via $SOURCE_GSTACK_DIR/bin/gstack-profile"
+	fi
+fi
+
 # 5. Install for Codex
 if [ "$INSTALL_CODEX" -eq 1 ]; then
 	if [ "$CODEX_REPO_LOCAL" -eq 1 ]; then

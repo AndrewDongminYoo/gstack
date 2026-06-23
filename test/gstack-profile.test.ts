@@ -209,3 +209,52 @@ describe("gstack-profile init/enable/disable/off", () => {
     }
   });
 });
+
+describe("gstack-profile doctor", () => {
+  test("warns about a leftover global install", () => {
+    const src = makeSource();
+    const fakeClaude = fs.mkdtempSync(path.join(os.tmpdir(), "gsk-claude-"));
+    const proj = fs.mkdtempSync(path.join(os.tmpdir(), "gsk-proj-"));
+    try {
+      fs.mkdirSync(path.join(fakeClaude, "gstack-ship"), { recursive: true });
+      const r = spawnSync(BIN, ["doctor"], {
+        encoding: "utf-8",
+        cwd: proj,
+        env: {
+          ...process.env,
+          GSTACK_PROFILE_SOURCE_DIR: src,
+          GSTACK_PROFILE_CLAUDE_SKILLS: fakeClaude,
+        },
+      });
+      expect(r.status).toBe(0);
+      expect(r.stdout + r.stderr).toContain("gstack-ship");
+    } finally {
+      fs.rmSync(src, { recursive: true, force: true });
+      fs.rmSync(fakeClaude, { recursive: true, force: true });
+      fs.rmSync(proj, { recursive: true, force: true });
+    }
+  });
+
+  test("reports clean when no global gstack skills exist", () => {
+    const src = makeSource();
+    const fakeClaude = fs.mkdtempSync(path.join(os.tmpdir(), "gsk-claude-"));
+    const proj = fs.mkdtempSync(path.join(os.tmpdir(), "gsk-proj-"));
+    try {
+      const r = spawnSync(BIN, ["doctor"], {
+        encoding: "utf-8",
+        cwd: proj,
+        env: {
+          ...process.env,
+          GSTACK_PROFILE_SOURCE_DIR: src,
+          GSTACK_PROFILE_CLAUDE_SKILLS: fakeClaude,
+        },
+      });
+      expect(r.status).toBe(0);
+      expect(r.stdout).toContain("clean");
+    } finally {
+      fs.rmSync(src, { recursive: true, force: true });
+      fs.rmSync(fakeClaude, { recursive: true, force: true });
+      fs.rmSync(proj, { recursive: true, force: true });
+    }
+  });
+});
