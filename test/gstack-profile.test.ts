@@ -125,3 +125,87 @@ describe("gstack-profile sync", () => {
     }
   });
 });
+
+function readEnabled(projectRoot: string): string[] {
+  const f = path.join(projectRoot, ".gstack", "profile.yaml");
+  if (!fs.existsSync(f)) return [];
+  return fs
+    .readFileSync(f, "utf-8")
+    .split("\n")
+    .map((l) => l.match(/^\s{4,}-\s*(\S+)/))
+    .filter(Boolean)
+    .map((m) => (m as RegExpMatchArray)[1]);
+}
+
+describe("gstack-profile init/enable/disable/off", () => {
+  test("init scaffolds an empty profile and gitignore entry", () => {
+    const src = makeSource();
+    const proj = fs.mkdtempSync(path.join(os.tmpdir(), "gsk-proj-"));
+    try {
+      fs.mkdirSync(path.join(proj, ".git")); // mark project root
+      const r = run(["init"], proj, src);
+      expect(r.status).toBe(0);
+      expect(fs.existsSync(path.join(proj, ".gstack", "profile.yaml"))).toBe(
+        true,
+      );
+      expect(fs.readFileSync(path.join(proj, ".gitignore"), "utf-8")).toContain(
+        ".claude/skills",
+      );
+    } finally {
+      fs.rmSync(src, { recursive: true, force: true });
+      fs.rmSync(proj, { recursive: true, force: true });
+    }
+  });
+
+  test("enable adds to profile and materializes; disable reverses", () => {
+    const src = makeSource();
+    const proj = fs.mkdtempSync(path.join(os.tmpdir(), "gsk-proj-"));
+    try {
+      fs.mkdirSync(path.join(proj, ".git"));
+      run(["init"], proj, src);
+      run(["enable", "ship", "review"], proj, src);
+      expect(readEnabled(proj).sort()).toEqual(["review", "ship"]);
+      expect(materialized(proj)).toEqual(["review", "ship"]);
+      run(["disable", "review"], proj, src);
+      expect(readEnabled(proj)).toEqual(["ship"]);
+      expect(materialized(proj)).toEqual(["ship"]);
+    } finally {
+      fs.rmSync(src, { recursive: true, force: true });
+      fs.rmSync(proj, { recursive: true, force: true });
+    }
+  });
+
+  test("off removes all managed links, keeps the profile", () => {
+    const src = makeSource();
+    const proj = fs.mkdtempSync(path.join(os.tmpdir(), "gsk-proj-"));
+    try {
+      fs.mkdirSync(path.join(proj, ".git"));
+      run(["init"], proj, src);
+      run(["enable", "ship"], proj, src);
+      run(["off"], proj, src);
+      expect(materialized(proj)).toEqual([]);
+      expect(fs.existsSync(path.join(proj, ".gstack", "profile.yaml"))).toBe(
+        true,
+      );
+    } finally {
+      fs.rmSync(src, { recursive: true, force: true });
+      fs.rmSync(proj, { recursive: true, force: true });
+    }
+  });
+
+  test("enable rejects an unknown skill", () => {
+    const src = makeSource();
+    const proj = fs.mkdtempSync(path.join(os.tmpdir(), "gsk-proj-"));
+    try {
+      fs.mkdirSync(path.join(proj, ".git"));
+      run(["init"], proj, src);
+      const r = run(["enable", "bogus"], proj, src);
+      expect(r.status).not.toBe(0);
+      expect(r.stderr).toContain("bogus");
+      expect(readEnabled(proj)).toEqual([]);
+    } finally {
+      fs.rmSync(src, { recursive: true, force: true });
+      fs.rmSync(proj, { recursive: true, force: true });
+    }
+  });
+});

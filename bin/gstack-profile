@@ -213,6 +213,91 @@ function reconcile(
   return { added, removed };
 }
 
+function writeProfile(projectRoot: string, enabled: string[]) {
+  const dir = path.join(projectRoot, ".gstack");
+  fs.mkdirSync(dir, { recursive: true });
+  const body =
+    `version: 1\nskills:\n  enabled:\n` +
+    (enabled.length ? enabled.map((s) => `    - ${s}`).join("\n") + "\n" : "");
+  fs.writeFileSync(path.join(dir, "profile.yaml"), body);
+}
+
+function ensureGitignore(projectRoot: string) {
+  const gi = path.join(projectRoot, ".gitignore");
+  const marker = ".claude/skills";
+  const existing = fs.existsSync(gi) ? fs.readFileSync(gi, "utf-8") : "";
+  if (existing.split("\n").some((l) => l.trim() === marker)) return;
+  const prefix = existing && !existing.endsWith("\n") ? "\n" : "";
+  fs.appendFileSync(
+    gi,
+    `${prefix}# gstack-profile materialized skills (managed, not committed)\n${marker}\n`,
+  );
+}
+
+function cmdInit(all: boolean): number {
+  const source = resolveSourceDir();
+  const projectRoot = findProjectRoot(process.cwd());
+  const enabled = all ? enumerateSuperset(source).map((s) => s.name) : [];
+  writeProfile(projectRoot, enabled);
+  ensureGitignore(projectRoot);
+  console.log(
+    `initialized .gstack/profile.yaml (${enabled.length} skills enabled)`,
+  );
+  if (all) cmdSync();
+  return 0;
+}
+
+function editEnabled(
+  projectRoot: string,
+  mutate: (set: Set<string>) => void,
+): string[] {
+  const set = new Set(readProfileEnabled(projectRoot));
+  mutate(set);
+  const next = [...set].sort();
+  writeProfile(projectRoot, next);
+  return next;
+}
+
+function cmdEnable(names: string[]): number {
+  const source = resolveSourceDir();
+  const projectRoot = findProjectRoot(process.cwd());
+  const supersetNames = new Set(enumerateSuperset(source).map((s) => s.name));
+  for (const n of names) {
+    if (!supersetNames.has(n)) {
+      console.error(
+        `Unknown skill "${n}". Run 'gstack-profile list' to see valid skills.`,
+      );
+      return 2;
+    }
+  }
+  editEnabled(projectRoot, (set) => names.forEach((n) => set.add(n)));
+  return cmdSync();
+}
+
+function cmdDisable(names: string[]): number {
+  const projectRoot = findProjectRoot(process.cwd());
+  editEnabled(projectRoot, (set) => names.forEach((n) => set.delete(n)));
+  return cmdSync();
+}
+
+function cmdOff(): number {
+  const source = resolveSourceDir();
+  const projectRoot = findProjectRoot(process.cwd());
+  const skillsDir = path.join(projectRoot, ".claude", "skills");
+  let removed = 0;
+  if (fs.existsSync(skillsDir)) {
+    for (const entry of fs.readdirSync(skillsDir)) {
+      const full = path.join(skillsDir, entry);
+      if (isGstackManaged(full, source)) {
+        fs.rmSync(full, { recursive: true, force: true });
+        removed++;
+      }
+    }
+  }
+  console.log(`removed ${removed} gstack skill link(s); profile kept`);
+  return 0;
+}
+
 function cmdSync(): number {
   const source = resolveSourceDir();
   const projectRoot = findProjectRoot(process.cwd());
@@ -266,6 +351,14 @@ function main(): number {
       return cmdSync();
     case "status":
       return cmdStatus();
+    case "init":
+      return cmdInit(process.argv.includes("--all"));
+    case "enable":
+      return cmdEnable(process.argv.slice(3).filter((a) => !a.startsWith("-")));
+    case "disable":
+      return cmdDisable(process.argv.slice(3).filter((a) => !a.startsWith("-")));
+    case "off":
+      return cmdOff();
     default:
       console.error(
         "Usage: gstack-profile {list|status|init|enable|disable|sync|off|doctor}",
