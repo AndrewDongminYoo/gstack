@@ -315,6 +315,10 @@ set)
 		echo "Warning: plan_tune_hooks '$VALUE' not recognized. Valid values: prompt, yes, no. Using prompt." >&2
 		VALUE="prompt"
 	fi
+	if [ "$KEY" = "skill_install_mode" ] && [ "$VALUE" != "global" ] && [ "$VALUE" != "per-project" ]; then
+		echo "Warning: skill_install_mode '$VALUE' not recognized. Valid values: global, per-project. Using global." >&2
+		VALUE="global"
+	fi
 	# codex_reviews controls PAID Codex calls. Unlike the warn-and-default keys above,
 	# an invalid value is REJECTED and the existing setting is left unchanged — a typo
 	# must never silently flip the switch and turn paid Codex calls on or off.

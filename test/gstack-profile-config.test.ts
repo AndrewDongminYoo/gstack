@@ -36,4 +36,20 @@ describe("skill_install_mode config key", () => {
       fs.rmSync(home, { recursive: true, force: true });
     }
   });
+
+  test("rejects an invalid value with a warning and falls back to 'global'", () => {
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), "gsk-cfg-"));
+    try {
+      const setR = runConfig(
+        ["set", "skill_install_mode", "per_project"],
+        home,
+      );
+      expect(setR.stderr).toContain("Warning");
+      expect(setR.stderr).toContain("per_project");
+      const getR = runConfig(["get", "skill_install_mode"], home);
+      expect(getR.stdout.trim()).toBe("global");
+    } finally {
+      fs.rmSync(home, { recursive: true, force: true });
+    }
+  });
 });
