@@ -25,7 +25,10 @@
  */
 import mermaid from "mermaid";
 import { parseMermaidToExcalidraw } from "@excalidraw/mermaid-to-excalidraw";
-import { convertToExcalidrawElements, exportToSvg } from "@excalidraw/excalidraw";
+import {
+  convertToExcalidrawElements,
+  exportToSvg,
+} from "@excalidraw/excalidraw";
 
 declare global {
   interface Window {
@@ -34,7 +37,11 @@ declare global {
     __mermaidToExcalidraw: (text: string) => Promise<string>;
     __excalidrawToSvg: (sceneJson: string) => Promise<string>;
     __rasterize: (svgText: string, targetWidthPx: number) => Promise<string>;
-    __downscaleRaster: (dataUri: string, targetWidthPx: number, mime: string) => Promise<string>;
+    __downscaleRaster: (
+      dataUri: string,
+      targetWidthPx: number,
+      mime: string,
+    ) => Promise<string>;
     __mountForScreenshot: (svgText: string, targetWidthPx: number) => string;
     __probeImage: (src: string) => Promise<string>;
     EXCALIDRAW_ASSET_PATH?: string;
@@ -45,7 +52,8 @@ declare global {
 // Excalidraw's font registry builds URLs from this against the document base.
 // The host must be absolute and never resolves — the page is offline by design;
 // exportToSvg embeds the bundled Excalifont glyphs without fetching.
-window.EXCALIDRAW_ASSET_PATH = "https://gstack-render.localhost/excalidraw-assets/";
+window.EXCALIDRAW_ASSET_PATH =
+  "https://gstack-render.localhost/excalidraw-assets/";
 
 // Font stacks must match make-pdf/src/print-css.ts (sans + CJK + emoji) so
 // mermaid's text measurement in this tab matches the print document's layout.
@@ -64,7 +72,8 @@ mermaid.initialize({
 });
 
 window.__renderMermaid = async (id: string, text: string): Promise<string> => {
-  if (!/^[A-Za-z][\w-]*$/.test(id)) throw new Error(`invalid mermaid render id: ${id}`);
+  if (!/^[A-Za-z][\w-]*$/.test(id))
+    throw new Error(`invalid mermaid render id: ${id}`);
   const { svg } = await mermaid.render(id, text);
   return svg;
 };
@@ -85,7 +94,8 @@ window.__mermaidToExcalidraw = async (text: string): Promise<string> => {
 
 window.__excalidrawToSvg = async (sceneJson: string): Promise<string> => {
   const scene = JSON.parse(sceneJson);
-  if (!Array.isArray(scene.elements)) throw new Error("excalidraw scene has no elements array");
+  if (!Array.isArray(scene.elements))
+    throw new Error("excalidraw scene has no elements array");
   const svg = await exportToSvg({
     elements: scene.elements,
     appState: { ...(scene.appState ?? {}), exportBackground: true },
@@ -108,7 +118,10 @@ function assertTargetWidth(px: number): void {
   }
 }
 
-window.__rasterize = async (svgText: string, targetWidthPx: number): Promise<string> => {
+window.__rasterize = async (
+  svgText: string,
+  targetWidthPx: number,
+): Promise<string> => {
   assertTargetWidth(targetWidthPx);
   const blob = new Blob([svgText], { type: "image/svg+xml;charset=utf-8" });
   const url = URL.createObjectURL(blob);
@@ -116,7 +129,12 @@ window.__rasterize = async (svgText: string, targetWidthPx: number): Promise<str
     const img = new Image();
     await new Promise<void>((resolve, reject) => {
       img.onload = () => resolve();
-      img.onerror = () => reject(new Error("SVG image decode failed (malformed SVG or foreignObject content)"));
+      img.onerror = () =>
+        reject(
+          new Error(
+            "SVG image decode failed (malformed SVG or foreignObject content)",
+          ),
+        );
       img.src = url;
     });
     const naturalW = img.naturalWidth || 800;
@@ -143,7 +161,10 @@ window.__rasterize = async (svgText: string, targetWidthPx: number): Promise<str
  * take an element screenshot (no canvas, no taint rules). Returns a marker
  * string; the artifact is the screenshot, not the return value.
  */
-window.__mountForScreenshot = (svgText: string, targetWidthPx: number): string => {
+window.__mountForScreenshot = (
+  svgText: string,
+  targetWidthPx: number,
+): string => {
   document.getElementById("raster-stage")?.remove();
   const stage = document.createElement("div");
   stage.id = "raster-stage";
@@ -185,7 +206,9 @@ window.__downscaleRaster = async (
   if (!ctx) throw new Error("2d canvas context unavailable");
   ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
   const outMime = mime === "image/jpeg" ? "image/jpeg" : "image/png";
-  return outMime === "image/jpeg" ? canvas.toDataURL(outMime, 0.9) : canvas.toDataURL(outMime);
+  return outMime === "image/jpeg"
+    ? canvas.toDataURL(outMime, 0.9)
+    : canvas.toDataURL(outMime);
 };
 
 /** Probe intrinsic dimensions of an image (data URI or URL). Returns JSON. */
@@ -200,7 +223,10 @@ window.__probeImage = async (src: string): Promise<string> => {
 };
 
 // __BUNDLE_INFO__ is replaced at build time with the pinned dependency map.
-window.__bundleInfo = { name: "gstack-diagram-render", deps: __BUNDLE_INFO_DEPS__ };
+window.__bundleInfo = {
+  name: "gstack-diagram-render",
+  deps: __BUNDLE_INFO_DEPS__,
+};
 
 // Readiness signal: pollable text beats a bare invisible div (Playwright's
 // visibility-based `wait` never fires on an empty element).

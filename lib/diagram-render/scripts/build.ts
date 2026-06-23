@@ -95,5 +95,7 @@ const info = {
 };
 await Bun.write(BUILD_INFO, JSON.stringify(info, null, 2) + "\n");
 
-console.log(`built ${path.relative(process.cwd(), DIST_HTML)} (${(info.bytes / 1024 / 1024).toFixed(2)} MB)`);
+console.log(
+  `built ${path.relative(process.cwd(), DIST_HTML)} (${(info.bytes / 1024 / 1024).toFixed(2)} MB)`,
+);
 console.log(`sha256 ${sha256}`);

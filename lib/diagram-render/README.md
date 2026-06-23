@@ -13,16 +13,16 @@ fails CI if `dist/` is edited by hand or falls out of sync with `BUILD_INFO.json
 
 ## Page API (window functions)
 
-| Function | In → Out |
-|---|---|
-| `__renderMermaid(id, text)` | mermaid text → SVG string. `id` must be unique per fence (`mermaid-fence-<n>`) — it namespaces every internal SVG id. |
-| `__mermaidToExcalidraw(text)` | mermaid text → `.excalidraw` scene JSON (flowcharts fully; other types degrade upstream). |
-| `__excalidrawToSvg(sceneJson)` | scene JSON → SVG string (Excalifont embedded, offline). |
-| `__rasterize(svg, targetWidthPx)` | SVG → PNG data URL. Callers own DPI math: `targetWidthPx = placed width (in) × 300`. Throws on tainted canvas. |
+| Function                                          | In → Out                                                                                                                               |
+| ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `__renderMermaid(id, text)`                       | mermaid text → SVG string. `id` must be unique per fence (`mermaid-fence-<n>`) — it namespaces every internal SVG id.                  |
+| `__mermaidToExcalidraw(text)`                     | mermaid text → `.excalidraw` scene JSON (flowcharts fully; other types degrade upstream).                                              |
+| `__excalidrawToSvg(sceneJson)`                    | scene JSON → SVG string (Excalifont embedded, offline).                                                                                |
+| `__rasterize(svg, targetWidthPx)`                 | SVG → PNG data URL. Callers own DPI math: `targetWidthPx = placed width (in) × 300`. Throws on tainted canvas.                         |
 | `__downscaleRaster(dataUri, targetWidthPx, mime)` | raster data URI → smaller data URI at `targetWidthPx` (same mime). make-pdf uses it to normalize oversized photos to print resolution. |
-| `__mountForScreenshot(svg, px)` | taint-proof fallback: mounts SVG at `#raster-stage` for `browse screenshot --selector`. |
-| `__probeImage(src)` | data URI/URL → `{width, height}` JSON. |
-| `__bundleInfo` | `{ name, deps }` — pinned dependency versions baked at build. |
+| `__mountForScreenshot(svg, px)`                   | taint-proof fallback: mounts SVG at `#raster-stage` for `browse screenshot --selector`.                                                |
+| `__probeImage(src)`                               | data URI/URL → `{width, height}` JSON.                                                                                                 |
+| `__bundleInfo`                                    | `{ name, deps }` — pinned dependency versions baked at build.                                                                          |
 
 Readiness: poll until `#status` text is `ready` (or `browse wait '#done'`).
 Page errors accumulate in `window.__errors`.
