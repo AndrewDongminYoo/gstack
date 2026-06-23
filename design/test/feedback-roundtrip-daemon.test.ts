@@ -47,11 +47,17 @@ beforeEach(() => {
 
 afterEach(async () => {
   for (const d of daemons.splice(0)) {
-    try { await d.stop(); } catch {}
+    try {
+      await d.stop();
+    } catch {}
   }
-  try { fs.unlinkSync(stateFile); } catch {}
+  try {
+    fs.unlinkSync(stateFile);
+  } catch {}
   delete process.env.DESIGN_DAEMON_STATE_FILE;
-  try { fs.rmSync(workDir, { recursive: true, force: true }); } catch {}
+  try {
+    fs.rmSync(workDir, { recursive: true, force: true });
+  } catch {}
 });
 
 async function spawn1(): Promise<SpawnedDaemon> {
@@ -114,7 +120,9 @@ describe("daemon round-trip: publish → submit → feedback.json", () => {
       const progress = await fetch(`${board.url}api/progress`);
       expect(((await progress.json()) as any).status).toBe("done");
     } finally {
-      try { fs.rmSync(boardDir, { recursive: true, force: true }); } catch {}
+      try {
+        fs.rmSync(boardDir, { recursive: true, force: true });
+      } catch {}
     }
   });
 
@@ -133,7 +141,9 @@ describe("daemon round-trip: publish → submit → feedback.json", () => {
       expect(res.status).toBe(301);
       expect(res.headers.get("Location")).toBe(`/boards/${board.id}/`);
     } finally {
-      try { fs.rmSync(boardDir, { recursive: true, force: true }); } catch {}
+      try {
+        fs.rmSync(boardDir, { recursive: true, force: true });
+      } catch {}
     }
   });
 });
@@ -163,8 +173,12 @@ describe("daemon round-trip: publish → regenerate → reload → submit round 
       expect(((await regen.json()) as any).action).toBe("regenerate");
 
       // Pending file exists, final feedback file does not
-      expect(fs.existsSync(path.join(board.sourceDir, "feedback-pending.json"))).toBe(true);
-      expect(fs.existsSync(path.join(board.sourceDir, "feedback.json"))).toBe(false);
+      expect(
+        fs.existsSync(path.join(board.sourceDir, "feedback-pending.json")),
+      ).toBe(true);
+      expect(fs.existsSync(path.join(board.sourceDir, "feedback.json"))).toBe(
+        false,
+      );
 
       // Progress reflects regenerating state
       const prog1 = await fetch(`${board.url}api/progress`);
@@ -172,7 +186,10 @@ describe("daemon round-trip: publish → regenerate → reload → submit round 
 
       // Agent generates round 2, writes a new HTML file, calls /api/reload
       const r2Path = path.join(boardDir, "round2.html");
-      fs.writeFileSync(r2Path, "<!DOCTYPE html><html><body><p>round 2 variants</p></body></html>");
+      fs.writeFileSync(
+        r2Path,
+        "<!DOCTYPE html><html><body><p>round 2 variants</p></body></html>",
+      );
       const reload = await fetch(`${board.url}api/reload`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -184,9 +201,10 @@ describe("daemon round-trip: publish → regenerate → reload → submit round 
       // new browser tab — the user's existing tab can reload in place)
       const r2Page = await fetch(board.url);
       expect(await r2Page.text()).toContain("round 2 variants");
-      expect(((await (await fetch(`${board.url}api/progress`)).json()) as any).status).toBe(
-        "serving",
-      );
+      expect(
+        ((await (await fetch(`${board.url}api/progress`)).json()) as any)
+          .status,
+      ).toBe("serving");
 
       // User submits round 2
       const finalSubmit = await fetch(`${board.url}api/feedback`, {
@@ -206,7 +224,9 @@ describe("daemon round-trip: publish → regenerate → reload → submit round 
       expect(written.preferred).toBe("B");
       expect(written.boardId).toBe(board.id);
     } finally {
-      try { fs.rmSync(boardDir, { recursive: true, force: true }); } catch {}
+      try {
+        fs.rmSync(boardDir, { recursive: true, force: true });
+      } catch {}
     }
   });
 });
@@ -242,7 +262,9 @@ describe("daemon round-trip: two concurrent publishes share one daemon", () => {
         body: JSON.stringify({ regenerated: false, preferred: "A" }),
       });
       expect(fs.existsSync(path.join(a.sourceDir, "feedback.json"))).toBe(true);
-      expect(fs.existsSync(path.join(b.sourceDir, "feedback.json"))).toBe(false);
+      expect(fs.existsSync(path.join(b.sourceDir, "feedback.json"))).toBe(
+        false,
+      );
 
       // Index page lists both
       const idx = await fetch(`http://127.0.0.1:${d.port}/`);
@@ -250,8 +272,12 @@ describe("daemon round-trip: two concurrent publishes share one daemon", () => {
       expect(idxHtml).toContain(a.id);
       expect(idxHtml).toContain(b.id);
     } finally {
-      try { fs.rmSync(dirA, { recursive: true, force: true }); } catch {}
-      try { fs.rmSync(dirB, { recursive: true, force: true }); } catch {}
+      try {
+        fs.rmSync(dirA, { recursive: true, force: true });
+      } catch {}
+      try {
+        fs.rmSync(dirB, { recursive: true, force: true });
+      } catch {}
     }
   });
 });

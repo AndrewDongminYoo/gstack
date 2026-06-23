@@ -53,13 +53,21 @@ beforeEach(() => {
 
 afterEach(async () => {
   for (const d of activeDaemons.splice(0)) {
-    try { await d.stop(); } catch {}
+    try {
+      await d.stop();
+    } catch {}
   }
   // Tear down any state file left around so the next test starts clean.
-  try { fs.unlinkSync(stateFile); } catch {}
-  try { fs.unlinkSync(resolveLockFilePath(stateFile)); } catch {}
+  try {
+    fs.unlinkSync(stateFile);
+  } catch {}
+  try {
+    fs.unlinkSync(resolveLockFilePath(stateFile));
+  } catch {}
   delete process.env.DESIGN_DAEMON_STATE_FILE;
-  try { fs.rmSync(workDir, { recursive: true, force: true }); } catch {}
+  try {
+    fs.rmSync(workDir, { recursive: true, force: true });
+  } catch {}
 });
 
 async function spawn1(idleMs = 60_000): Promise<SpawnedDaemon> {
@@ -120,7 +128,9 @@ describe("ensureDaemon", () => {
       port: state!.port,
       stateFile,
       stop: async () => {
-        try { process.kill(state!.pid, "SIGTERM"); } catch {}
+        try {
+          process.kill(state!.pid, "SIGTERM");
+        } catch {}
       },
     });
   });
@@ -139,14 +149,17 @@ describe("ensureDaemon", () => {
   test("with a stale state file (PID dead): spawns fresh, overwrites state", async () => {
     // Synthesize a stale state file pointing at a definitely-dead pid.
     fs.mkdirSync(path.dirname(stateFile), { recursive: true });
-    fs.writeFileSync(stateFile, JSON.stringify({
-      pid: 999_999_998,
-      port: 1, // bogus port — /health will fail fast
-      startedAt: "2020-01-01T00:00:00Z",
-      version: "ancient",
-      serverPath: "/nope",
-      cmdlineMarker: CMDLINE_MARKER,
-    }));
+    fs.writeFileSync(
+      stateFile,
+      JSON.stringify({
+        pid: 999_999_998,
+        port: 1, // bogus port — /health will fail fast
+        startedAt: "2020-01-01T00:00:00Z",
+        version: "ancient",
+        serverPath: "/nope",
+        cmdlineMarker: CMDLINE_MARKER,
+      }),
+    );
 
     const result = await ensureDaemon({
       version: "test-version",
@@ -164,7 +177,11 @@ describe("ensureDaemon", () => {
       proc: { pid: fresh!.pid } as any,
       port: fresh!.port,
       stateFile,
-      stop: async () => { try { process.kill(fresh!.pid, "SIGTERM"); } catch {} },
+      stop: async () => {
+        try {
+          process.kill(fresh!.pid, "SIGTERM");
+        } catch {}
+      },
     });
   });
 
@@ -172,14 +189,17 @@ describe("ensureDaemon", () => {
     // Use the current test process's PID — definitely alive, definitely
     // does NOT have CMDLINE_MARKER in its cmdline (it's the Bun test runner).
     fs.mkdirSync(path.dirname(stateFile), { recursive: true });
-    fs.writeFileSync(stateFile, JSON.stringify({
-      pid: process.pid, // alive but NOT a daemon
-      port: 1,
-      startedAt: "2020-01-01T00:00:00Z",
-      version: "ancient",
-      serverPath: "/nope",
-      cmdlineMarker: CMDLINE_MARKER,
-    }));
+    fs.writeFileSync(
+      stateFile,
+      JSON.stringify({
+        pid: process.pid, // alive but NOT a daemon
+        port: 1,
+        startedAt: "2020-01-01T00:00:00Z",
+        version: "ancient",
+        serverPath: "/nope",
+        cmdlineMarker: CMDLINE_MARKER,
+      }),
+    );
 
     // ensureDaemon should NOT signal process.pid (we'd kill ourselves);
     // verifyIdentity catches the cmdline mismatch and skips the kill.
@@ -199,7 +219,11 @@ describe("ensureDaemon", () => {
       proc: { pid: fresh!.pid } as any,
       port: fresh!.port,
       stateFile,
-      stop: async () => { try { process.kill(fresh!.pid, "SIGTERM"); } catch {} },
+      stop: async () => {
+        try {
+          process.kill(fresh!.pid, "SIGTERM");
+        } catch {}
+      },
     });
   });
 
@@ -228,7 +252,11 @@ describe("ensureDaemon", () => {
       proc: { pid: fresh!.pid } as any,
       port: fresh!.port,
       stateFile,
-      stop: async () => { try { process.kill(fresh!.pid, "SIGTERM"); } catch {} },
+      stop: async () => {
+        try {
+          process.kill(fresh!.pid, "SIGTERM");
+        } catch {}
+      },
     });
   });
 
@@ -249,7 +277,9 @@ describe("ensureDaemon", () => {
     // Now run a tiny script that calls ensureDaemon with a mismatched
     // version. It should print the WARNING + exit 1.
     const scriptPath = path.join(workDir, "ensure-mismatch.ts");
-    fs.writeFileSync(scriptPath, `
+    fs.writeFileSync(
+      scriptPath,
+      `
 import { ensureDaemon } from "${path.resolve(import.meta.dir, "..", "src", "daemon-client.ts").replace(/\\\\/g, "/")}";
 await ensureDaemon({
   version: "totally-different-version",
@@ -257,7 +287,8 @@ await ensureDaemon({
   verbose: true,
 });
 console.log("REACHED_AFTER_ENSURE — should not happen");
-`);
+`,
+    );
 
     const child = spawn("bun", ["run", scriptPath], {
       env: { ...process.env, DESIGN_DAEMON_STATE_FILE: stateFile },
@@ -404,7 +435,9 @@ describe("daemon idle-shutdown behavior (real process)", () => {
       expect(readStateFile(stateFile)).toBeNull();
     } finally {
       if (isProcessAlive(d.proc.pid!)) {
-        try { d.proc.kill("SIGKILL"); } catch {}
+        try {
+          d.proc.kill("SIGKILL");
+        } catch {}
       }
     }
   }, 10_000);
@@ -456,9 +489,13 @@ describe("daemon idle-shutdown behavior (real process)", () => {
     } finally {
       polling = false;
       if (isProcessAlive(d.proc.pid!)) {
-        try { d.proc.kill("SIGKILL"); } catch {}
+        try {
+          d.proc.kill("SIGKILL");
+        } catch {}
       }
-      try { fs.rmSync(boardDir, { recursive: true, force: true }); } catch {}
+      try {
+        fs.rmSync(boardDir, { recursive: true, force: true });
+      } catch {}
     }
   }, 15_000);
 
@@ -496,9 +533,13 @@ describe("daemon idle-shutdown behavior (real process)", () => {
       expect(readStateFile(stateFile)).toBeNull();
     } finally {
       if (isProcessAlive(d.proc.pid!)) {
-        try { d.proc.kill("SIGKILL"); } catch {}
+        try {
+          d.proc.kill("SIGKILL");
+        } catch {}
       }
-      try { fs.rmSync(boardDir, { recursive: true, force: true }); } catch {}
+      try {
+        fs.rmSync(boardDir, { recursive: true, force: true });
+      } catch {}
     }
   }, 15_000);
 });
@@ -537,7 +578,9 @@ describe("concurrent ensureDaemon race", () => {
       port: state!.port,
       stateFile,
       stop: async () => {
-        try { process.kill(state!.pid, "SIGTERM"); } catch {}
+        try {
+          process.kill(state!.pid, "SIGTERM");
+        } catch {}
       },
     });
   }, 15_000);
@@ -575,6 +618,8 @@ describe("acquireLock stale-lock reclaim", () => {
     expect(fs.readFileSync(lockPath, "utf-8").trim()).toBe(String(process.pid));
 
     // Cleanup
-    try { fs.unlinkSync(lockPath); } catch {}
+    try {
+      fs.unlinkSync(lockPath);
+    } catch {}
   });
 });

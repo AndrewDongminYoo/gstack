@@ -74,7 +74,9 @@ describe("resolveApiKeyInfo", () => {
     expect(resolution?.key).toBe("sk-env");
     expect(resolution?.source).toBe("env");
     expect(resolution?.envFile).toBeUndefined();
-    expect(describeApiKeySource(resolution!)).toBe("OPENAI_API_KEY environment variable");
+    expect(describeApiKeySource(resolution!)).toBe(
+      "OPENAI_API_KEY environment variable",
+    );
   });
 
   test("reports when OPENAI_API_KEY matches current-directory .env", () => {
@@ -85,12 +87,19 @@ describe("resolveApiKeyInfo", () => {
 
     expect(resolution?.key).toBe("sk-project");
     expect(resolution?.envFile).toBe(".env");
-    expect(describeApiKeySource(resolution!)).toBe("OPENAI_API_KEY environment variable (matches .env in current directory)");
-    expect(resolution?.warning).toContain("may bill that project's OpenAI account");
+    expect(describeApiKeySource(resolution!)).toBe(
+      "OPENAI_API_KEY environment variable (matches .env in current directory)",
+    );
+    expect(resolution?.warning).toContain(
+      "may bill that project's OpenAI account",
+    );
   });
 
   test("detects quoted and exported env-file values", () => {
-    fs.writeFileSync(path.join(tmpDir, ".env.local"), "export OPENAI_API_KEY=\"sk-local\"\n");
+    fs.writeFileSync(
+      path.join(tmpDir, ".env.local"),
+      'export OPENAI_API_KEY="sk-local"\n',
+    );
     process.env.OPENAI_API_KEY = "sk-local";
 
     const resolution = resolveApiKeyInfo();
@@ -127,7 +136,9 @@ describe("requireApiKey", () => {
     }
 
     const stderr = messages.join("\n");
-    expect(stderr).toContain("Using OpenAI key from OPENAI_API_KEY environment variable.");
+    expect(stderr).toContain(
+      "Using OpenAI key from OPENAI_API_KEY environment variable.",
+    );
     expect(stderr).not.toContain("sk-secret-value");
   });
 });

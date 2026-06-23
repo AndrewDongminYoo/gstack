@@ -13,7 +13,12 @@ import path from "path";
 import { __testInternals__, fetchHandler, idleCheckTick } from "../src/daemon";
 
 const { markMeaningfulActivity } = __testInternals__;
-import { makeBoardHtml, makeTmpDir, req, resetDaemon } from "./daemon-tests-fixtures";
+import {
+  makeBoardHtml,
+  makeTmpDir,
+  req,
+  resetDaemon,
+} from "./daemon-tests-fixtures";
 
 let tmpDir: string;
 
@@ -30,14 +35,20 @@ afterEach(() => {
   }
 });
 
-async function publishTestBoard(opts: { dir?: string; body?: string; title?: string } = {}) {
+async function publishTestBoard(
+  opts: { dir?: string; body?: string; title?: string } = {},
+) {
   const dir = opts.dir ?? tmpDir;
   const htmlPath = makeBoardHtml(dir, opts.body ?? "<p>Test</p>");
   const r = await fetchHandler(
     req("POST", "/api/boards", { html: htmlPath, title: opts.title }),
   );
   expect(r.status).toBe(200);
-  const body = (await r.json()) as { id: string; url: string; sourceDir: string };
+  const body = (await r.json()) as {
+    id: string;
+    url: string;
+    sourceDir: string;
+  };
   return { ...body, htmlPath, dir };
 }
 
@@ -69,7 +80,9 @@ describe("daemon /health", () => {
 describe("daemon /api/boards (publish)", () => {
   test("publishes a board and returns id + url + derived sourceDir", async () => {
     const htmlPath = makeBoardHtml(tmpDir);
-    const r = await fetchHandler(req("POST", "/api/boards", { html: htmlPath }));
+    const r = await fetchHandler(
+      req("POST", "/api/boards", { html: htmlPath }),
+    );
     expect(r.status).toBe(200);
     const body = (await r.json()) as any;
     expect(body.id).toMatch(/^b-\d{8}-\d{6}-[a-z0-9]{6}$/);
@@ -124,7 +137,9 @@ describe("daemon /api/boards (publish)", () => {
   test("409 when a non-done board already claims the same sourceDir", async () => {
     const first = await publishTestBoard();
     const htmlPath = makeBoardHtml(tmpDir, "<p>Second attempt</p>");
-    const r = await fetchHandler(req("POST", "/api/boards", { html: htmlPath }));
+    const r = await fetchHandler(
+      req("POST", "/api/boards", { html: htmlPath }),
+    );
     expect(r.status).toBe(409);
     const body = (await r.json()) as any;
     expect(body.error).toContain("already in use");
@@ -139,7 +154,9 @@ describe("daemon /api/boards (publish)", () => {
       req("POST", `/boards/${first.id}/api/feedback`, { regenerated: false }),
     );
     const htmlPath = makeBoardHtml(tmpDir, "<p>Round two</p>");
-    const r = await fetchHandler(req("POST", "/api/boards", { html: htmlPath }));
+    const r = await fetchHandler(
+      req("POST", "/api/boards", { html: htmlPath }),
+    );
     expect(r.status).toBe(200);
   });
 });
@@ -206,8 +223,12 @@ describe("daemon /boards/<id>/api/feedback", () => {
     expect(r.status).toBe(200);
     expect(((await r.json()) as any).action).toBe("regenerate");
 
-    expect(fs.existsSync(path.join(board.sourceDir, "feedback-pending.json"))).toBe(true);
-    expect(fs.existsSync(path.join(board.sourceDir, "feedback.json"))).toBe(false);
+    expect(
+      fs.existsSync(path.join(board.sourceDir, "feedback-pending.json")),
+    ).toBe(true);
+    expect(fs.existsSync(path.join(board.sourceDir, "feedback.json"))).toBe(
+      false,
+    );
 
     const progress = await fetchHandler(
       req("GET", `/boards/${board.id}/api/progress`),
@@ -221,34 +242,48 @@ describe("daemon /boards/<id>/api/feedback", () => {
     try {
       const htmlA = makeBoardHtml(dirA);
       const htmlB = makeBoardHtml(dirB);
-      const a = (await (await fetchHandler(
-        req("POST", "/api/boards", { html: htmlA }),
-      )).json()) as any;
-      const b = (await (await fetchHandler(
-        req("POST", "/api/boards", { html: htmlB }),
-      )).json()) as any;
+      const a = (await (
+        await fetchHandler(req("POST", "/api/boards", { html: htmlA }))
+      ).json()) as any;
+      const b = (await (
+        await fetchHandler(req("POST", "/api/boards", { html: htmlB }))
+      ).json()) as any;
       expect(a.id).not.toBe(b.id);
 
       await fetchHandler(
-        req("POST", `/boards/${a.id}/api/feedback`, { preferred: "A", regenerated: false }),
+        req("POST", `/boards/${a.id}/api/feedback`, {
+          preferred: "A",
+          regenerated: false,
+        }),
       );
       expect(fs.existsSync(path.join(a.sourceDir, "feedback.json"))).toBe(true);
       // Board B's directory must not have been touched
-      expect(fs.existsSync(path.join(b.sourceDir, "feedback.json"))).toBe(false);
-      expect(fs.existsSync(path.join(b.sourceDir, "feedback-pending.json"))).toBe(false);
+      expect(fs.existsSync(path.join(b.sourceDir, "feedback.json"))).toBe(
+        false,
+      );
+      expect(
+        fs.existsSync(path.join(b.sourceDir, "feedback-pending.json")),
+      ).toBe(false);
     } finally {
-      try { fs.rmSync(dirA, { recursive: true, force: true }); } catch {}
-      try { fs.rmSync(dirB, { recursive: true, force: true }); } catch {}
+      try {
+        fs.rmSync(dirA, { recursive: true, force: true });
+      } catch {}
+      try {
+        fs.rmSync(dirB, { recursive: true, force: true });
+      } catch {}
     }
   });
 
   test("rejects malformed JSON body", async () => {
     const board = await publishTestBoard();
-    const bad = new Request(`http://127.0.0.1/boards/${board.id}/api/feedback`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: "{not json",
-    });
+    const bad = new Request(
+      `http://127.0.0.1/boards/${board.id}/api/feedback`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{not json",
+      },
+    );
     const r = await fetchHandler(bad);
     expect(r.status).toBe(400);
   });
@@ -261,7 +296,10 @@ describe("daemon /boards/<id>/api/reload", () => {
     const board = await publishTestBoard({ body: "<p>round 1</p>" });
     const newHtml = makeBoardHtml(tmpDir, "<p>round 2</p>");
     // The reload helper writes to design-board.html; make a distinct path
-    fs.writeFileSync(path.join(tmpDir, "round2.html"), "<html><body><p>round 2</p></body></html>");
+    fs.writeFileSync(
+      path.join(tmpDir, "round2.html"),
+      "<html><body><p>round 2</p></body></html>",
+    );
     const reloadPath = path.join(tmpDir, "round2.html");
 
     const r = await fetchHandler(
@@ -303,7 +341,9 @@ describe("daemon /boards/<id>/api/reload", () => {
       );
       expect(r.status).toBe(403);
     } finally {
-      try { fs.unlinkSync(linkPath); } catch {}
+      try {
+        fs.unlinkSync(linkPath);
+      } catch {}
     }
   });
 });
@@ -325,9 +365,11 @@ describe("daemon / (index)", () => {
     const dirB = makeTmpDir("index-b");
     try {
       const htmlB = makeBoardHtml(dirB);
-      const b = (await (await fetchHandler(
-        req("POST", "/api/boards", { html: htmlB, title: "second" }),
-      )).json()) as any;
+      const b = (await (
+        await fetchHandler(
+          req("POST", "/api/boards", { html: htmlB, title: "second" }),
+        )
+      ).json()) as any;
 
       const html = await (await fetchHandler(req("GET", "/"))).text();
       const idxA = html.indexOf(a.id);
@@ -338,7 +380,9 @@ describe("daemon / (index)", () => {
       // State badge present
       expect(html).toMatch(/state-serving/);
     } finally {
-      try { fs.rmSync(dirB, { recursive: true, force: true }); } catch {}
+      try {
+        fs.rmSync(dirB, { recursive: true, force: true });
+      } catch {}
     }
   });
 });
@@ -401,13 +445,16 @@ describe("daemon LRU eviction", () => {
     expect(boards.size).toBe(50);
 
     const htmlPath = makeBoardHtml(tmpDir);
-    const r = await fetchHandler(req("POST", "/api/boards", { html: htmlPath }));
+    const r = await fetchHandler(
+      req("POST", "/api/boards", { html: htmlPath }),
+    );
     expect(r.status).toBe(200);
 
     expect(boards.size).toBeLessThanOrEqual(50);
     // At least one of the (oldest) done boards is gone; non-done untouched.
     let doneGoneCount = 0;
-    for (let i = 0; i < 10; i++) if (!boards.has(`b-done-${i}`)) doneGoneCount += 1;
+    for (let i = 0; i < 10; i++)
+      if (!boards.has(`b-done-${i}`)) doneGoneCount += 1;
     expect(doneGoneCount).toBeGreaterThanOrEqual(1);
     // All non-done preserved
     for (let i = 0; i < 40; i++) {
@@ -430,7 +477,9 @@ describe("daemon LRU eviction", () => {
       });
     }
     const htmlPath = makeBoardHtml(tmpDir);
-    const r = await fetchHandler(req("POST", "/api/boards", { html: htmlPath }));
+    const r = await fetchHandler(
+      req("POST", "/api/boards", { html: htmlPath }),
+    );
     expect(r.status).toBe(503);
   });
 });

@@ -35,7 +35,8 @@ function makeStubFetch(
   return (async (_input: any, _init?: any) => {
     calls.push({ ts: Date.now() });
     const response = responses[idx];
-    if (!response) throw new Error(`stub fetch: no response for call ${idx + 1}`);
+    if (!response)
+      throw new Error(`stub fetch: no response for call ${idx + 1}`);
     idx++;
     return response;
   }) as typeof globalThis.fetch;
@@ -59,7 +60,12 @@ describe("generateVariant Retry-After handling", () => {
     const fetchFn = makeStubFetch([rateLimited("1"), successResponse()], calls);
 
     const result = await generateVariant(
-      "fake-key", "prompt", outputPath, "1024x1024", "high", fetchFn,
+      "fake-key",
+      "prompt",
+      outputPath,
+      "1024x1024",
+      "high",
+      fetchFn,
     );
 
     expect(result.success).toBe(true);
@@ -73,10 +79,18 @@ describe("generateVariant Retry-After handling", () => {
   test("HTTP-date: honors a future date with no extra leading exponential", async () => {
     const calls: CallRecord[] = [];
     const future = new Date(Date.now() + 3000).toUTCString();
-    const fetchFn = makeStubFetch([rateLimited(future), successResponse()], calls);
+    const fetchFn = makeStubFetch(
+      [rateLimited(future), successResponse()],
+      calls,
+    );
 
     const result = await generateVariant(
-      "fake-key", "prompt", outputPath, "1024x1024", "high", fetchFn,
+      "fake-key",
+      "prompt",
+      outputPath,
+      "1024x1024",
+      "high",
+      fetchFn,
     );
 
     expect(result.success).toBe(true);
@@ -88,10 +102,18 @@ describe("generateVariant Retry-After handling", () => {
 
   test("invalid Retry-After (alphanumeric): falls through to exponential", async () => {
     const calls: CallRecord[] = [];
-    const fetchFn = makeStubFetch([rateLimited("2abc"), successResponse()], calls);
+    const fetchFn = makeStubFetch(
+      [rateLimited("2abc"), successResponse()],
+      calls,
+    );
 
     const result = await generateVariant(
-      "fake-key", "prompt", outputPath, "1024x1024", "high", fetchFn,
+      "fake-key",
+      "prompt",
+      outputPath,
+      "1024x1024",
+      "high",
+      fetchFn,
     );
 
     expect(result.success).toBe(true);
@@ -107,7 +129,12 @@ describe("generateVariant Retry-After handling", () => {
     const fetchFn = makeStubFetch([rateLimited(), successResponse()], calls);
 
     const result = await generateVariant(
-      "fake-key", "prompt", outputPath, "1024x1024", "high", fetchFn,
+      "fake-key",
+      "prompt",
+      outputPath,
+      "1024x1024",
+      "high",
+      fetchFn,
     );
 
     expect(result.success).toBe(true);
@@ -122,7 +149,12 @@ describe("generateVariant Retry-After handling", () => {
     const fetchFn = makeStubFetch([rateLimited("0"), successResponse()], calls);
 
     const result = await generateVariant(
-      "fake-key", "prompt", outputPath, "1024x1024", "high", fetchFn,
+      "fake-key",
+      "prompt",
+      outputPath,
+      "1024x1024",
+      "high",
+      fetchFn,
     );
 
     expect(result.success).toBe(true);

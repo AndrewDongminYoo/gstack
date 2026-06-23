@@ -18,13 +18,21 @@ import path from "path";
 
 import { __testInternals__ } from "../src/daemon";
 
-export const DAEMON_SCRIPT = path.join(import.meta.dir, "..", "src", "daemon.ts");
+export const DAEMON_SCRIPT = path.join(
+  import.meta.dir,
+  "..",
+  "src",
+  "daemon.ts",
+);
 
 export function makeTmpDir(prefix = "design-daemon-test"): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), `${prefix}-`));
 }
 
-export function makeBoardHtml(tmpDir: string, body = "<p>Test board</p>"): string {
+export function makeBoardHtml(
+  tmpDir: string,
+  body = "<p>Test board</p>",
+): string {
   const p = path.join(tmpDir, "design-board.html");
   fs.writeFileSync(
     p,
@@ -61,9 +69,15 @@ export interface SpawnedDaemon {
  * when stdout emits `DAEMON_STARTED port=<N>`.
  */
 export async function spawnDaemonForTest(
-  opts: { stateFile?: string; idleMs?: number; checkMs?: number; env?: Record<string, string> } = {},
+  opts: {
+    stateFile?: string;
+    idleMs?: number;
+    checkMs?: number;
+    env?: Record<string, string>;
+  } = {},
 ): Promise<SpawnedDaemon> {
-  const stateFile = opts.stateFile ?? path.join(makeTmpDir("daemon-state"), "design.json");
+  const stateFile =
+    opts.stateFile ?? path.join(makeTmpDir("daemon-state"), "design.json");
   const env: Record<string, string> = {
     ...(process.env as Record<string, string>),
     // DESIGN_DAEMON_STATE_FILE points both daemon and any same-process
