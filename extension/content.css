@@ -3,7 +3,7 @@
  */
 
 #gstack-ref-overlays {
-  font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace !important;
+  font-family: "JetBrains Mono", "SF Mono", "Fira Code", monospace !important;
 }
 
 /* Connection status pill — bottom-right corner */
@@ -22,7 +22,8 @@
   border: 1px solid rgba(245, 158, 11, 0.25);
   border-radius: 9999px;
   color: #e0e0e0;
-  font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  font-family:
+    "JetBrains Mono", "SF Mono", "Fira Code", "Cascadia Code", monospace;
   font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.02em;
@@ -40,7 +41,7 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #F59E0B;
+  background: #f59e0b;
   box-shadow: 0 0 6px rgba(245, 158, 11, 0.5);
   flex-shrink: 0;
 }
@@ -84,7 +85,7 @@
   padding: 6px 10px;
   background: #141414;
   border-bottom: 1px solid #262626;
-  color: #FAFAFA;
+  color: #fafafa;
   font-weight: 600;
   font-size: 11px;
 }
@@ -103,13 +104,13 @@
 }
 
 .gstack-ref-panel-id {
-  color: #FBBF24;
+  color: #fbbf24;
   font-weight: 600;
   margin-right: 4px;
 }
 
 .gstack-ref-panel-role {
-  color: #A1A1AA;
+  color: #a1a1aa;
   margin-right: 4px;
 }
 
@@ -119,6 +120,6 @@
 
 .gstack-ref-panel-more {
   padding: 4px 10px;
-  color: #52525B;
+  color: #52525b;
   font-style: italic;
 }

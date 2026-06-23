@@ -21,34 +21,34 @@
  * via <script src> tags in sidepanel.html (window.Terminal, window.FitAddon).
  */
 (function () {
-  'use strict';
+  "use strict";
 
   const Terminal = window.Terminal;
   const FitAddonModule = window.FitAddon;
   if (!Terminal) {
-    console.error('[gstack terminal] xterm not loaded');
+    console.error("[gstack terminal] xterm not loaded");
     return;
   }
 
   const els = {
-    bootstrap: document.getElementById('terminal-bootstrap'),
-    bootstrapStatus: document.getElementById('terminal-bootstrap-status'),
-    installCard: document.getElementById('terminal-install-card'),
-    installRetry: document.getElementById('terminal-install-retry'),
-    mount: document.getElementById('terminal-mount'),
-    ended: document.getElementById('terminal-ended'),
-    restart: document.getElementById('terminal-restart'),
-    restartNow: document.getElementById('terminal-restart-now'),
+    bootstrap: document.getElementById("terminal-bootstrap"),
+    bootstrapStatus: document.getElementById("terminal-bootstrap-status"),
+    installCard: document.getElementById("terminal-install-card"),
+    installRetry: document.getElementById("terminal-install-retry"),
+    mount: document.getElementById("terminal-mount"),
+    ended: document.getElementById("terminal-ended"),
+    restart: document.getElementById("terminal-restart"),
+    restartNow: document.getElementById("terminal-restart-now"),
   };
 
   /** State machine. */
   const STATE = {
-    IDLE: 'idle',
-    CONNECTING: 'connecting',
-    LIVE: 'live',
-    ENDED: 'ended',
-    NO_CLAUDE: 'no-claude',
-    RECONNECTING: 'reconnecting',  // v1.44 Commit 3 — re-attach loop active
+    IDLE: "idle",
+    CONNECTING: "connecting",
+    LIVE: "live",
+    ENDED: "ended",
+    NO_CLAUDE: "no-claude",
+    RECONNECTING: "reconnecting", // v1.44 Commit 3 — re-attach loop active
   };
   let state = STATE.IDLE;
 
@@ -105,8 +105,12 @@
   let keepaliveInterval = null;
   const KEEPALIVE_INTERVAL_MS = 25000;
 
-  function show(el) { el.style.display = ''; }
-  function hide(el) { el.style.display = 'none'; }
+  function show(el) {
+    el.style.display = "";
+  }
+  function hide(el) {
+    el.style.display = "none";
+  }
 
   function setState(next, opts = {}) {
     state = next;
@@ -116,14 +120,15 @@
         hide(els.installCard);
         hide(els.mount);
         hide(els.ended);
-        els.bootstrapStatus.textContent = opts.message || 'Press any key to start Claude Code.';
+        els.bootstrapStatus.textContent =
+          opts.message || "Press any key to start Claude Code.";
         break;
       case STATE.CONNECTING:
         show(els.bootstrap);
         hide(els.installCard);
         hide(els.mount);
         hide(els.ended);
-        els.bootstrapStatus.textContent = 'Connecting...';
+        els.bootstrapStatus.textContent = "Connecting...";
         break;
       case STATE.LIVE:
         hide(els.bootstrap);
@@ -142,7 +147,7 @@
         show(els.installCard);
         hide(els.mount);
         hide(els.ended);
-        els.bootstrapStatus.textContent = '';
+        els.bootstrapStatus.textContent = "";
         break;
     }
   }
@@ -177,16 +182,16 @@
     const serverPort = getServerPort();
     const token = getAuthToken();
     if (!serverPort || !token) {
-      return { error: 'browse server not ready' };
+      return { error: "browse server not ready" };
     }
     try {
       const resp = await fetch(`http://127.0.0.1:${serverPort}/pty-session`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
-        credentials: 'include',
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
       });
       if (!resp.ok) {
-        const body = await resp.text().catch(() => '');
+        const body = await resp.text().catch(() => "");
         return { error: `${resp.status} ${body || resp.statusText}` };
       }
       return await resp.json();
@@ -240,15 +245,18 @@
       attempt += 1;
       let resp;
       try {
-        resp = await fetch(`http://127.0.0.1:${serverPort}/pty-session/reattach`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${authToken}`,
+        resp = await fetch(
+          `http://127.0.0.1:${serverPort}/pty-session/reattach`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${authToken}`,
+            },
+            body: JSON.stringify({ sessionId: prevSessionId }),
+            credentials: "include",
           },
-          body: JSON.stringify({ sessionId: prevSessionId }),
-          credentials: 'include',
-        });
+        );
       } catch (err) {
         scheduleNextAttempt();
         return;
@@ -265,7 +273,8 @@
         reattachInFlight = false;
         autoConnectAborted = true;
         setState(STATE.IDLE, {
-          message: 'Auth invalid — reload the sidebar or restart your gstack session.',
+          message:
+            "Auth invalid — reload the sidebar or restart your gstack session.",
         });
         return;
       }
@@ -274,13 +283,21 @@
         return;
       }
       let body;
-      try { body = await resp.json(); } catch { body = null; }
+      try {
+        body = await resp.json();
+      } catch {
+        body = null;
+      }
       if (!body || !body.terminalPort || !body.attachToken) {
         scheduleNextAttempt();
         return;
       }
       reattachInFlight = false;
-      openReattachWebSocket(body.terminalPort, body.attachToken, body.sessionId || prevSessionId);
+      openReattachWebSocket(
+        body.terminalPort,
+        body.attachToken,
+        body.sessionId || prevSessionId,
+      );
     };
 
     const scheduleNextAttempt = () => {
@@ -301,50 +318,65 @@
    */
   function openReattachWebSocket(terminalPort, attachToken, sessionId) {
     currentSessionId = sessionId || null;
-    try { window.gstackPtySession = currentSessionId; } catch {}
+    try {
+      window.gstackPtySession = currentSessionId;
+    } catch {}
     setState(STATE.LIVE);
     ensureXterm();
     nextBinaryIsReplay = false;
-    ws = new WebSocket(`ws://127.0.0.1:${terminalPort}/ws`, [`gstack-pty.${attachToken}`]);
-    ws.binaryType = 'arraybuffer';
+    ws = new WebSocket(`ws://127.0.0.1:${terminalPort}/ws`, [
+      `gstack-pty.${attachToken}`,
+    ]);
+    ws.binaryType = "arraybuffer";
 
-    ws.addEventListener('open', () => {
+    ws.addEventListener("open", () => {
       try {
-        ws.send(JSON.stringify({ type: 'resize', cols: term.cols, rows: term.rows }));
+        ws.send(
+          JSON.stringify({ type: "resize", cols: term.cols, rows: term.rows }),
+        );
       } catch {}
       if (keepaliveInterval) clearInterval(keepaliveInterval);
       keepaliveInterval = setInterval(() => {
         if (!ws || ws.readyState !== WebSocket.OPEN) return;
-        try { ws.send(JSON.stringify({ type: 'keepalive' })); } catch {}
+        try {
+          ws.send(JSON.stringify({ type: "keepalive" }));
+        } catch {}
       }, KEEPALIVE_INTERVAL_MS);
     });
 
-    ws.addEventListener('message', (ev) => {
-      if (typeof ev.data === 'string') {
+    ws.addEventListener("message", (ev) => {
+      if (typeof ev.data === "string") {
         try {
           const msg = JSON.parse(ev.data);
-          if (msg.type === 'reattach-begin') {
+          if (msg.type === "reattach-begin") {
             // Clear xterm before the replay binary arrives — RIS (\x1bc)
             // is a full hardware reset that flushes the buffer and
             // resets all attributes. The server's replay starts with
             // DECSTR + optional alt-screen re-enter for safety.
-            try { term.write('\x1bc'); } catch {}
+            try {
+              term.write("\x1bc");
+            } catch {}
             nextBinaryIsReplay = true;
             return;
           }
-          if (msg.type === 'error' && msg.code === 'CLAUDE_NOT_FOUND') {
+          if (msg.type === "error" && msg.code === "CLAUDE_NOT_FOUND") {
             setState(STATE.NO_CLAUDE);
-            try { ws.close(); } catch {}
+            try {
+              ws.close();
+            } catch {}
             return;
           }
-          if (msg.type === 'ping') {
-            try { ws.send(JSON.stringify({ type: 'pong', ts: msg.ts })); } catch {}
+          if (msg.type === "ping") {
+            try {
+              ws.send(JSON.stringify({ type: "pong", ts: msg.ts }));
+            } catch {}
             return;
           }
         } catch {}
         return;
       }
-      const buf = ev.data instanceof ArrayBuffer ? new Uint8Array(ev.data) : ev.data;
+      const buf =
+        ev.data instanceof ArrayBuffer ? new Uint8Array(ev.data) : ev.data;
       // First binary frame after reattach-begin is the replay payload;
       // write it through unchanged (server already prefixed soft-reset).
       // Subsequent binary frames are live PTY output.
@@ -352,7 +384,7 @@
       if (nextBinaryIsReplay) nextBinaryIsReplay = false;
     });
 
-    ws.addEventListener('close', (ev) => {
+    ws.addEventListener("close", (ev) => {
       ws = null;
       if (keepaliveInterval) {
         clearInterval(keepaliveInterval);
@@ -371,16 +403,19 @@
       }
       startReattachLoop(currentSessionId);
     });
-    ws.addEventListener('error', (err) => {
-      console.error('[gstack terminal] reattach ws error', err);
+    ws.addEventListener("error", (err) => {
+      console.error("[gstack terminal] reattach ws error", err);
     });
   }
 
   async function checkClaudeAvailable(terminalPort) {
     try {
-      const resp = await fetch(`http://127.0.0.1:${terminalPort}/claude-available`, {
-        credentials: 'include',
-      });
+      const resp = await fetch(
+        `http://127.0.0.1:${terminalPort}/claude-available`,
+        {
+          credentials: "include",
+        },
+      );
       if (!resp.ok) return { available: false };
       return await resp.json();
     } catch {
@@ -391,9 +426,10 @@
   function ensureXterm() {
     if (term) return;
     term = new Terminal({
-      fontFamily: '"JetBrains Mono", "SF Mono", Menlo, "Noto Sans Mono CJK KR", "Malgun Gothic", monospace',
+      fontFamily:
+        '"JetBrains Mono", "SF Mono", Menlo, "Noto Sans Mono CJK KR", "Malgun Gothic", monospace',
       fontSize: 13,
-      theme: { background: '#0a0a0a', foreground: '#e5e5e5' },
+      theme: { background: "#0a0a0a", foreground: "#e5e5e5" },
       cursorBlink: true,
       scrollback: 5000,
       allowTransparency: false,
@@ -418,7 +454,13 @@
       try {
         fitAddon && fitAddon.fit();
         if (ws && ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({ type: 'resize', cols: term.cols, rows: term.rows }));
+          ws.send(
+            JSON.stringify({
+              type: "resize",
+              cols: term.cols,
+              rows: term.rows,
+            }),
+          );
         }
       } catch {}
     });
@@ -427,7 +469,13 @@
       try {
         fitAddon && fitAddon.fit();
         if (ws && ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({ type: 'resize', cols: term.cols, rows: term.rows }));
+          ws.send(
+            JSON.stringify({
+              type: "resize",
+              cols: term.cols,
+              rows: term.rows,
+            }),
+          );
         }
       } catch {}
     });
@@ -440,8 +488,10 @@
     let composing = false;
     const ta = term.textarea;
     if (ta) {
-      ta.addEventListener('compositionstart', () => { composing = true; });
-      ta.addEventListener('compositionend', (e) => {
+      ta.addEventListener("compositionstart", () => {
+        composing = true;
+      });
+      ta.addEventListener("compositionend", (e) => {
         composing = false;
         if (e.data && ws && ws.readyState === WebSocket.OPEN) {
           ws.send(new TextEncoder().encode(e.data));
@@ -449,9 +499,8 @@
       });
     }
 
-
     term.onData((data) => {
-      if (composing) return;  // suppress partial input events during IME composition
+      if (composing) return; // suppress partial input events during IME composition
       if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(new TextEncoder().encode(data));
       }
@@ -502,28 +551,36 @@
    * Closes #1370.
    */
   window.gstackScanForPTYInject = async function (text, origin) {
-    if (!text) return { allow: false, verdict: 'BLOCK', reasons: ['empty-text'] };
+    if (!text)
+      return { allow: false, verdict: "BLOCK", reasons: ["empty-text"] };
     try {
-      const resp = await fetch('http://127.0.0.1:34567/pty-inject-scan', {
-        method: 'POST',
+      const resp = await fetch("http://127.0.0.1:34567/pty-inject-scan", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${await getAuthTokenForScan()}`,
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${await getAuthTokenForScan()}`,
         },
-        body: JSON.stringify({ text, origin: origin || 'extension' }),
+        body: JSON.stringify({ text, origin: origin || "extension" }),
       });
       if (!resp.ok) {
-        return { allow: true, verdict: 'WARN', reasons: [`scan-http-${resp.status}`] };
+        return {
+          allow: true,
+          verdict: "WARN",
+          reasons: [`scan-http-${resp.status}`],
+        };
       }
       const body = await resp.json();
-      const verdict = body.verdict || 'WARN';
-      const allow = verdict !== 'BLOCK';
+      const verdict = body.verdict || "WARN";
+      const allow = verdict !== "BLOCK";
       return { allow, verdict, reasons: body.reasons || [], l4: body.l4 };
     } catch (err) {
       return {
         allow: true,
-        verdict: 'WARN',
-        reasons: ['scan-unreachable', err && err.message ? err.message : 'fetch-failed'],
+        verdict: "WARN",
+        reasons: [
+          "scan-unreachable",
+          err && err.message ? err.message : "fetch-failed",
+        ],
       };
     }
   };
@@ -536,13 +593,13 @@
   async function getAuthTokenForScan() {
     if (window.__gstackPtyScanToken) return window.__gstackPtyScanToken;
     try {
-      const resp = await fetch('http://127.0.0.1:34567/health');
+      const resp = await fetch("http://127.0.0.1:34567/health");
       const body = await resp.json();
-      const token = body.AUTH_TOKEN || body.authToken || '';
+      const token = body.AUTH_TOKEN || body.authToken || "";
       if (token) window.__gstackPtyScanToken = token;
       return token;
     } catch {
-      return '';
+      return "";
     }
   }
 
@@ -555,10 +612,11 @@
       // 401 = stale auth token; no amount of retrying will fix it. Sticky
       // abort the polling loop so we don't spam the same error every 2s
       // until the user clicks Restart (which clears the flag).
-      if (typeof minted.error === 'string' && minted.error.startsWith('401')) {
+      if (typeof minted.error === "string" && minted.error.startsWith("401")) {
         autoConnectAborted = true;
         setState(STATE.IDLE, {
-          message: 'Auth invalid — reload the sidebar or restart your gstack session.',
+          message:
+            "Auth invalid — reload the sidebar or restart your gstack session.",
         });
         return;
       }
@@ -572,12 +630,16 @@
     const { terminalPort, sessionId } = minted;
     const attachToken = minted.attachToken || minted.ptySessionToken;
     if (!attachToken) {
-      setState(STATE.IDLE, { message: 'Cannot start: no attach token returned' });
+      setState(STATE.IDLE, {
+        message: "Cannot start: no attach token returned",
+      });
       return;
     }
     currentSessionId = sessionId || null;
     // Expose for sidepanel.js pagehide handler — see Commit 2C wiring.
-    try { window.gstackPtySession = currentSessionId; } catch {}
+    try {
+      window.gstackPtySession = currentSessionId;
+    } catch {}
 
     // Pre-flight: does claude even exist on PATH?
     const claudeStatus = await checkClaudeAvailable(terminalPort);
@@ -599,27 +661,33 @@
     // SameSite=Strict don't survive the jump from server.ts:34567 to the
     // agent's random port from a chrome-extension origin, so cookies
     // alone weren't reliable.
-    ws = new WebSocket(`ws://127.0.0.1:${terminalPort}/ws`, [`gstack-pty.${attachToken}`]);
-    ws.binaryType = 'arraybuffer';
+    ws = new WebSocket(`ws://127.0.0.1:${terminalPort}/ws`, [
+      `gstack-pty.${attachToken}`,
+    ]);
+    ws.binaryType = "arraybuffer";
 
-    ws.addEventListener('open', () => {
+    ws.addEventListener("open", () => {
       try {
-        ws.send(JSON.stringify({ type: 'resize', cols: term.cols, rows: term.rows }));
+        ws.send(
+          JSON.stringify({ type: "resize", cols: term.cols, rows: term.rows }),
+        );
       } catch {}
       // Push a fresh tab snapshot so claude's tabs.json is populated by
       // the time the lazy spawn finishes booting. Background.js exposes
       // the snapshot helper via chrome.runtime; we ask for it here and
       // forward whatever comes back.
       try {
-        chrome.runtime.sendMessage({ type: 'getTabState' }, (resp) => {
+        chrome.runtime.sendMessage({ type: "getTabState" }, (resp) => {
           if (resp && ws && ws.readyState === WebSocket.OPEN) {
             try {
-              ws.send(JSON.stringify({
-                type: 'tabState',
-                active: resp.active,
-                tabs: resp.tabs,
-                reason: 'initial',
-              }));
+              ws.send(
+                JSON.stringify({
+                  type: "tabState",
+                  active: resp.active,
+                  tabs: resp.tabs,
+                  reason: "initial",
+                }),
+              );
             } catch {}
           }
         });
@@ -628,7 +696,9 @@
       // without requiring the user to type a keystroke. Pre-v1.44 the
       // lazy-binary-spawn pattern made forceRestart look stuck for ~2-3s
       // until the user pressed any key.
-      try { ws.send(JSON.stringify({ type: 'start' })); } catch {}
+      try {
+        ws.send(JSON.stringify({ type: "start" }));
+      } catch {}
       // v1.44 client-side keepalive. Server pings every 25s; we ALSO send
       // keepalive frames at the same cadence so a paused timer on either
       // side still has the other to lean on. Both are silently dropped
@@ -636,36 +706,43 @@
       if (keepaliveInterval) clearInterval(keepaliveInterval);
       keepaliveInterval = setInterval(() => {
         if (!ws || ws.readyState !== WebSocket.OPEN) return;
-        try { ws.send(JSON.stringify({ type: 'keepalive' })); } catch {}
+        try {
+          ws.send(JSON.stringify({ type: "keepalive" }));
+        } catch {}
       }, KEEPALIVE_INTERVAL_MS);
     });
 
-    ws.addEventListener('message', (ev) => {
-      if (typeof ev.data === 'string') {
+    ws.addEventListener("message", (ev) => {
+      if (typeof ev.data === "string") {
         // Agent control message. Treat as JSON; error frames carry code,
         // ping frames trigger an immediate pong reply.
         try {
           const msg = JSON.parse(ev.data);
-          if (msg.type === 'error' && msg.code === 'CLAUDE_NOT_FOUND') {
+          if (msg.type === "error" && msg.code === "CLAUDE_NOT_FOUND") {
             setState(STATE.NO_CLAUDE);
-            try { ws.close(); } catch {}
+            try {
+              ws.close();
+            } catch {}
             return;
           }
-          if (msg.type === 'ping') {
+          if (msg.type === "ping") {
             // Mirror the server's timestamp back. Cheap liveness ACK that
             // lets the agent observe round-trip latency for free.
-            try { ws.send(JSON.stringify({ type: 'pong', ts: msg.ts })); } catch {}
+            try {
+              ws.send(JSON.stringify({ type: "pong", ts: msg.ts }));
+            } catch {}
             return;
           }
         } catch {}
         return;
       }
       // Binary: feed to xterm.
-      const buf = ev.data instanceof ArrayBuffer ? new Uint8Array(ev.data) : ev.data;
+      const buf =
+        ev.data instanceof ArrayBuffer ? new Uint8Array(ev.data) : ev.data;
       term.write(buf);
     });
 
-    ws.addEventListener('close', (ev) => {
+    ws.addEventListener("close", (ev) => {
       ws = null;
       if (keepaliveInterval) {
         clearInterval(keepaliveInterval);
@@ -687,8 +764,8 @@
       setState(STATE.ENDED);
     });
 
-    ws.addEventListener('error', (err) => {
-      console.error('[gstack terminal] ws error', err);
+    ws.addEventListener("error", (err) => {
+      console.error("[gstack terminal] ws error", err);
     });
   }
 
@@ -697,10 +774,14 @@
       clearInterval(keepaliveInterval);
       keepaliveInterval = null;
     }
-    try { ws && ws.close(); } catch {}
+    try {
+      ws && ws.close();
+    } catch {}
     ws = null;
     if (term) {
-      try { term.dispose(); } catch {}
+      try {
+        term.dispose();
+      } catch {}
       term = null;
       fitAddon = null;
     }
@@ -733,7 +814,7 @@
     // Re-arm the auto-connect loop in case a prior auth failure stuck the
     // sticky flag — explicit user action is the cleared-flag signal.
     autoConnectAborted = false;
-    setState(STATE.IDLE, { message: 'Restarting Claude Code...' });
+    setState(STATE.IDLE, { message: "Restarting Claude Code..." });
 
     const serverPort = getServerPort();
     const authToken = getAuthToken();
@@ -741,10 +822,14 @@
 
     // Close the local WS BEFORE the server-side kill so the agent's
     // close handler doesn't race with the dispose call.
-    try { ws && ws.close(4001, 'intentional-restart'); } catch {}
+    try {
+      ws && ws.close(4001, "intentional-restart");
+    } catch {}
     ws = null;
     if (term) {
-      try { term.dispose(); } catch {}
+      try {
+        term.dispose();
+      } catch {}
       term = null;
       fitAddon = null;
     }
@@ -760,29 +845,36 @@
     let nextTuple = null;
     try {
       const resp = await fetch(`http://127.0.0.1:${serverPort}/pty-restart`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authToken}`,
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
         },
-        body: JSON.stringify(priorSessionId ? { sessionId: priorSessionId } : {}),
-        credentials: 'include',
+        body: JSON.stringify(
+          priorSessionId ? { sessionId: priorSessionId } : {},
+        ),
+        credentials: "include",
       });
       if (resp.ok) {
         nextTuple = await resp.json();
       } else if (resp.status === 401) {
         autoConnectAborted = true;
         setState(STATE.IDLE, {
-          message: 'Auth invalid — reload the sidebar or restart your gstack session.',
+          message:
+            "Auth invalid — reload the sidebar or restart your gstack session.",
         });
         return;
       } else if (resp.status === 503) {
         // Agent down — fall through to patient autoconnect which will
         // surface the appropriate "waiting for server" status.
-        setState(STATE.IDLE, { message: 'Restart failed: terminal agent not ready. Retrying...' });
+        setState(STATE.IDLE, {
+          message: "Restart failed: terminal agent not ready. Retrying...",
+        });
       } else {
-        const body = await resp.text().catch(() => '');
-        setState(STATE.IDLE, { message: `Restart failed: ${resp.status} ${body || resp.statusText}` });
+        const body = await resp.text().catch(() => "");
+        setState(STATE.IDLE, {
+          message: `Restart failed: ${resp.status} ${body || resp.statusText}`,
+        });
       }
     } catch (err) {
       setState(STATE.IDLE, {
@@ -794,7 +886,9 @@
       // Restart didn't yield a fresh tuple. Fall back to the regular
       // connect path; tryAutoConnect will retry as the server recovers.
       currentSessionId = null;
-      try { window.gstackPtySession = null; } catch {}
+      try {
+        window.gstackPtySession = null;
+      } catch {}
       tryAutoConnect();
       return;
     }
@@ -802,7 +896,12 @@
     // We have a fresh 4-tuple — open the new WS directly without going
     // through mintSession again. This is the explicit "no race window"
     // path the codex D8 redesign was after.
-    const { terminalPort, sessionId, attachToken, expiresAt: _expiresAt } = nextTuple;
+    const {
+      terminalPort,
+      sessionId,
+      attachToken,
+      expiresAt: _expiresAt,
+    } = nextTuple;
     const token = attachToken || nextTuple.ptySessionToken;
     if (!terminalPort || !token) {
       currentSessionId = null;
@@ -810,7 +909,9 @@
       return;
     }
     currentSessionId = sessionId || null;
-    try { window.gstackPtySession = currentSessionId; } catch {}
+    try {
+      window.gstackPtySession = currentSessionId;
+    } catch {}
 
     // Pre-flight: claude still on PATH?
     const claudeStatus = await checkClaudeAvailable(terminalPort);
@@ -821,57 +922,72 @@
 
     setState(STATE.LIVE);
     ensureXterm();
-    ws = new WebSocket(`ws://127.0.0.1:${terminalPort}/ws`, [`gstack-pty.${token}`]);
-    ws.binaryType = 'arraybuffer';
+    ws = new WebSocket(`ws://127.0.0.1:${terminalPort}/ws`, [
+      `gstack-pty.${token}`,
+    ]);
+    ws.binaryType = "arraybuffer";
 
-    ws.addEventListener('open', () => {
+    ws.addEventListener("open", () => {
       try {
-        ws.send(JSON.stringify({ type: 'resize', cols: term.cols, rows: term.rows }));
+        ws.send(
+          JSON.stringify({ type: "resize", cols: term.cols, rows: term.rows }),
+        );
       } catch {}
       try {
-        chrome.runtime.sendMessage({ type: 'getTabState' }, (resp) => {
+        chrome.runtime.sendMessage({ type: "getTabState" }, (resp) => {
           if (resp && ws && ws.readyState === WebSocket.OPEN) {
             try {
-              ws.send(JSON.stringify({
-                type: 'tabState',
-                active: resp.active,
-                tabs: resp.tabs,
-                reason: 'restart',
-              }));
+              ws.send(
+                JSON.stringify({
+                  type: "tabState",
+                  active: resp.active,
+                  tabs: resp.tabs,
+                  reason: "restart",
+                }),
+              );
             } catch {}
           }
         });
       } catch {}
       // Eager spawn — fresh claude prompt visible without user keystroke.
-      try { ws.send(JSON.stringify({ type: 'start' })); } catch {}
+      try {
+        ws.send(JSON.stringify({ type: "start" }));
+      } catch {}
       if (keepaliveInterval) clearInterval(keepaliveInterval);
       keepaliveInterval = setInterval(() => {
         if (!ws || ws.readyState !== WebSocket.OPEN) return;
-        try { ws.send(JSON.stringify({ type: 'keepalive' })); } catch {}
+        try {
+          ws.send(JSON.stringify({ type: "keepalive" }));
+        } catch {}
       }, KEEPALIVE_INTERVAL_MS);
     });
 
-    ws.addEventListener('message', (ev) => {
-      if (typeof ev.data === 'string') {
+    ws.addEventListener("message", (ev) => {
+      if (typeof ev.data === "string") {
         try {
           const msg = JSON.parse(ev.data);
-          if (msg.type === 'error' && msg.code === 'CLAUDE_NOT_FOUND') {
+          if (msg.type === "error" && msg.code === "CLAUDE_NOT_FOUND") {
             setState(STATE.NO_CLAUDE);
-            try { ws.close(); } catch {}
+            try {
+              ws.close();
+            } catch {}
             return;
           }
-          if (msg.type === 'ping') {
-            try { ws.send(JSON.stringify({ type: 'pong', ts: msg.ts })); } catch {}
+          if (msg.type === "ping") {
+            try {
+              ws.send(JSON.stringify({ type: "pong", ts: msg.ts }));
+            } catch {}
             return;
           }
         } catch {}
         return;
       }
-      const buf = ev.data instanceof ArrayBuffer ? new Uint8Array(ev.data) : ev.data;
+      const buf =
+        ev.data instanceof ArrayBuffer ? new Uint8Array(ev.data) : ev.data;
       term.write(buf);
     });
 
-    ws.addEventListener('close', (ev) => {
+    ws.addEventListener("close", (ev) => {
       ws = null;
       if (keepaliveInterval) {
         clearInterval(keepaliveInterval);
@@ -892,8 +1008,8 @@
       }
       setState(STATE.ENDED);
     });
-    ws.addEventListener('error', (err) => {
-      console.error('[gstack terminal] ws error', err);
+    ws.addEventListener("error", (err) => {
+      console.error("[gstack terminal] ws error", err);
     });
   }
 
@@ -905,21 +1021,27 @@
    */
   function repaintIfLive() {
     if (state !== STATE.LIVE || !term) return;
-    try { fitAddon && fitAddon.fit(); } catch {}
-    try { term.refresh(0, term.rows - 1); } catch {}
+    try {
+      fitAddon && fitAddon.fit();
+    } catch {}
+    try {
+      term.refresh(0, term.rows - 1);
+    } catch {}
     try {
       if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: 'resize', cols: term.cols, rows: term.rows }));
+        ws.send(
+          JSON.stringify({ type: "resize", cols: term.cols, rows: term.rows }),
+        );
       }
     } catch {}
   }
 
   function init() {
-    setState(STATE.IDLE, { message: 'Starting Claude Code...' });
+    setState(STATE.IDLE, { message: "Starting Claude Code..." });
 
-    els.installRetry?.addEventListener('click', () => {
+    els.installRetry?.addEventListener("click", () => {
       // Re-probe claude on PATH, then try a connect.
-      setState(STATE.IDLE, { message: 'Starting Claude Code...' });
+      setState(STATE.IDLE, { message: "Starting Claude Code..." });
       tryAutoConnect();
     });
 
@@ -928,23 +1050,24 @@
     //     a session has ended).
     //   - els.restartNow lives in the always-visible toolbar (lets the user
     //     force a fresh claude mid-session without waiting for it to exit).
-    els.restart?.addEventListener('click', forceRestart);
-    els.restartNow?.addEventListener('click', forceRestart);
-
+    els.restart?.addEventListener("click", forceRestart);
+    els.restartNow?.addEventListener("click", forceRestart);
 
     // Live browser-tab state. background.js → sidepanel.js → us. We
     // forward over the live PTY WebSocket; terminal-agent.ts writes
     // <stateDir>/active-tab.json + <stateDir>/tabs.json so claude can
     // always read the current tab landscape.
-    document.addEventListener('gstack:tab-state', (ev) => {
+    document.addEventListener("gstack:tab-state", (ev) => {
       if (!ws || ws.readyState !== WebSocket.OPEN) return;
       try {
-        ws.send(JSON.stringify({
-          type: 'tabState',
-          active: ev.detail?.active,
-          tabs: ev.detail?.tabs,
-          reason: ev.detail?.reason,
-        }));
+        ws.send(
+          JSON.stringify({
+            type: "tabState",
+            active: ev.detail?.active,
+            tabs: ev.detail?.tabs,
+            reason: ev.detail?.reason,
+          }),
+        );
       } catch {}
     });
 
@@ -954,13 +1077,17 @@
     // container flips back to visible, so we listen for the close-debug
     // event and force a fit + refresh.
     const observer = new MutationObserver(() => {
-      const term = document.getElementById('tab-terminal');
-      if (term?.classList.contains('active')) {
+      const term = document.getElementById("tab-terminal");
+      if (term?.classList.contains("active")) {
         requestAnimationFrame(repaintIfLive);
       }
     });
-    const target = document.getElementById('tab-terminal');
-    if (target) observer.observe(target, { attributes: true, attributeFilter: ['class'] });
+    const target = document.getElementById("tab-terminal");
+    if (target)
+      observer.observe(target, {
+        attributes: true,
+        attributeFilter: ["class"],
+      });
 
     tryAutoConnect();
   }
@@ -1002,22 +1129,23 @@
       const elapsed = Date.now() - startedAt;
       if (elapsed > 300_000) {
         setState(STATE.IDLE, {
-          message: 'Browse server still not responding after 5 min. Try `$B status` in a terminal.',
+          message:
+            "Browse server still not responding after 5 min. Try `$B status` in a terminal.",
         });
       } else if (elapsed > 60_000) {
         setState(STATE.IDLE, {
-          message: 'Still waiting — browse server may be slow to start.',
+          message: "Still waiting — browse server may be slow to start.",
         });
       } else if (elapsed > 15_000) {
-        setState(STATE.IDLE, { message: 'Waiting for browse server...' });
+        setState(STATE.IDLE, { message: "Waiting for browse server..." });
       }
       setTimeout(tick, 2000);
     };
     tick();
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
   } else {
     init();
   }
