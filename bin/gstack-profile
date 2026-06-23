@@ -243,7 +243,10 @@ function cmdInit(all: boolean): number {
   console.log(
     `initialized .gstack/profile.yaml (${enabled.length} skills enabled)`,
   );
-  if (all) cmdSync();
+  if (all) {
+    const syncResult = cmdSync();
+    if (syncResult !== 0) return syncResult;
+  }
   return 0;
 }
 
