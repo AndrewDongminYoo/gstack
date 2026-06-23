@@ -10,7 +10,7 @@
  * exercise it against bundled HTML fixtures without spinning up the daemon.
  */
 
-import { browse } from './_lib/browse-client';
+import { browse } from "./_lib/browse-client";
 
 export interface Story {
   /** 1-based rank as displayed on HN. */
@@ -31,7 +31,7 @@ export interface Output {
   count: number;
 }
 
-const FRONT_PAGE_URL = 'https://news.ycombinator.com/';
+const FRONT_PAGE_URL = "https://news.ycombinator.com/";
 
 /**
  * Parse HN front-page HTML into Story[].
@@ -54,7 +54,8 @@ export function parseStoriesFromHtml(html: string): Story[] {
   const stories: Story[] = [];
 
   // Match each `tr.athing` row, capturing the id attribute and the row body.
-  const rowRegex = /<tr\s+[^>]*\bclass="athing[^"]*"[^>]*\bid="(\d+)"[^>]*>([\s\S]*?)<\/tr>/g;
+  const rowRegex =
+    /<tr\s+[^>]*\bclass="athing[^"]*"[^>]*\bid="(\d+)"[^>]*>([\s\S]*?)<\/tr>/g;
 
   let match: RegExpExecArray | null;
   let rank = 0;
@@ -64,7 +65,9 @@ export function parseStoriesFromHtml(html: string): Story[] {
     const rowBody = match[2];
 
     // Title link: <span class="titleline"><a href="..." ...>title</a>
-    const titleMatch = rowBody.match(/<span\s+class="titleline"[^>]*>\s*<a\s+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/);
+    const titleMatch = rowBody.match(
+      /<span\s+class="titleline"[^>]*>\s*<a\s+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/,
+    );
     if (!titleMatch) continue;
     const url = decodeHtmlEntities(titleMatch[1]);
     const title = stripTags(decodeHtmlEntities(titleMatch[2])).trim();
@@ -77,19 +80,24 @@ export function parseStoriesFromHtml(html: string): Story[] {
     const tail = html.slice(subtextStart);
     const spacerIdx = tail.search(/<tr\b[^>]*\bclass="spacer\b/);
     const nextAthingIdx = tail.search(/<tr\b[^>]*\bclass="athing\b/);
-    const candidates = [spacerIdx, nextAthingIdx].filter(i => i >= 0);
-    const boundary = candidates.length > 0 ? Math.min(...candidates) : tail.length;
+    const candidates = [spacerIdx, nextAthingIdx].filter((i) => i >= 0);
+    const boundary =
+      candidates.length > 0 ? Math.min(...candidates) : tail.length;
     const subtextSlice = tail.slice(0, boundary);
 
     let points: number | null = null;
     let comments: number | null = null;
 
-    const scoreMatch = subtextSlice.match(/<span\s+class="score"[^>]*>(\d+)\s*points?<\/span>/);
+    const scoreMatch = subtextSlice.match(
+      /<span\s+class="score"[^>]*>(\d+)\s*points?<\/span>/,
+    );
     if (scoreMatch) points = parseInt(scoreMatch[1], 10);
 
     // Comment count: an anchor like `<a href="item?id=...">N comments</a>`,
     // or `discuss` (treated as 0). Skip "hide" / "context" / "from" links.
-    const commentsMatch = subtextSlice.match(/<a\s+href="item\?id=\d+"[^>]*>(\d+)\s*(?:&nbsp;)?\s*comments?<\/a>/);
+    const commentsMatch = subtextSlice.match(
+      /<a\s+href="item\?id=\d+"[^>]*>(\d+)\s*(?:&nbsp;)?\s*comments?<\/a>/,
+    );
     if (commentsMatch) {
       comments = parseInt(commentsMatch[1], 10);
     } else if (/discuss<\/a>/.test(subtextSlice)) {
@@ -103,18 +111,18 @@ export function parseStoriesFromHtml(html: string): Story[] {
 }
 
 function stripTags(s: string): string {
-  return s.replace(/<[^>]*>/g, '');
+  return s.replace(/<[^>]*>/g, "");
 }
 
 function decodeHtmlEntities(s: string): string {
   return s
-    .replace(/&amp;/g, '&')
+    .replace(/&amp;/g, "&")
     .replace(/&quot;/g, '"')
     .replace(/&#x27;/g, "'")
     .replace(/&#39;/g, "'")
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&nbsp;/g, ' ');
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&nbsp;/g, " ");
 }
 
 // ─── Main entry (only when run as a script, not when imported by tests) ─
@@ -128,5 +136,5 @@ async function main(): Promise<void> {
   const html = await browse.html();
   const stories = parseStoriesFromHtml(html);
   const output: Output = { stories, count: stories.length };
-  process.stdout.write(JSON.stringify(output) + '\n');
+  process.stdout.write(JSON.stringify(output) + "\n");
 }

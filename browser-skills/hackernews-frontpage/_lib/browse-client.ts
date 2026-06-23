@@ -31,9 +31,9 @@
  * Zero side effects on import. Safe to import from tests or plain scripts.
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
-import * as cp from 'child_process';
+import * as fs from "fs";
+import * as path from "path";
+import * as cp from "child_process";
 
 export interface BrowseClientOptions {
   /** Override port. Default: GSTACK_PORT env or state file. */
@@ -51,7 +51,7 @@ export interface BrowseClientOptions {
 interface ResolvedAuth {
   port: number;
   token: string;
-  source: 'env' | 'state-file';
+  source: "env" | "state-file";
 }
 
 function parseIntegerEnvValue(value: string | undefined): number | undefined {
@@ -62,9 +62,11 @@ function parseIntegerEnvValue(value: string | undefined): number | undefined {
 }
 
 /** Resolve the daemon port + token. Throws a clear error if neither path works. */
-export function resolveBrowseAuth(opts: BrowseClientOptions = {}): ResolvedAuth {
+export function resolveBrowseAuth(
+  opts: BrowseClientOptions = {},
+): ResolvedAuth {
   if (opts.port !== undefined && opts.token !== undefined) {
-    return { port: opts.port, token: opts.token, source: 'env' };
+    return { port: opts.port, token: opts.token, source: "env" };
   }
 
   // 1. Env vars (set by $B skill run when spawning).
@@ -73,20 +75,21 @@ export function resolveBrowseAuth(opts: BrowseClientOptions = {}): ResolvedAuth 
   if (envPort && envToken) {
     const port = opts.port ?? parseIntegerEnvValue(envPort);
     if (port !== undefined) {
-      return { port, token: opts.token ?? envToken, source: 'env' };
+      return { port, token: opts.token ?? envToken, source: "env" };
     }
   }
 
   // 2. State file fallback (developer running `bun run script.ts` directly).
-  const stateFile = opts.stateFile ?? process.env.BROWSE_STATE_FILE ?? defaultStateFile();
+  const stateFile =
+    opts.stateFile ?? process.env.BROWSE_STATE_FILE ?? defaultStateFile();
   if (stateFile && fs.existsSync(stateFile)) {
     try {
-      const data = JSON.parse(fs.readFileSync(stateFile, 'utf-8'));
-      if (typeof data.port === 'number' && typeof data.token === 'string') {
+      const data = JSON.parse(fs.readFileSync(stateFile, "utf-8"));
+      if (typeof data.port === "number" && typeof data.token === "string") {
         return {
           port: opts.port ?? data.port,
           token: opts.token ?? data.token,
-          source: 'state-file',
+          source: "state-file",
         };
       }
     } catch {
@@ -95,20 +98,23 @@ export function resolveBrowseAuth(opts: BrowseClientOptions = {}): ResolvedAuth 
   }
 
   throw new Error(
-    'browse-client: cannot find daemon port + token. Either spawn via `$B skill run` ' +
-    '(sets GSTACK_PORT + GSTACK_SKILL_TOKEN) or run from a project with a live daemon ' +
-    '(.gstack/browse.json must exist).'
+    "browse-client: cannot find daemon port + token. Either spawn via `$B skill run` " +
+      "(sets GSTACK_PORT + GSTACK_SKILL_TOKEN) or run from a project with a live daemon " +
+      "(.gstack/browse.json must exist).",
   );
 }
 
 function defaultStateFile(): string | null {
   try {
-    const proc = cp.spawnSync('git', ['rev-parse', '--show-toplevel'], { encoding: 'utf-8', timeout: 2000 });
+    const proc = cp.spawnSync("git", ["rev-parse", "--show-toplevel"], {
+      encoding: "utf-8",
+      timeout: 2000,
+    });
     const root = proc.status === 0 ? proc.stdout.trim() : null;
     const base = root || process.cwd();
-    return path.join(base, '.gstack', 'browse.json');
+    return path.join(base, ".gstack", "browse.json");
   } catch {
-    return path.join(process.cwd(), '.gstack', 'browse.json');
+    return path.join(process.cwd(), ".gstack", "browse.json");
   }
 }
 
@@ -119,7 +125,7 @@ export class BrowseClientError extends Error {
     public readonly body?: string,
   ) {
     super(message);
-    this.name = 'BrowseClientError';
+    this.name = "BrowseClientError";
   }
 }
 
@@ -150,26 +156,32 @@ export class BrowseClient {
     const body = JSON.stringify({
       command: cmd,
       args,
-      ...(this.tabId !== undefined && !isNaN(this.tabId) ? { tabId: this.tabId } : {}),
+      ...(this.tabId !== undefined && !isNaN(this.tabId)
+        ? { tabId: this.tabId }
+        : {}),
     });
 
     let resp: Response;
     try {
       resp = await fetch(`http://127.0.0.1:${this.port}/command`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.token}`,
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${this.token}`,
         },
         body,
         signal: AbortSignal.timeout(this.timeoutMs),
       });
     } catch (err: any) {
-      if (err.name === 'TimeoutError' || err.name === 'AbortError') {
-        throw new BrowseClientError(`browse-client: command "${cmd}" timed out after ${this.timeoutMs}ms`);
+      if (err.name === "TimeoutError" || err.name === "AbortError") {
+        throw new BrowseClientError(
+          `browse-client: command "${cmd}" timed out after ${this.timeoutMs}ms`,
+        );
       }
-      if (err.code === 'ECONNREFUSED') {
-        throw new BrowseClientError(`browse-client: daemon not running on port ${this.port}`);
+      if (err.code === "ECONNREFUSED") {
+        throw new BrowseClientError(
+          `browse-client: daemon not running on port ${this.port}`,
+        );
       }
       throw new BrowseClientError(`browse-client: ${err.message ?? err}`);
     }
@@ -190,41 +202,73 @@ export class BrowseClient {
 
   // ─── Navigation ─────────────────────────────────────────────────
 
-  async goto(url: string): Promise<string> { return this.command('goto', [url]); }
-  async wait(arg: string): Promise<string> { return this.command('wait', [arg]); }
+  async goto(url: string): Promise<string> {
+    return this.command("goto", [url]);
+  }
+  async wait(arg: string): Promise<string> {
+    return this.command("wait", [arg]);
+  }
 
   // ─── Reading ────────────────────────────────────────────────────
 
   async text(selector?: string): Promise<string> {
-    return this.command('text', selector ? [selector] : []);
+    return this.command("text", selector ? [selector] : []);
   }
   async html(selector?: string): Promise<string> {
-    return this.command('html', selector ? [selector] : []);
+    return this.command("html", selector ? [selector] : []);
   }
-  async links(): Promise<string> { return this.command('links'); }
-  async forms(): Promise<string> { return this.command('forms'); }
-  async accessibility(): Promise<string> { return this.command('accessibility'); }
-  async attrs(selector: string): Promise<string> { return this.command('attrs', [selector]); }
-  async media(...flags: string[]): Promise<string> { return this.command('media', flags); }
-  async data(...flags: string[]): Promise<string> { return this.command('data', flags); }
+  async links(): Promise<string> {
+    return this.command("links");
+  }
+  async forms(): Promise<string> {
+    return this.command("forms");
+  }
+  async accessibility(): Promise<string> {
+    return this.command("accessibility");
+  }
+  async attrs(selector: string): Promise<string> {
+    return this.command("attrs", [selector]);
+  }
+  async media(...flags: string[]): Promise<string> {
+    return this.command("media", flags);
+  }
+  async data(...flags: string[]): Promise<string> {
+    return this.command("data", flags);
+  }
 
   // ─── Interaction ────────────────────────────────────────────────
 
-  async click(selector: string): Promise<string> { return this.command('click', [selector]); }
-  async fill(selector: string, value: string): Promise<string> { return this.command('fill', [selector, value]); }
-  async select(selector: string, value: string): Promise<string> { return this.command('select', [selector, value]); }
-  async hover(selector: string): Promise<string> { return this.command('hover', [selector]); }
-  async type(text: string): Promise<string> { return this.command('type', [text]); }
-  async press(key: string): Promise<string> { return this.command('press', [key]); }
+  async click(selector: string): Promise<string> {
+    return this.command("click", [selector]);
+  }
+  async fill(selector: string, value: string): Promise<string> {
+    return this.command("fill", [selector, value]);
+  }
+  async select(selector: string, value: string): Promise<string> {
+    return this.command("select", [selector, value]);
+  }
+  async hover(selector: string): Promise<string> {
+    return this.command("hover", [selector]);
+  }
+  async type(text: string): Promise<string> {
+    return this.command("type", [text]);
+  }
+  async press(key: string): Promise<string> {
+    return this.command("press", [key]);
+  }
   async scroll(selector?: string): Promise<string> {
-    return this.command('scroll', selector ? [selector] : []);
+    return this.command("scroll", selector ? [selector] : []);
   }
 
   // ─── Snapshot + screenshot ──────────────────────────────────────
 
   /** Snapshot returns the ARIA tree. Pass flags like '-i' (interactive only), '-c' (compact). */
-  async snapshot(...flags: string[]): Promise<string> { return this.command('snapshot', flags); }
-  async screenshot(...args: string[]): Promise<string> { return this.command('screenshot', args); }
+  async snapshot(...flags: string[]): Promise<string> {
+    return this.command("snapshot", flags);
+  }
+  async screenshot(...args: string[]): Promise<string> {
+    return this.command("screenshot", args);
+  }
 }
 
 /**
@@ -239,26 +283,66 @@ class LazyBrowseClient {
     return this.inner;
   }
   // Mirror the BrowseClient surface; each method delegates to a freshly resolved instance.
-  command(cmd: string, args: string[] = []) { return this.get().command(cmd, args); }
-  goto(url: string) { return this.get().goto(url); }
-  wait(arg: string) { return this.get().wait(arg); }
-  text(selector?: string) { return this.get().text(selector); }
-  html(selector?: string) { return this.get().html(selector); }
-  links() { return this.get().links(); }
-  forms() { return this.get().forms(); }
-  accessibility() { return this.get().accessibility(); }
-  attrs(selector: string) { return this.get().attrs(selector); }
-  media(...flags: string[]) { return this.get().media(...flags); }
-  data(...flags: string[]) { return this.get().data(...flags); }
-  click(selector: string) { return this.get().click(selector); }
-  fill(selector: string, value: string) { return this.get().fill(selector, value); }
-  select(selector: string, value: string) { return this.get().select(selector, value); }
-  hover(selector: string) { return this.get().hover(selector); }
-  type(text: string) { return this.get().type(text); }
-  press(key: string) { return this.get().press(key); }
-  scroll(selector?: string) { return this.get().scroll(selector); }
-  snapshot(...flags: string[]) { return this.get().snapshot(...flags); }
-  screenshot(...args: string[]) { return this.get().screenshot(...args); }
+  command(cmd: string, args: string[] = []) {
+    return this.get().command(cmd, args);
+  }
+  goto(url: string) {
+    return this.get().goto(url);
+  }
+  wait(arg: string) {
+    return this.get().wait(arg);
+  }
+  text(selector?: string) {
+    return this.get().text(selector);
+  }
+  html(selector?: string) {
+    return this.get().html(selector);
+  }
+  links() {
+    return this.get().links();
+  }
+  forms() {
+    return this.get().forms();
+  }
+  accessibility() {
+    return this.get().accessibility();
+  }
+  attrs(selector: string) {
+    return this.get().attrs(selector);
+  }
+  media(...flags: string[]) {
+    return this.get().media(...flags);
+  }
+  data(...flags: string[]) {
+    return this.get().data(...flags);
+  }
+  click(selector: string) {
+    return this.get().click(selector);
+  }
+  fill(selector: string, value: string) {
+    return this.get().fill(selector, value);
+  }
+  select(selector: string, value: string) {
+    return this.get().select(selector, value);
+  }
+  hover(selector: string) {
+    return this.get().hover(selector);
+  }
+  type(text: string) {
+    return this.get().type(text);
+  }
+  press(key: string) {
+    return this.get().press(key);
+  }
+  scroll(selector?: string) {
+    return this.get().scroll(selector);
+  }
+  snapshot(...flags: string[]) {
+    return this.get().snapshot(...flags);
+  }
+  screenshot(...args: string[]) {
+    return this.get().screenshot(...args);
+  }
 }
 
 export const browse = new LazyBrowseClient();
