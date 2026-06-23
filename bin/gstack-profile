@@ -1,0 +1,104 @@
+#!/usr/bin/env bun
+/**
+ * gstack-profile — per-project skill curation (opt-in).
+ * Reads .gstack/profile.yaml and reconciles <project>/.claude/skills/gstack-*
+ * symlinks against the enabled list. The gstack checkout is the symlink source.
+ */
+import { spawnSync } from "child_process";
+import * as fs from "fs";
+import * as path from "path";
+
+const IS_WINDOWS = process.platform === "win32";
+
+export function resolveSourceDir(): string {
+  const override = process.env.GSTACK_PROFILE_SOURCE_DIR;
+  if (override) return override;
+  return path.resolve(import.meta.dir, "..");
+}
+
+export function enumerateSuperset(
+  sourceDir: string,
+): { dir: string; name: string }[] {
+  const out: { dir: string; name: string }[] = [];
+  let entries: string[];
+  try {
+    entries = fs.readdirSync(sourceDir);
+  } catch {
+    return out;
+  }
+  for (const dir of entries) {
+    if (dir === "node_modules") continue;
+    const skillMd = path.join(sourceDir, dir, "SKILL.md");
+    if (!fs.existsSync(skillMd)) continue;
+    let name = dir;
+    try {
+      const text = fs.readFileSync(skillMd, "utf-8");
+      const m = text.match(/^name:\s*(.+)$/m);
+      if (m) name = m[1].trim();
+    } catch {}
+    out.push({ dir, name });
+  }
+  out.sort((a, b) => a.name.localeCompare(b.name));
+  return out;
+}
+
+export function skillPrefix(sourceDir: string): boolean {
+  const cfg = path.join(sourceDir, "bin", "gstack-config");
+  try {
+    const r = spawnSync(cfg, ["get", "skill_prefix"], { encoding: "utf-8" });
+    return r.stdout.trim() === "true";
+  } catch {
+    return false;
+  }
+}
+
+export function linkName(name: string, prefix: boolean): string {
+  if (!prefix) return name;
+  return name.startsWith("gstack-") ? name : `gstack-${name}`;
+}
+
+export function findProjectRoot(start: string): string {
+  let dir = path.resolve(start);
+  while (true) {
+    if (
+      fs.existsSync(path.join(dir, ".git")) ||
+      fs.existsSync(path.join(dir, ".gstack"))
+    ) {
+      return dir;
+    }
+    const parent = path.dirname(dir);
+    if (parent === dir) return path.resolve(start);
+    dir = parent;
+  }
+}
+
+function cmdList(): number {
+  const source = resolveSourceDir();
+  const projectRoot = findProjectRoot(process.cwd());
+  const enabled = new Set(readProfileEnabled(projectRoot)); // defined in Task 3; empty until then
+  for (const { name } of enumerateSuperset(source)) {
+    const mark = enabled.has(name) ? "x" : " ";
+    console.log(`[${mark}] ${name}`);
+  }
+  return 0;
+}
+
+// Placeholder until Task 3 implements real parsing. Keeps `list` working now.
+export function readProfileEnabled(_projectRoot: string): string[] {
+  return [];
+}
+
+function main(): number {
+  const [cmd] = process.argv.slice(2);
+  switch (cmd) {
+    case "list":
+      return cmdList();
+    default:
+      console.error(
+        "Usage: gstack-profile {list|status|init|enable|disable|sync|off|doctor}",
+      );
+      return 1;
+  }
+}
+
+if (import.meta.main) process.exit(main());
