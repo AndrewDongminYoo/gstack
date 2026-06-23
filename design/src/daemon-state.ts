@@ -43,7 +43,9 @@ export function resolveStateFilePath(): string {
   return path.join(process.cwd(), ".gstack", "design.json");
 }
 
-export function resolveLockFilePath(stateFile: string = resolveStateFilePath()): string {
+export function resolveLockFilePath(
+  stateFile: string = resolveStateFilePath(),
+): string {
   return `${stateFile}.lock`;
 }
 
@@ -86,7 +88,9 @@ export function readVersionString(): string {
   return "unknown";
 }
 
-export function readStateFile(stateFile: string = resolveStateFilePath()): DaemonState | null {
+export function readStateFile(
+  stateFile: string = resolveStateFilePath(),
+): DaemonState | null {
   try {
     return JSON.parse(fs.readFileSync(stateFile, "utf-8")) as DaemonState;
   } catch {
@@ -104,7 +108,9 @@ export function writeStateFile(
   fs.renameSync(tmp, stateFile);
 }
 
-export function removeStateFile(stateFile: string = resolveStateFilePath()): void {
+export function removeStateFile(
+  stateFile: string = resolveStateFilePath(),
+): void {
   try {
     fs.unlinkSync(stateFile);
   } catch {

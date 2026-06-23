@@ -50,7 +50,10 @@ const IDLE_EXTENSION_MS = parseInt(
   process.env.DESIGN_DAEMON_EXTENSION_MS || String(60 * 60 * 1000), // 1h
   10,
 );
-const MAX_EXTENSIONS = parseInt(process.env.DESIGN_DAEMON_MAX_EXTENSIONS || "4", 10);
+const MAX_EXTENSIONS = parseInt(
+  process.env.DESIGN_DAEMON_MAX_EXTENSIONS || "4",
+  10,
+);
 const IDLE_CHECK_INTERVAL_MS = parseInt(
   process.env.DESIGN_DAEMON_CHECK_MS || "60000",
   10,
@@ -125,7 +128,10 @@ async function withBoardMutex<T>(id: string, fn: () => Promise<T>): Promise<T> {
   const next = new Promise<void>((r) => {
     release = r;
   });
-  boardMutex.set(id, prev.then(() => next));
+  boardMutex.set(
+    id,
+    prev.then(() => next),
+  );
   await prev;
   try {
     return await fn();
@@ -184,8 +190,12 @@ function findActiveBoardForSourceDir(sourceDir: string): Board | null {
 }
 
 function escapeHtml(s: string): string {
-  return s.replace(/[&<>"']/g, (c) =>
-    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!),
+  return s.replace(
+    /[&<>"']/g,
+    (c) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
+        c
+      ]!,
   );
 }
 
@@ -212,7 +222,9 @@ export function idleCheckTick(): void {
   if (idle < IDLE_MS) return;
   if (hasActiveBoards()) {
     if (idleExtensions >= MAX_EXTENSIONS) {
-      dlog(`idle past hard ceiling with ${nonDoneCount()} active boards — forcing shutdown`);
+      dlog(
+        `idle past hard ceiling with ${nonDoneCount()} active boards — forcing shutdown`,
+      );
       gracefulShutdown(0);
       return;
     }
@@ -242,7 +254,9 @@ function handleHealth(): Response {
 }
 
 function handleIndex(): Response {
-  const sorted = [...boards.values()].sort((a, b) => b.publishedAt - a.publishedAt);
+  const sorted = [...boards.values()].sort(
+    (a, b) => b.publishedAt - a.publishedAt,
+  );
   const rows = sorted
     .map((b) => {
       const ts = new Date(b.publishedAt).toISOString();
@@ -272,7 +286,9 @@ function handleIndex(): Response {
 <p class="meta">daemon up ${Math.floor((Date.now() - startTime) / 1000)}s · ${boards.size} board(s) · ${nonDoneCount()} active</p>
 ${list}
 </body></html>`;
-  return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8" } });
+  return new Response(html, {
+    headers: { "Content-Type": "text/html; charset=utf-8" },
+  });
 }
 
 async function handlePublish(req: Request, origin: string): Promise<Response> {
@@ -286,9 +302,13 @@ async function handlePublish(req: Request, origin: string): Promise<Response> {
     return Response.json({ error: "Expected JSON object" }, { status: 400 });
   }
   const htmlPath = typeof body.html === "string" ? body.html : "";
-  if (!htmlPath) return Response.json({ error: "Missing 'html' field" }, { status: 400 });
+  if (!htmlPath)
+    return Response.json({ error: "Missing 'html' field" }, { status: 400 });
   if (!fs.existsSync(htmlPath)) {
-    return Response.json({ error: `HTML file not found: ${htmlPath}` }, { status: 400 });
+    return Response.json(
+      { error: `HTML file not found: ${htmlPath}` },
+      { status: 400 },
+    );
   }
   let resolvedHtml: string;
   let sourceDir: string;
@@ -296,7 +316,10 @@ async function handlePublish(req: Request, origin: string): Promise<Response> {
     resolvedHtml = fs.realpathSync(path.resolve(htmlPath));
     sourceDir = fs.realpathSync(path.dirname(resolvedHtml));
   } catch (e: any) {
-    return Response.json({ error: `Cannot resolve path: ${e.message}` }, { status: 400 });
+    return Response.json(
+      { error: `Cannot resolve path: ${e.message}` },
+      { status: 400 },
+    );
   }
   if (!fs.statSync(resolvedHtml).isFile()) {
     return Response.json(
@@ -347,7 +370,9 @@ async function handlePublish(req: Request, origin: string): Promise<Response> {
   boards.set(id, board);
   evictUntilUnderCap();
   markMeaningfulActivity();
-  dlog(`published board ${id} sourceDir=${sourceDir} pid=${board.publisherPid}`);
+  dlog(
+    `published board ${id} sourceDir=${sourceDir} pid=${board.publisherPid}`,
+  );
   return Response.json({
     id,
     url: `${origin}/boards/${id}/`,
@@ -372,7 +397,10 @@ function handleBoardProgress(board: Board): Response {
   return Response.json({ status: board.state });
 }
 
-async function handleBoardFeedback(board: Board, req: Request): Promise<Response> {
+async function handleBoardFeedback(
+  board: Board,
+  req: Request,
+): Promise<Response> {
   let body: any;
   try {
     body = await req.json();
@@ -421,7 +449,10 @@ async function handleBoardFeedback(board: Board, req: Request): Promise<Response
   return Response.json({ received: true, action: "unknown" });
 }
 
-async function handleBoardReload(board: Board, req: Request): Promise<Response> {
+async function handleBoardReload(
+  board: Board,
+  req: Request,
+): Promise<Response> {
   let body: any;
   try {
     body = await req.json();
@@ -430,7 +461,10 @@ async function handleBoardReload(board: Board, req: Request): Promise<Response> 
   }
   const newHtmlPath = typeof body?.html === "string" ? body.html : "";
   if (!newHtmlPath || !fs.existsSync(newHtmlPath)) {
-    return Response.json({ error: `HTML file not found: ${newHtmlPath}` }, { status: 400 });
+    return Response.json(
+      { error: `HTML file not found: ${newHtmlPath}` },
+      { status: 400 },
+    );
   }
   const resolvedReload = fs.realpathSync(path.resolve(newHtmlPath));
   if (!resolvedReload.startsWith(board.allowedDir + path.sep)) {
@@ -474,13 +508,15 @@ export async function fetchHandler(req: Request): Promise<Response> {
 
   if (req.method === "GET" && url.pathname === "/health") return handleHealth();
   if (req.method === "GET" && url.pathname === "/") return handleIndex();
-  if (req.method === "POST" && url.pathname === "/api/boards") return handlePublish(req, origin);
+  if (req.method === "POST" && url.pathname === "/api/boards")
+    return handlePublish(req, origin);
 
   if (req.method === "POST" && url.pathname === "/shutdown") {
     if (hasActiveBoards()) {
       return Response.json(
         {
-          error: "Refusing /shutdown: daemon has active boards. Submit or close them first.",
+          error:
+            "Refusing /shutdown: daemon has active boards. Submit or close them first.",
           activeBoards: nonDoneCount(),
         },
         { status: 409 },
@@ -510,7 +546,8 @@ export async function fetchHandler(req: Request): Promise<Response> {
       });
     }
     if (req.method === "GET" && subpath === "/") return handleBoardGet(board);
-    if (req.method === "GET" && subpath === "/api/progress") return handleBoardProgress(board);
+    if (req.method === "GET" && subpath === "/api/progress")
+      return handleBoardProgress(board);
     if (req.method === "POST" && subpath === "/api/feedback") {
       return withBoardMutex(id, () => handleBoardFeedback(board, req));
     }
@@ -542,7 +579,9 @@ export function start(): { port: number } {
     cmdlineMarker: CMDLINE_MARKER,
   };
   writeStateFile(state);
-  dlog(`DAEMON_STARTED port=${actualPort} pid=${process.pid} version=${VERSION}`);
+  dlog(
+    `DAEMON_STARTED port=${actualPort} pid=${process.pid} version=${VERSION}`,
+  );
   // Stdout line the spawning CLI parses to learn the port quickly.
   console.log(`DAEMON_STARTED port=${actualPort}`);
 

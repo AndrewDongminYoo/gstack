@@ -75,7 +75,9 @@ function printUsage(): void {
     console.log(`  ${"".padEnd(12)} ${info.usage}`);
   }
   console.log("\nAuth: ~/.gstack/openai.json, then OPENAI_API_KEY env var");
-  console.log("If OPENAI_API_KEY matches a current-directory .env file, the source is reported before billing.");
+  console.log(
+    "If OPENAI_API_KEY matches a current-directory .env file, the source is reported before billing.",
+  );
   console.log("Setup: $D setup");
 }
 
@@ -108,7 +110,8 @@ async function runSetup(): Promise<void> {
   console.log("\nRunning smoke test (generating a simple image)...");
   try {
     await generate({
-      brief: "A simple blue square centered on a white background. Minimal, geometric, clean.",
+      brief:
+        "A simple blue square centered on a white background. Minimal, geometric, clean.",
       output: "/tmp/gstack-design-smoke-test.png",
       size: "1024x1024",
       quality: "low",
@@ -151,7 +154,8 @@ async function main(): Promise<void> {
       // Parse --images as glob or multiple files
       const imagesArg = flags.images as string;
       const images = await resolveImagePaths(imagesArg);
-      const outputPath = (flags.output as string) || "/tmp/gstack-design-board.html";
+      const outputPath =
+        (flags.output as string) || "/tmp/gstack-design-board.html";
       compare({ images, output: outputPath });
       // If --serve flag is set, publish the board.
       //   Default: ensure the persistent daemon is up, POST the board, open
@@ -184,7 +188,10 @@ async function main(): Promise<void> {
       console.error(`Generating implementation prompt from ${promptImage}...`);
       const proc2 = Bun.spawn(["git", "rev-parse", "--show-toplevel"]);
       const root = (await new Response(proc2.stdout).text()).trim();
-      const d2c = await generateDesignToCodePrompt(promptImage, root || undefined);
+      const d2c = await generateDesignToCodePrompt(
+        promptImage,
+        root || undefined,
+      );
       console.log(JSON.stringify(d2c, null, 2));
       break;
     }
@@ -252,7 +259,9 @@ async function main(): Promise<void> {
       }
       console.error(`Verifying implementation against approved mockup...`);
       const verifyResult = await verifyAgainstMockup(mockup, screenshot);
-      console.error(`Match: ${verifyResult.matchScore}/100 — ${verifyResult.pass ? "PASS" : "FAIL"}`);
+      console.error(
+        `Match: ${verifyResult.matchScore}/100 — ${verifyResult.pass ? "PASS" : "FAIL"}`,
+      );
       console.log(JSON.stringify(verifyResult, null, 2));
       break;
     }
@@ -301,7 +310,9 @@ async function main(): Promise<void> {
       if (sub === "stop") {
         const r = await shutdownDaemon({ force: !!flags.force });
         if (r.stopped) {
-          console.log(JSON.stringify({ stopped: true, reason: r.reason }, null, 2));
+          console.log(
+            JSON.stringify({ stopped: true, reason: r.reason }, null, 2),
+          );
           process.exit(0);
         }
         console.error(
@@ -312,7 +323,9 @@ async function main(): Promise<void> {
         );
         process.exit(1);
       }
-      console.error(`Unknown daemon sub-command: ${sub}. Use 'status' or 'stop'.`);
+      console.error(
+        `Unknown daemon sub-command: ${sub}. Use 'status' or 'stop'.`,
+      );
       process.exit(2);
     }
   }
@@ -335,9 +348,14 @@ async function main(): Promise<void> {
  *     BOARD_URL + ./api/reload to work end-to-end. Emitting the legacy
  *     line keeps port-only consumers from breaking outright.)
  */
-async function publishToDaemon(opts: { html: string; title?: string }): Promise<void> {
+async function publishToDaemon(opts: {
+  html: string;
+  title?: string;
+}): Promise<void> {
   if (!opts.html) {
-    console.error("--html is required (compare --serve provides --output as the html)");
+    console.error(
+      "--html is required (compare --serve provides --output as the html)",
+    );
     process.exit(1);
   }
   const ensured = await ensureDaemon({});
@@ -355,7 +373,13 @@ async function publishToDaemon(opts: { html: string; title?: string }): Promise<
   // port. The full back-compat story requires the caller to ALSO learn the
   // per-board path; see publishToDaemon docstring above.
   console.error(`SERVE_STARTED: port=${ensured.port} html=${opts.html}`);
-  console.log(JSON.stringify({ id: result.id, url: result.url, sourceDir: result.sourceDir }, null, 2));
+  console.log(
+    JSON.stringify(
+      { id: result.id, url: result.url, sourceDir: result.sourceDir },
+      null,
+      2,
+    ),
+  );
   openBrowser(result.url);
   // Short-lived publisher process exits; daemon keeps serving.
 }
@@ -383,7 +407,9 @@ function openBrowser(url: string): void {
  */
 async function resolveImagePaths(input: string): Promise<string[]> {
   if (!input) {
-    console.error("--images is required. Provide glob pattern or comma-separated paths.");
+    console.error(
+      "--images is required. Provide glob pattern or comma-separated paths.",
+    );
     process.exit(1);
   }
 
@@ -392,7 +418,11 @@ async function resolveImagePaths(input: string): Promise<string[]> {
     const glob = new Bun.Glob(input);
     const paths: string[] = [];
     for await (const match of glob.scan({ absolute: true })) {
-      if (match.endsWith(".png") || match.endsWith(".jpg") || match.endsWith(".jpeg")) {
+      if (
+        match.endsWith(".png") ||
+        match.endsWith(".jpg") ||
+        match.endsWith(".jpeg")
+      ) {
         paths.push(match);
       }
     }
@@ -400,7 +430,7 @@ async function resolveImagePaths(input: string): Promise<string[]> {
   }
 
   // Comma-separated or single path
-  return input.split(",").map(p => p.trim());
+  return input.split(",").map((p) => p.trim());
 }
 
 // Self-execution shortcut: when invoked with --daemon-mode, this same

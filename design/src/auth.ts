@@ -38,7 +38,9 @@ function readEnvValue(filePath: string, key: string): string | null {
   }
 
   for (const line of content.split(/\r?\n/)) {
-    const match = line.match(new RegExp(`^\\s*(?:export\\s+)?${key}\\s*=\\s*(.*)\\s*$`));
+    const match = line.match(
+      new RegExp(`^\\s*(?:export\\s+)?${key}\\s*=\\s*(.*)\\s*$`),
+    );
     if (!match) continue;
 
     let value = match[1].trim();
@@ -85,11 +87,19 @@ export function resolveApiKeyInfo(): ApiKeyResolution | null {
 
   // 2. Check environment variable
   if (process.env.OPENAI_API_KEY) {
-    const envFile = matchingCwdEnvFile("OPENAI_API_KEY", process.env.OPENAI_API_KEY);
+    const envFile = matchingCwdEnvFile(
+      "OPENAI_API_KEY",
+      process.env.OPENAI_API_KEY,
+    );
     const warning = envFile
       ? `Warning: OPENAI_API_KEY matches ${envFile} in the current directory. Design generation may bill that project's OpenAI account. Run $D setup to store a gstack-specific key in ~/.gstack/openai.json.`
       : undefined;
-    return { key: process.env.OPENAI_API_KEY, source: "env", envFile: envFile ?? undefined, warning };
+    return {
+      key: process.env.OPENAI_API_KEY,
+      source: "env",
+      envFile: envFile ?? undefined,
+      warning,
+    };
   }
 
   return null;
@@ -101,7 +111,8 @@ export function resolveApiKey(): string | null {
 
 export function describeApiKeySource(resolution: ApiKeyResolution): string {
   if (resolution.source === "config") return "~/.gstack/openai.json";
-  if (resolution.envFile) return `OPENAI_API_KEY environment variable (matches ${resolution.envFile} in current directory)`;
+  if (resolution.envFile)
+    return `OPENAI_API_KEY environment variable (matches ${resolution.envFile} in current directory)`;
   return "OPENAI_API_KEY environment variable";
 }
 
@@ -124,7 +135,9 @@ export function requireApiKey(): string {
     console.error("No OpenAI API key found.");
     console.error("");
     console.error("Run: $D setup");
-    console.error("  or save to ~/.gstack/openai.json: { \"api_key\": \"sk-...\" }");
+    console.error(
+      '  or save to ~/.gstack/openai.json: { "api_key": "sk-..." }',
+    );
     console.error("  or set OPENAI_API_KEY environment variable");
     console.error("");
     console.error("Get a key at: https://platform.openai.com/api-keys");

@@ -98,7 +98,10 @@ export async function ensureDaemon(
     const health = await healthCheck(existing.port);
     if (health) {
       if (health.version === expectedVersion) {
-        log(verbose, `attached to existing daemon pid=${existing.pid} port=${existing.port}`);
+        log(
+          verbose,
+          `attached to existing daemon pid=${existing.pid} port=${existing.port}`,
+        );
         return { port: existing.port, version: health.version, spawned: false };
       }
       // Version mismatch: refuse if active boards exist (Codex finding).
@@ -112,15 +115,29 @@ export async function ensureDaemon(
         process.exit(1);
       }
       // No active boards — safe to graceful-shutdown and respawn.
-      log(verbose, `daemon version mismatch (${health.version} vs ${expectedVersion}); shutting down`);
+      log(
+        verbose,
+        `daemon version mismatch (${health.version} vs ${expectedVersion}); shutting down`,
+      );
       await gracefulShutdownExistingDaemon(existing.port);
-      await killByPidWithIdentity(existing.pid, existing.cmdlineMarker, verbose);
+      await killByPidWithIdentity(
+        existing.pid,
+        existing.cmdlineMarker,
+        verbose,
+      );
     } else {
       // State file points at an unresponsive port. Either the daemon
       // crashed or the PID got reused. Identity-verify before any SIGTERM
       // so we don't kill an unrelated process (Codex finding).
-      log(verbose, `state file present (pid=${existing.pid}) but /health unresponsive`);
-      await killByPidWithIdentity(existing.pid, existing.cmdlineMarker, verbose);
+      log(
+        verbose,
+        `state file present (pid=${existing.pid}) but /health unresponsive`,
+      );
+      await killByPidWithIdentity(
+        existing.pid,
+        existing.cmdlineMarker,
+        verbose,
+      );
     }
   }
 
@@ -150,7 +167,10 @@ export async function ensureDaemon(
     if (fresh) {
       const h = await healthCheck(fresh.port);
       if (h && h.version === expectedVersion) {
-        log(verbose, `another CLI won the lock; attaching pid=${fresh.pid} port=${fresh.port}`);
+        log(
+          verbose,
+          `another CLI won the lock; attaching pid=${fresh.pid} port=${fresh.port}`,
+        );
         return { port: fresh.port, version: h.version, spawned: false };
       }
     }
@@ -185,7 +205,9 @@ export interface PublishBoardResult {
   sourceDir: string;
 }
 
-export async function publishBoard(opts: PublishBoardOptions): Promise<PublishBoardResult> {
+export async function publishBoard(
+  opts: PublishBoardOptions,
+): Promise<PublishBoardResult> {
   const body: Record<string, unknown> = {
     html: opts.html,
     publisherPid: opts.publisherPid ?? process.pid,
@@ -199,7 +221,10 @@ export async function publishBoard(opts: PublishBoardOptions): Promise<PublishBo
   if (!resp.ok) {
     let errText: string;
     try {
-      const j = (await resp.json()) as { error?: string; existing?: { id: string; url: string } };
+      const j = (await resp.json()) as {
+        error?: string;
+        existing?: { id: string; url: string };
+      };
       if (j.existing) {
         // 409: surface the existing-board URL so the caller can reuse it
         return { id: j.existing.id, url: j.existing.url, sourceDir: "" };
@@ -244,7 +269,8 @@ function resolveSpawnCommand(scriptOverride: string | undefined): {
   args: string[];
 } {
   const execBase = path.basename(process.execPath).toLowerCase();
-  const isCompiledHost = execBase !== "bun" && execBase !== "bun.exe" && execBase !== "node";
+  const isCompiledHost =
+    execBase !== "bun" && execBase !== "bun.exe" && execBase !== "node";
   if (isCompiledHost && !scriptOverride) {
     return {
       command: process.execPath,
@@ -401,7 +427,15 @@ export async function shutdownDaemon(opts: { force?: boolean } = {}): Promise<{
 /** $D daemon status — for the CLI sub-command. */
 export async function daemonStatus(): Promise<
   | { running: false }
-  | { running: true; port: number; pid: number; version: string; boards: number; activeBoards: number; uptime: number }
+  | {
+      running: true;
+      port: number;
+      pid: number;
+      version: string;
+      boards: number;
+      activeBoards: number;
+      uptime: number;
+    }
 > {
   const existing = readStateFile();
   if (!existing) return { running: false };
