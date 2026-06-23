@@ -1,5 +1,6 @@
 <!-- AUTO-GENERATED from plan-completion.md.tmpl — do not edit directly -->
 <!-- Regenerate: bun run gen:skill-docs -->
+
 ## Step 8: Plan Completion Audit
 
 **Dispatch this step as a subagent** using the Agent tool with `subagent_type: "general-purpose"`. The subagent reads the plan file and every referenced code file in its own fresh context. Parent gets only the conclusion.
@@ -35,6 +36,7 @@ done
 3. **Validation:** If a plan file was found via content-based search (not conversation context), read the first 20 lines and verify it is relevant to the current branch's work. If it appears to be from a different project or feature, treat as "no plan file found."
 
 **Error handling:**
+
 - No plan file found → skip with "No plan file detected — skipping."
 - Plan file found but unreadable (permissions, encoding) → skip with "Plan file found but unreadable — skipping."
 
@@ -50,6 +52,7 @@ Read the plan file. Extract every actionable item — anything that describes wo
 - **Data model changes:** "Add column X to table Y", "Create migration for Z"
 
 **Ignore:**
+
 - Context/Background sections (`## Context`, `## Background`, `## Problem`)
 - Questions and open items (marked with ?, "TBD", "TODO: decide")
 - Review report sections (`## GSTACK REVIEW REPORT`)
@@ -61,6 +64,7 @@ Read the plan file. Extract every actionable item — anything that describes wo
 **No items found:** If the plan contains no extractable actionable items, skip with: "Plan file contains no actionable items — skipping completion audit."
 
 For each item, note:
+
 - The item text (verbatim or concise summary)
 - Its category: CODE | TEST | MIGRATION | CONFIG | DOCS
 
@@ -80,11 +84,11 @@ Before judging completion, classify HOW each item can be verified. The diff alon
 - **EXTERNAL-STATE** → UNVERIFIABLE. Cite the system and the specific check the user must perform.
 - **CONTENT-SHAPE in another repo** → if the file exists, run any project-detected validator (see "Validator detection" below) before falling back to UNVERIFIABLE. With a validator: pass → DONE; fail → NOT DONE (cite validator output). No validator available: classify UNVERIFIABLE and cite both the file path and the convention to confirm.
 
-**Path concreteness rule.** If a plan item names a *concrete filesystem path* (absolute, `~/...`, or `<sibling-repo>/<file>`), it MUST be classified DONE or NOT DONE based on `[ -f <path> ]`. UNVERIFIABLE is only valid when the path is genuinely abstract ("Cloudflare DNS", "Supabase allowlist") or the sibling root is unreachable on this machine. "I don't want to check" is not unreachable.
+**Path concreteness rule.** If a plan item names a _concrete filesystem path_ (absolute, `~/...`, or `<sibling-repo>/<file>`), it MUST be classified DONE or NOT DONE based on `[ -f <path> ]`. UNVERIFIABLE is only valid when the path is genuinely abstract ("Cloudflare DNS", "Supabase allowlist") or the sibling root is unreachable on this machine. "I don't want to check" is not unreachable.
 
 **Validator detection.** Before falling back to UNVERIFIABLE on a CONTENT-SHAPE item, scan the target repo's `package.json` for any script matching `validate-*`, `lint-wiki`, `check-docs`, or similar. If found, invoke it with the relevant path argument (e.g., `npm run validate-wiki -- <path>`). For multi-target validators (e.g., `validate-wiki --all`), run once and reconcile per-item from the output. A passing validator promotes the item from UNVERIFIABLE to DONE; a failing one demotes to NOT DONE.
 
-**Honesty rule.** Do NOT classify an item as DONE just because related code shipped. Code that *handles* a deliverable is not the deliverable. Shipping a markdown-extraction library is not the same as shipping the markdown file. When in doubt between DONE and UNVERIFIABLE, prefer UNVERIFIABLE — better to surface a confirmation prompt than silently miss a deliverable.
+**Honesty rule.** Do NOT classify an item as DONE just because related code shipped. Code that _handles_ a deliverable is not the deliverable. Shipping a markdown-extraction library is not the same as shipping the markdown file. When in doubt between DONE and UNVERIFIABLE, prefer UNVERIFIABLE — better to surface a confirmation prompt than silently miss a deliverable.
 
 ### Cross-Reference Against Diff
 
@@ -153,7 +157,7 @@ After producing the completion checklist, evaluate in priority order:
    **Per-item confirmation is mandatory.** Do NOT use a single AskUserQuestion to blanket-confirm all UNVERIFIABLE items. Blanket confirmation is the failure mode that surfaced in VAS-449 (user clicks A without opening any file). Instead:
 
    - Loop through UNVERIFIABLE items one at a time.
-   - For each item, use AskUserQuestion with the item's *specific* manual check (e.g., "Confirm: does `~/Development/domain-hq/docs/dashboard.md` exist?", not "Have you checked all items?").
+   - For each item, use AskUserQuestion with the item's _specific_ manual check (e.g., "Confirm: does `~/Development/domain-hq/docs/dashboard.md` exist?", not "Have you checked all items?").
    - Options per item:
      Y) Confirmed done — cite what you verified (free-text, embedded in PR body)
      N) Not done — block ship; treat as NOT DONE and re-enter the priority-1 gate
@@ -173,7 +177,7 @@ After producing the completion checklist, evaluate in priority order:
 **No plan file found:** Skip entirely. "No plan file detected — skipping plan completion audit."
 
 **Include in PR body (Step 8):** Add a `## Plan Completion` section with the checklist summary.
->
+
 > After your analysis, output a single JSON object on the LAST LINE of your response (no other text after it):
 > `{"total_items":N,"done":N,"changed":N,"deferred":N,"unverifiable":N,"summary":"<markdown checklist for PR body>"}`
 
@@ -223,6 +227,7 @@ cat ${CLAUDE_SKILL_DIR}/../qa-only/SKILL.md
 **If unreadable:** Skip with "Could not load /qa-only — skipping plan verification."
 
 Follow the /qa-only workflow with these modifications:
+
 - **Skip the preamble** (already handled by /ship)
 - **Use the plan's verification section as the primary test input** — treat each verification item as a test case
 - **Use the detected dev server URL** as the base URL
@@ -243,6 +248,7 @@ Follow the /qa-only workflow with these modifications:
 ### 5. Include in PR body
 
 Add a `## Verification Results` section to the PR body (Step 19):
+
 - If verification ran: summary of results (N PASS, M FAIL, K SKIPPED)
 - If skipped: reason for skipping (no plan, no server, no verification section)
 
@@ -268,6 +274,7 @@ If `CROSS_PROJECT` is `unset` (first time): Use AskUserQuestion:
 > where cross-contamination would be a concern.
 
 Options:
+
 - A) Enable cross-project learnings (recommended)
 - B) Keep learnings project-scoped only
 

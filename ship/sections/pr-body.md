@@ -1,5 +1,6 @@
 <!-- AUTO-GENERATED from pr-body.md.tmpl — do not edit directly -->
 <!-- Regenerate: bun run gen:skill-docs -->
+
 ## Step 18: Documentation sync (via subagent, before PR creation)
 
 **Dispatch /document-release as a subagent** using the Agent tool with `subagent_type: "general-purpose"`. The subagent gets a fresh context window — zero rot from the preceding 17 steps. It also runs the **full** `/document-release` workflow (with CHANGELOG clobber protection, doc exclusions, risky-change gates, named staging, race-safe PR body editing) rather than a weaker reimplementation.
@@ -32,11 +33,13 @@
 **Idempotency check:** Check if a PR/MR already exists for this branch.
 
 **If GitHub:**
+
 ```bash
 gh pr view --json url,number,state -q 'if .state == "OPEN" then "PR #\(.number): \(.url)" else "NO_PR" end' 2>/dev/null || echo "NO_PR"
 ```
 
 **If GitLab:**
+
 ```bash
 glab mr view -F json 2>/dev/null | jq -r 'if .state == "opened" then "MR_EXISTS" else "NO_MR" end' 2>/dev/null || echo "NO_MR"
 ```

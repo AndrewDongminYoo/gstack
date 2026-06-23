@@ -1,5 +1,6 @@
 <!-- AUTO-GENERATED from greptile.md.tmpl — do not edit directly -->
 <!-- Regenerate: bun run gen:skill-docs -->
+
 ## Step 10: Address Greptile review comments (if PR exists)
 
 **Dispatch the fetch + classification as a subagent** using the Agent tool with `subagent_type: "general-purpose"`. The subagent pulls every Greptile comment, runs the escalation detection algorithm, and classifies each comment. Parent receives a structured list and handles user interaction + file edits.
@@ -26,6 +27,7 @@ Otherwise, print: `+ {total} Greptile comments ({valid_actionable} valid, {alrea
 For each comment in `comments`:
 
 **VALID & ACTIONABLE:** Use AskUserQuestion with:
+
 - The comment (file:line or [top-level] + body summary + permalink URL)
 - `RECOMMENDATION: Choose A because [one-line reason]`
 - Options: A) Fix now, B) Acknowledge and ship anyway, C) It's a false positive
@@ -33,10 +35,12 @@ For each comment in `comments`:
 - If user chooses C: reply using the **False Positive reply template** from greptile-triage.md (include evidence + suggested re-rank), save to both per-project and global greptile-history (type: fp).
 
 **VALID BUT ALREADY FIXED:** Reply using the **Already Fixed reply template** from greptile-triage.md — no AskUserQuestion needed:
+
 - Include what was done and the fixing commit SHA
 - Save to both per-project and global greptile-history (type: already-fixed)
 
 **FALSE POSITIVE:** Use AskUserQuestion:
+
 - Show the comment and why you think it's wrong (file:line or [top-level] + body summary + permalink URL)
 - Options:
   - A) Reply to Greptile explaining the false positive (recommended if clearly wrong)

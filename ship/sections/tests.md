@@ -1,5 +1,6 @@
 <!-- AUTO-GENERATED from tests.md.tmpl — do not edit directly -->
 <!-- Regenerate: bun run gen:skill-docs -->
+
 ## Step 4: Test Framework Bootstrap
 
 ## Test Framework Bootstrap
@@ -43,21 +44,22 @@ If user picks H → write `.gstack/no-test-bootstrap` and continue without tests
 ### B2. Research best practices
 
 Use WebSearch to find current best practices for the detected runtime:
+
 - `"[runtime] best test framework 2025 2026"`
 - `"[framework A] vs [framework B] comparison"`
 
 If WebSearch is unavailable, use this built-in knowledge table:
 
-| Runtime | Primary recommendation | Alternative |
-|---------|----------------------|-------------|
-| Ruby/Rails | minitest + fixtures + capybara | rspec + factory_bot + shoulda-matchers |
-| Node.js | vitest + @testing-library | jest + @testing-library |
-| Next.js | vitest + @testing-library/react + playwright | jest + cypress |
-| Python | pytest + pytest-cov | unittest |
-| Go | stdlib testing + testify | stdlib only |
-| Rust | cargo test (built-in) + mockall | — |
-| PHP | phpunit + mockery | pest |
-| Elixir | ExUnit (built-in) + ex_machina | — |
+| Runtime    | Primary recommendation                       | Alternative                            |
+| ---------- | -------------------------------------------- | -------------------------------------- |
+| Ruby/Rails | minitest + fixtures + capybara               | rspec + factory_bot + shoulda-matchers |
+| Node.js    | vitest + @testing-library                    | jest + @testing-library                |
+| Next.js    | vitest + @testing-library/react + playwright | jest + cypress                         |
+| Python     | pytest + pytest-cov                          | unittest                               |
+| Go         | stdlib testing + testify                     | stdlib only                            |
+| Rust       | cargo test (built-in) + mockall              | —                                      |
+| PHP        | phpunit + mockery                            | pest                                   |
+| Elixir     | ExUnit (built-in) + ex_machina               | —                                      |
 
 ### B3. Framework selection
 
@@ -112,6 +114,7 @@ ls .gitlab-ci.yml .circleci/ bitrise.yml 2>/dev/null
 
 If `.github/` exists (or no CI detected — default to GitHub Actions):
 Create `.github/workflows/test.yml` with:
+
 - `runs-on: ubuntu-latest`
 - Appropriate setup action for the runtime (setup-node, setup-ruby, setup-python, etc.)
 - The same test command verified in B5
@@ -124,6 +127,7 @@ If non-GitHub CI detected → skip CI generation with note: "Detected {provider}
 First check: If TESTING.md already exists → read it and update/append rather than overwriting. Never destroy existing content.
 
 Write TESTING.md with:
+
 - Philosophy: "100% test coverage is the key to great vibe coding. Tests let you move fast, trust your instincts, and ship with confidence — without them, vibe coding is just yolo coding. With tests, it's a superpower."
 - Framework name and version
 - How to run tests (the verified command from B5)
@@ -135,6 +139,7 @@ Write TESTING.md with:
 First check: If CLAUDE.md already has a `## Testing` section → skip. Don't duplicate.
 
 Append a `## Testing` section:
+
 - Run command and test directory
 - Reference to TESTING.md
 - Test expectations:
@@ -185,6 +190,7 @@ When tests fail, do NOT immediately stop. First, determine ownership:
 For each failing test:
 
 1. **Get the files changed on this branch:**
+
    ```bash
    git diff origin/<base>...HEAD --name-only
    ```
@@ -238,18 +244,21 @@ Use AskUserQuestion:
 ### Step T4: Execute the chosen action
 
 **If "Investigate and fix now":**
+
 - Switch to /investigate mindset: root cause first, then minimal fix.
 - Fix the pre-existing failure.
 - Commit the fix separately from the branch's changes: `git commit -m "fix: pre-existing test failure in <test-file>"`
 - Continue with the workflow.
 
 **If "Add as P0 TODO":**
+
 - If `TODOS.md` exists, add the entry following the format in `review/TODOS-format.md` (or `.claude/skills/review/TODOS-format.md`).
 - If `TODOS.md` does not exist, create it with the standard header and add the entry.
 - Entry should include: title, the error output, which branch it was noticed on, and priority P0.
 - Continue with the workflow — treat the pre-existing failure as non-blocking.
 
 **If "Blame + assign GitHub issue" (collaborative only):**
+
 - Find who likely broke it. Check BOTH the test file AND the production code it tests:
   ```bash
   # Who last touched the failing test?
@@ -260,23 +269,24 @@ Use AskUserQuestion:
   If these are different people, prefer the production code author — they likely introduced the regression.
 - Create an issue assigned to that person (use the platform detected in Step 0):
   - **If GitHub:**
-    ```bash
+    ````bash
     gh issue create \
       --title "Pre-existing test failure: <test-name>" \
       --body "Found failing on branch <current-branch>. Failure is pre-existing.\n\n**Error:**\n```\n<first 10 lines>\n```\n\n**Last modified by:** <author>\n**Noticed by:** gstack /ship on <date>" \
       --assignee "<github-username>"
-    ```
+    ````
   - **If GitLab:**
-    ```bash
+    ````bash
     glab issue create \
       -t "Pre-existing test failure: <test-name>" \
       -d "Found failing on branch <current-branch>. Failure is pre-existing.\n\n**Error:**\n```\n<first 10 lines>\n```\n\n**Last modified by:** <author>\n**Noticed by:** gstack /ship on <date>" \
       -a "<gitlab-username>"
-    ```
+    ````
 - If neither CLI is available or `--assignee`/`-a` fails (user not in org, etc.), create the issue without assignee and note who should look at it in the body.
 - Continue with the workflow.
 
 **If "Skip":**
+
 - Continue with the workflow.
 - Note in output: "Pre-existing test failure skipped: <test-name>"
 
@@ -297,6 +307,7 @@ git diff origin/<base> --name-only
 ```
 
 Match against these patterns (from CLAUDE.md):
+
 - `app/services/*_prompt_builder.rb`
 - `app/services/*_generation_service.rb`, `*_writer_service.rb`, `*_designer_service.rb`
 - `app/services/*_evaluator.rb`, `*_scorer.rb`, `*_classifier_service.rb`, `*_analyzer.rb`
@@ -318,6 +329,7 @@ grep -l "changed_file_basename" test/evals/*_eval_runner.rb
 Map runner → test file: `post_generation_eval_runner.rb` → `post_generation_eval_test.rb`.
 
 **Special cases:**
+
 - Changes to `test/evals/judges/*.rb`, `test/evals/support/*.rb`, or `test/evals/fixtures/` affect ALL suites that use those judges/support files. Check imports in the eval test files to determine which.
 - Changes to `config/system_prompts/*.txt` — grep eval runners for the prompt filename to find affected suites.
 - If unsure which suites are affected, run ALL suites that could plausibly be impacted. Over-testing is better than missing a regression.

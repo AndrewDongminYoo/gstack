@@ -1,16 +1,20 @@
 <!-- AUTO-GENERATED from changelog.md.tmpl — do not edit directly -->
 <!-- Regenerate: bun run gen:skill-docs -->
+
 ## Step 13: CHANGELOG (auto-generate)
 
 1. Read `CHANGELOG.md` header to know the format.
 
 2. **First, enumerate every commit on the branch:**
+
    ```bash
    git log <base>..HEAD --oneline
    ```
+
    Copy the full list. Count the commits. You will use this as a checklist.
 
 3. **Read the full diff** to understand what each commit actually changed:
+
    ```bash
    git diff <base>...HEAD
    ```

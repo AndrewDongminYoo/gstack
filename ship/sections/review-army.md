@@ -1,5 +1,6 @@
 <!-- AUTO-GENERATED from review-army.md.tmpl — do not edit directly -->
 <!-- Regenerate: bun run gen:skill-docs -->
+
 ## Step 9: Pre-Landing Review
 
 Review the diff for structural issues that tests don't catch.
@@ -16,13 +17,13 @@ Review the diff for structural issues that tests don't catch.
 
 Every finding MUST include a confidence score (1-10):
 
-| Score | Meaning | Display rule |
-|-------|---------|-------------|
-| 9-10 | Verified by reading specific code. Concrete bug or exploit demonstrated. | Show normally |
-| 7-8 | High confidence pattern match. Very likely correct. | Show normally |
-| 5-6 | Moderate. Could be a false positive. | Show with caveat: "Medium confidence, verify this is actually an issue" |
-| 3-4 | Low confidence. Pattern is suspicious but may be fine. | Suppress from main report. Include in appendix only. |
-| 1-2 | Speculation. | Only report if severity would be P0. |
+| Score | Meaning                                                                  | Display rule                                                            |
+| ----- | ------------------------------------------------------------------------ | ----------------------------------------------------------------------- |
+| 9-10  | Verified by reading specific code. Concrete bug or exploit demonstrated. | Show normally                                                           |
+| 7-8   | High confidence pattern match. Very likely correct.                      | Show normally                                                           |
+| 5-6   | Moderate. Could be a false positive.                                     | Show with caveat: "Medium confidence, verify this is actually an issue" |
+| 3-4   | Low confidence. Pattern is suspicious but may be fine.                   | Suppress from main report. Include in appendix only.                    |
+| 1-2   | Speculation.                                                             | Only report if severity would be P0.                                    |
 
 **Finding format:**
 
@@ -62,12 +63,12 @@ is deliberately out of scope for the lighter gate — see the deferred
 
 The FP classes the gate kills (measured against Django Sprint 2.5 #1539):
 
-| FP class | Why the gate catches it |
-|---|---|
-| "field doesn't exist on model" | Requires quoting the model class body or Meta; the field's absence becomes obvious |
-| "dict.get() might be None" | Requires quoting the dict initialization (e.g. Django form's `cleaned_data` is `{}`-initialized) |
-| "save() might lose fields" | Requires quoting the ORM signature or model definition |
-| "update_fields might miss X" | Requires quoting the field set; if X doesn't exist, the FP is self-evident |
+| FP class                       | Why the gate catches it                                                                          |
+| ------------------------------ | ------------------------------------------------------------------------------------------------ |
+| "field doesn't exist on model" | Requires quoting the model class body or Meta; the field's absence becomes obvious               |
+| "dict.get() might be None"     | Requires quoting the dict initialization (e.g. Django form's `cleaned_data` is `{}`-initialized) |
+| "save() might lose fields"     | Requires quoting the ORM signature or model definition                                           |
+| "update_fields might miss X"   | Requires quoting the field set; if X doesn't exist, the FP is self-evident                       |
 
 **Calibration learning:** If you report a finding with confidence < 7 and the user
 confirms it IS a real issue, that is a calibration event. Your initial confidence was
@@ -122,6 +123,7 @@ codex exec "Review the git diff on this branch. Run 7 litmus checks (YES/NO each
 ```
 
 Use a 5-minute timeout (`timeout: 300000`). After the command completes, read stderr:
+
 ```bash
 cat "$TMPERR_DRL" && rm -f "$TMPERR_DRL"
 ```
@@ -130,7 +132,7 @@ cat "$TMPERR_DRL" && rm -f "$TMPERR_DRL"
 
 Present Codex output under a `CODEX (design):` header, merged with the checklist findings above.
 
-   Include any design findings alongside the code review findings. They follow the same Fix-First flow below.
+Include any design findings alongside the code review findings. They follow the same Fix-First flow below.
 
 ## Step 9.1: Review Army — Specialist Dispatch
 
@@ -172,23 +174,20 @@ echo "TEST_FW: ${TEST_FW:-unknown}"
 Based on the scope signals above, select which specialists to dispatch.
 
 **Always-on (dispatch on every review with 50+ changed lines):**
+
 1. **Testing** — read `~/.claude/skills/gstack/review/specialists/testing.md`
 2. **Maintainability** — read `~/.claude/skills/gstack/review/specialists/maintainability.md`
 
 **If DIFF_LINES < 50:** Skip all specialists. Print: "Small diff ($DIFF_LINES lines) — specialists skipped." Continue to the Fix-First flow (item 4).
 
-**Conditional (dispatch if the matching scope signal is true):**
-3. **Security** — if SCOPE_AUTH=true, OR if SCOPE_BACKEND=true AND DIFF_LINES > 100. Read `~/.claude/skills/gstack/review/specialists/security.md`
-4. **Performance** — if SCOPE_BACKEND=true OR SCOPE_FRONTEND=true. Read `~/.claude/skills/gstack/review/specialists/performance.md`
-5. **Data Migration** — if SCOPE_MIGRATIONS=true. Read `~/.claude/skills/gstack/review/specialists/data-migration.md`
-6. **API Contract** — if SCOPE_API=true. Read `~/.claude/skills/gstack/review/specialists/api-contract.md`
-7. **Design** — if SCOPE_FRONTEND=true. Use the existing design review checklist at `~/.claude/skills/gstack/review/design-checklist.md`
+**Conditional (dispatch if the matching scope signal is true):** 3. **Security** — if SCOPE_AUTH=true, OR if SCOPE_BACKEND=true AND DIFF_LINES > 100. Read `~/.claude/skills/gstack/review/specialists/security.md` 4. **Performance** — if SCOPE_BACKEND=true OR SCOPE_FRONTEND=true. Read `~/.claude/skills/gstack/review/specialists/performance.md` 5. **Data Migration** — if SCOPE_MIGRATIONS=true. Read `~/.claude/skills/gstack/review/specialists/data-migration.md` 6. **API Contract** — if SCOPE_API=true. Read `~/.claude/skills/gstack/review/specialists/api-contract.md` 7. **Design** — if SCOPE_FRONTEND=true. Use the existing design review checklist at `~/.claude/skills/gstack/review/design-checklist.md`
 
 ### Adaptive gating
 
 After scope-based selection, apply adaptive gating based on specialist hit rates:
 
 For each conditional specialist that passed scope gating, check the `gstack-specialist-stats` output above:
+
 - If tagged `[GATE_CANDIDATE]` (0 findings in 10+ dispatches): skip it. Print: "[specialist] auto-gated (0 findings in N reviews)."
 - If tagged `[NEVER_GATE]`: always dispatch regardless of hit rate. Security and data-migration are insurance policy specialists — they should run even when silent.
 
@@ -244,6 +243,7 @@ CHECKLIST:
 {checklist content}"
 
 **Subagent configuration:**
+
 - Use `subagent_type: "general-purpose"`
 - Do NOT use `run_in_background` — all specialists must complete before merge
 - If any specialist subagent fails or times out, log the failure and continue with results from successful specialists. Specialists are additive — partial results are better than no results.
@@ -256,22 +256,26 @@ After all specialist subagents complete, collect their outputs.
 
 **Parse findings:**
 For each specialist's output:
+
 1. If output is "NO FINDINGS" — skip, this specialist found nothing
 2. Otherwise, parse each line as a JSON object. Skip lines that are not valid JSON.
 3. Collect all parsed findings into a single list, tagged with their specialist name.
 
 **Fingerprint and deduplicate:**
 For each finding, compute its fingerprint:
+
 - If `fingerprint` field is present, use it
 - Otherwise: `{path}:{line}:{category}` (if line is present) or `{path}:{category}`
 
 Group findings by fingerprint. For findings sharing the same fingerprint:
+
 - Keep the finding with the highest confidence score
 - Tag it: "MULTI-SPECIALIST CONFIRMED ({specialist1} + {specialist2})"
 - Boost confidence by +1 (cap at 10)
 - Note the confirming specialists in the output
 
 **Apply confidence gates:**
+
 - Confidence 7+: show normally in the findings output
 - Confidence 5-6: show with caveat "Medium confidence — verify this is actually an issue"
 - Confidence 3-4: move to appendix (suppress from main findings)
@@ -302,6 +306,7 @@ The Fix-First heuristic applies identically — specialist findings follow the s
 **Compile per-specialist stats:**
 After merging findings, compile a `specialists` object for the review-log persist.
 For each specialist (testing, maintainability, security, performance, data-migration, api-contract, design, red-team):
+
 - If dispatched: `{"dispatched": true, "findings": N, "critical": N, "informational": N}`
 - If skipped by scope: `{"dispatched": false, "reason": "scope"}`
 - If skipped by gating: `{"dispatched": false, "reason": "gated"}`
@@ -319,6 +324,7 @@ Remember these stats — you will need them for the review-log entry in Step 5.8
 If activated, dispatch one more subagent via the Agent tool (foreground, not background).
 
 The Red Team subagent receives:
+
 1. The red-team checklist from `~/.claude/skills/gstack/review/specialists/red-team.md`
 2. The merged specialist findings from Step 9.2 (so it knows what was already caught)
 3. The git diff command
@@ -347,6 +353,7 @@ Before classifying findings, check if any were previously skipped by the user in
 Parse the output: only lines BEFORE `---CONFIG---` are JSONL entries (the output also contains `---CONFIG---` and `---HEAD---` footer sections that are not JSONL — ignore those).
 
 For each JSONL entry that has a `findings` array:
+
 1. Collect all fingerprints where `action: "skipped"`
 2. Note the `commit` field from that entry
 
@@ -357,6 +364,7 @@ git diff --name-only <prior-review-commit> HEAD
 ```
 
 For each current finding (from both the checklist pass (Step 9) and specialist review (Step 9.1-9.2)), check:
+
 - Does its fingerprint match a previously skipped finding?
 - Is the finding's file path NOT in the changed-files set?
 
@@ -378,7 +386,7 @@ Output a summary header: `Pre-Landing Review: N issues (X critical, Y informatio
 
 6. **If ASK items remain,** present them in ONE AskUserQuestion:
    - List each with number, severity, problem, recommended fix
-   - Per-item options: A) Fix  B) Skip
+   - Per-item options: A) Fix B) Skip
    - Overall RECOMMENDATION
    - If 3 or fewer ASK items, you may use individual AskUserQuestion calls instead
 
@@ -391,11 +399,14 @@ Output a summary header: `Pre-Landing Review: N issues (X critical, Y informatio
    If no issues found: `Pre-Landing Review: No issues found.`
 
 9. Persist the review result to the review log:
+
 ```bash
 ~/.claude/skills/gstack/bin/gstack-review-log '{"skill":"review","timestamp":"TIMESTAMP","status":"STATUS","issues_found":N,"critical":N,"informational":N,"quality_score":SCORE,"specialists":SPECIALISTS_JSON,"findings":FINDINGS_JSON,"commit":"'"$(git rev-parse --short HEAD)"'","via":"ship"}'
 ```
+
 Substitute TIMESTAMP (ISO 8601), STATUS ("clean" if no issues, "issues_found" otherwise),
 and N values from the summary counts above. The `via:"ship"` distinguishes from standalone `/review` runs.
+
 - `quality_score` = the PR Quality Score computed in Step 9.2 (e.g., 7.5). If specialists were skipped (small diff), use `10.0`
 - `specialists` = the per-specialist stats object compiled in Step 9.2. Each specialist that was considered gets an entry: `{"dispatched":true/false,"findings":N,"critical":N,"informational":N}` if dispatched, or `{"dispatched":false,"reason":"scope|gated"}` if skipped. Example: `{"testing":{"dispatched":true,"findings":2,"critical":0,"informational":2},"security":{"dispatched":false,"reason":"scope"}}`
 - `findings` = array of per-finding records. For each finding (from checklist pass and specialists), include: `{"fingerprint":"path:line:category","severity":"CRITICAL|INFORMATIONAL","action":"ACTION"}`. ACTION is `"auto-fixed"`, `"fixed"` (user approved), or `"skipped"` (user chose Skip).
