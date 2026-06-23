@@ -22,7 +22,7 @@
  *   re-mints on reconnect.
  * - Tokens are 32 random bytes (URL-safe base64). 256 bits, unbruteforceable.
  */
-import * as crypto from 'crypto';
+import * as crypto from "crypto";
 
 interface Session {
   createdAt: number;
@@ -33,12 +33,12 @@ const TTL_MS = 30 * 60 * 1000; // 30 minutes
 const MAX_SESSIONS = 10_000; // Upper bound on registry size
 const sessions = new Map<string, Session>();
 
-export const SSE_COOKIE_NAME = 'gstack_sse';
+export const SSE_COOKIE_NAME = "gstack_sse";
 
 /** Mint a fresh view-only SSE session token. */
 export function mintSseSessionToken(): { token: string; expiresAt: number } {
   // 32 random bytes → 43-char URL-safe base64 (no padding)
-  const token = crypto.randomBytes(32).toString('base64url');
+  const token = crypto.randomBytes(32).toString("base64url");
   const now = Date.now();
   const expiresAt = now + TTL_MS;
   sessions.set(token, { createdAt: now, expiresAt });
@@ -52,7 +52,9 @@ export function mintSseSessionToken(): { token: string; expiresAt: number } {
  * additional expired entries on every validate so the registry can't grow
  * unboundedly under sustained mint + reconnect pressure.
  */
-export function validateSseSessionToken(token: string | null | undefined): boolean {
+export function validateSseSessionToken(
+  token: string | null | undefined,
+): boolean {
   if (!token) return false;
   const s = sessions.get(token);
   if (!s) {
@@ -69,12 +71,12 @@ export function validateSseSessionToken(token: string | null | undefined): boole
 
 /** Parse the SSE session token from a Cookie header. */
 export function extractSseCookie(req: Request): string | null {
-  const cookieHeader = req.headers.get('cookie');
+  const cookieHeader = req.headers.get("cookie");
   if (!cookieHeader) return null;
-  for (const part of cookieHeader.split(';')) {
-    const [name, ...valueParts] = part.trim().split('=');
+  for (const part of cookieHeader.split(";")) {
+    const [name, ...valueParts] = part.trim().split("=");
     if (name === SSE_COOKIE_NAME) {
-      return valueParts.join('=') || null;
+      return valueParts.join("=") || null;
     }
   }
   return null;

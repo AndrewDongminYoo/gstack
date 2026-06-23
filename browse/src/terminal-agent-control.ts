@@ -14,10 +14,10 @@
  * the watchdog respawned around can't accidentally service a stale grant
  * from the old generation.
  */
-import * as fs from 'fs';
-import * as path from 'path';
-import { safeUnlink, safeKill, isProcessAlive } from './error-handling';
-import { writeSecureFile, mkdirSecure } from './file-permissions';
+import * as fs from "fs";
+import * as path from "path";
+import { safeUnlink, safeKill, isProcessAlive } from "./error-handling";
+import { writeSecureFile, mkdirSecure } from "./file-permissions";
 
 /**
  * Locate the terminal-agent script on disk. In dev (cli.ts running via
@@ -26,12 +26,14 @@ import { writeSecureFile, mkdirSecure } from './file-permissions';
  * exposes it relative to process.execPath. Either path must work or
  * the agent can't be spawned at all.
  */
-export function resolveTerminalAgentScript(searchHints: { metaDir?: string; execPath?: string } = {}): string | null {
+export function resolveTerminalAgentScript(
+  searchHints: { metaDir?: string; execPath?: string } = {},
+): string | null {
   const meta = searchHints.metaDir || __dirname;
   const exec = searchHints.execPath || process.execPath;
   const candidates = [
-    path.resolve(meta, 'terminal-agent.ts'),
-    path.resolve(path.dirname(exec), '..', 'src', 'terminal-agent.ts'),
+    path.resolve(meta, "terminal-agent.ts"),
+    path.resolve(path.dirname(exec), "..", "src", "terminal-agent.ts"),
   ];
   for (const c of candidates) {
     if (fs.existsSync(c)) return c;
@@ -63,12 +65,12 @@ export function spawnTerminalAgent(opts: {
   const stateDir = path.dirname(opts.stateFile);
   const prior = readAgentRecord(stateDir);
   if (prior) {
-    killAgentByRecord(prior, 'SIGTERM');
+    killAgentByRecord(prior, "SIGTERM");
     clearAgentRecord(stateDir);
   }
   const script = opts.scriptPath || resolveTerminalAgentScript();
   if (!script || !fs.existsSync(script)) return null;
-  const proc = (Bun as any).spawn(['bun', 'run', script], {
+  const proc = (Bun as any).spawn(["bun", "run", script], {
     cwd: opts.cwd || process.cwd(),
     env: {
       ...process.env,
@@ -76,7 +78,7 @@ export function spawnTerminalAgent(opts: {
       BROWSE_SERVER_PORT: String(opts.serverPort),
       ...(opts.extraEnv || {}),
     },
-    stdio: ['ignore', 'ignore', 'ignore'],
+    stdio: ["ignore", "ignore", "ignore"],
   });
   proc.unref?.();
   return proc.pid ?? null;
@@ -91,15 +93,19 @@ export interface AgentRecord {
 }
 
 export function agentRecordPath(stateDir: string): string {
-  return path.join(stateDir, 'terminal-agent-pid');
+  return path.join(stateDir, "terminal-agent-pid");
 }
 
 /** Read the current record. Returns null on missing/malformed file. */
 export function readAgentRecord(stateDir: string): AgentRecord | null {
   try {
-    const raw = fs.readFileSync(agentRecordPath(stateDir), 'utf-8');
+    const raw = fs.readFileSync(agentRecordPath(stateDir), "utf-8");
     const j = JSON.parse(raw);
-    if (typeof j?.pid === 'number' && typeof j?.gen === 'string' && typeof j?.startedAt === 'number') {
+    if (
+      typeof j?.pid === "number" &&
+      typeof j?.gen === "string" &&
+      typeof j?.startedAt === "number"
+    ) {
       return j as AgentRecord;
     }
     return null;
@@ -110,7 +116,9 @@ export function readAgentRecord(stateDir: string): AgentRecord | null {
 
 /** Atomic write. Caller must ensure stateDir exists; agent does this at boot. */
 export function writeAgentRecord(stateDir: string, record: AgentRecord): void {
-  try { mkdirSecure(stateDir); } catch {}
+  try {
+    mkdirSecure(stateDir);
+  } catch {}
   const target = agentRecordPath(stateDir);
   const tmp = `${target}.tmp-${process.pid}`;
   writeSecureFile(tmp, JSON.stringify(record));
@@ -135,7 +143,7 @@ export function clearAgentRecord(stateDir: string): void {
  */
 export function killAgentByRecord(
   record: AgentRecord,
-  signal: NodeJS.Signals = 'SIGTERM',
+  signal: NodeJS.Signals = "SIGTERM",
 ): boolean {
   if (!isProcessAlive(record.pid)) return false;
   safeKill(record.pid, signal);

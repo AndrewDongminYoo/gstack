@@ -41,7 +41,9 @@ export interface SizeGuardResult {
  * Imports sharp lazily so the module load cost only hits screenshot paths
  * (sharp's native binding is non-trivial to initialize).
  */
-export async function guardScreenshotBuffer(input: Buffer): Promise<{ buffer: Buffer; result: SizeGuardResult }> {
+export async function guardScreenshotBuffer(
+  input: Buffer,
+): Promise<{ buffer: Buffer; result: SizeGuardResult }> {
   const sharpModule = await import("sharp");
   const sharp = sharpModule.default ?? sharpModule;
   const image = sharp(input);
@@ -94,7 +96,9 @@ export async function guardScreenshotBuffer(input: Buffer): Promise<{ buffer: Bu
  * needed, and write the result back to the same path. Returns the
  * diagnostic shape. Use this after `await page.screenshot({ path, ... })`.
  */
-export async function guardScreenshotPath(filePath: string): Promise<SizeGuardResult> {
+export async function guardScreenshotPath(
+  filePath: string,
+): Promise<SizeGuardResult> {
   const input = readFileSync(filePath);
   const { buffer, result } = await guardScreenshotBuffer(input);
   if (result.resized) {

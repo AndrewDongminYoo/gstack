@@ -6,7 +6,7 @@
  * every log path that prints proxy config.
  */
 
-const REDACTED = '***';
+const REDACTED = "***";
 
 /**
  * Redact creds in a proxy URL string. Returns the URL with username and
@@ -15,12 +15,12 @@ const REDACTED = '***';
  * AND contain creds).
  */
 export function redactProxyUrl(input: string | null | undefined): string {
-  if (!input) return '<no proxy>';
+  if (!input) return "<no proxy>";
   let url: URL;
   try {
     url = new URL(input);
   } catch {
-    return '<malformed proxy url>';
+    return "<malformed proxy url>";
   }
   if (url.username) url.username = REDACTED;
   if (url.password) url.password = REDACTED;

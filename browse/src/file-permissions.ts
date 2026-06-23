@@ -36,9 +36,9 @@
  * their runner / share setup.
  */
 
-import { execFileSync } from 'child_process';
-import * as fs from 'fs';
-import * as os from 'os';
+import { execFileSync } from "child_process";
+import * as fs from "fs";
+import * as os from "os";
 
 let warnedOnce = false;
 
@@ -49,8 +49,8 @@ function warnIcaclsFailure(fsPath: string, err: unknown): void {
   // biome-ignore lint/suspicious/noConsole: intentional user-facing warning
   console.warn(
     `[gstack] Failed to restrict Windows ACL on ${fsPath}: ${msg}\n` +
-    `  Sensitive files may be readable by other accounts on this machine.\n` +
-    `  This warning appears once per process; subsequent failures are silent.`
+      `  Sensitive files may be readable by other accounts on this machine.\n` +
+      `  This warning appears once per process; subsequent failures are silent.`,
   );
 }
 
@@ -65,20 +65,24 @@ function warnIcaclsFailure(fsPath: string, err: unknown): void {
  * current user full control.
  */
 export function restrictFilePermissions(filePath: string): void {
-  if (process.platform === 'win32') {
+  if (process.platform === "win32") {
     try {
       const user = os.userInfo().username;
       execFileSync(
-        'icacls',
-        [filePath, '/inheritance:r', '/grant:r', `${user}:(F)`],
-        { stdio: 'ignore' },
+        "icacls",
+        [filePath, "/inheritance:r", "/grant:r", `${user}:(F)`],
+        { stdio: "ignore" },
       );
     } catch (err) {
       warnIcaclsFailure(filePath, err);
     }
     return;
   }
-  try { fs.chmodSync(filePath, 0o600); } catch { /* best-effort */ }
+  try {
+    fs.chmodSync(filePath, 0o600);
+  } catch {
+    /* best-effort */
+  }
 }
 
 /**
@@ -95,20 +99,24 @@ export function restrictFilePermissions(filePath: string): void {
  * `restrictFilePermissions` still end up owner-only.
  */
 export function restrictDirectoryPermissions(dirPath: string): void {
-  if (process.platform === 'win32') {
+  if (process.platform === "win32") {
     try {
       const user = os.userInfo().username;
       execFileSync(
-        'icacls',
-        [dirPath, '/inheritance:r', '/grant:r', `${user}:(OI)(CI)(F)`],
-        { stdio: 'ignore' },
+        "icacls",
+        [dirPath, "/inheritance:r", "/grant:r", `${user}:(OI)(CI)(F)`],
+        { stdio: "ignore" },
       );
     } catch (err) {
       warnIcaclsFailure(dirPath, err);
     }
     return;
   }
-  try { fs.chmodSync(dirPath, 0o700); } catch { /* best-effort */ }
+  try {
+    fs.chmodSync(dirPath, 0o700);
+  } catch {
+    /* best-effort */
+  }
 }
 
 /**

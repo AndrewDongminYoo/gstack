@@ -15,15 +15,34 @@
  *   restores state. Falls back to clean slate on any failure.
  */
 
-import { chromium, type Browser, type BrowserContext, type BrowserContextOptions, type Page, type Locator, type Cookie } from 'playwright';
-import { writeSecureFile, mkdirSecure } from './file-permissions';
-import { addConsoleEntry, addNetworkEntry, addDialogEntry, networkBuffer, type DialogEntry } from './buffers';
-import { emitActivity } from './activity';
-import { validateNavigationUrl } from './url-validation';
-import { TabSession, type RefEntry } from './tab-session';
-import { resolveChromiumProfile, cleanSingletonLocks } from './config';
-import { withCdpSession } from './cdp-bridge';
-import type { MemorySnapshot, MemoryStructureStats, MemoryTabSnapshot, MemoryProcess } from './memory-snapshot';
+import {
+  chromium,
+  type Browser,
+  type BrowserContext,
+  type BrowserContextOptions,
+  type Page,
+  type Locator,
+  type Cookie,
+} from "playwright";
+import { writeSecureFile, mkdirSecure } from "./file-permissions";
+import {
+  addConsoleEntry,
+  addNetworkEntry,
+  addDialogEntry,
+  networkBuffer,
+  type DialogEntry,
+} from "./buffers";
+import { emitActivity } from "./activity";
+import { validateNavigationUrl } from "./url-validation";
+import { TabSession, type RefEntry } from "./tab-session";
+import { resolveChromiumProfile, cleanSingletonLocks } from "./config";
+import { withCdpSession } from "./cdp-bridge";
+import type {
+  MemorySnapshot,
+  MemoryStructureStats,
+  MemoryTabSnapshot,
+  MemoryProcess,
+} from "./memory-snapshot";
 
 /**
  * Detect whether GSTACK_CHROMIUM_PATH points at a custom Chromium build that
@@ -38,9 +57,10 @@ import type { MemorySnapshot, MemoryStructureStats, MemoryTabSnapshot, MemoryPro
  *      (fallback for callers that only set the path)
  */
 export function isCustomChromium(): boolean {
-  if (process.env.GSTACK_CHROMIUM_KIND === 'custom-extension-baked') return true;
-  const p = process.env.GSTACK_CHROMIUM_PATH || '';
-  return p.includes('GBrowser') || p.includes('gbrowser');
+  if (process.env.GSTACK_CHROMIUM_KIND === "custom-extension-baked")
+    return true;
+  const p = process.env.GSTACK_CHROMIUM_PATH || "";
+  return p.includes("GBrowser") || p.includes("gbrowser");
 }
 
 /**
@@ -61,15 +81,15 @@ export function isCustomChromium(): boolean {
  * (Playwright will add it anyway when this returns false) and harmless.
  */
 export function shouldEnableChromiumSandbox(): boolean {
-  if (process.platform === 'win32') return false;
+  if (process.platform === "win32") return false;
   // Explicit user override for Ubuntu/AppArmor and similar environments where
   // unprivileged Chromium sandboxing is blocked even for normal users (the
   // sandbox needs unprivileged user namespaces that the host policy denies,
   // so /qa hangs without --no-sandbox). Setting GSTACK_CHROMIUM_NO_SANDBOX=1
   // forces the sandbox off without changing the default for everyone else.
   // See #1562.
-  if (process.env.GSTACK_CHROMIUM_NO_SANDBOX === '1') return false;
-  const isRoot = typeof process.getuid === 'function' && process.getuid() === 0;
+  if (process.env.GSTACK_CHROMIUM_NO_SANDBOX === "1") return false;
+  const isRoot = typeof process.getuid === "function" && process.getuid() === 0;
   return !(process.env.CI || process.env.CONTAINER || isRoot);
 }
 
@@ -90,18 +110,20 @@ export function shouldEnableChromiumSandbox(): boolean {
  * per-path exit semantics (launch→1, launchHeaded→2, handoff→1) and gbd
  * restarts on backoff.
  */
-export async function resolveDisconnectCause(browser: Browser | null): Promise<'clean' | 'crash'> {
+export async function resolveDisconnectCause(
+  browser: Browser | null,
+): Promise<"clean" | "crash"> {
   const proc = browser?.process();
   if (proc && proc.exitCode === null && proc.signalCode === null) {
     await new Promise<void>((resolve) => {
       const timer = setTimeout(resolve, 1000);
-      proc.once('exit', () => {
+      proc.once("exit", () => {
         clearTimeout(timer);
         resolve();
       });
     });
   }
-  return proc?.exitCode === 0 && proc?.signalCode == null ? 'clean' : 'crash';
+  return proc?.exitCode === 0 && proc?.signalCode == null ? "clean" : "crash";
 }
 
 /**
@@ -109,14 +131,22 @@ export async function resolveDisconnectCause(browser: Browser | null): Promise<'
  * crash. Inlined into the launch() body via a one-line dispatch so
  * browser-manager's flow stays grep-friendly.
  */
-export async function handleChromiumDisconnect(browser: Browser | null): Promise<void> {
+export async function handleChromiumDisconnect(
+  browser: Browser | null,
+): Promise<void> {
   const cause = await resolveDisconnectCause(browser);
-  if (cause === 'clean') {
-    console.error('[browse] Chromium closed cleanly (user-initiated quit). Server exiting (0).');
+  if (cause === "clean") {
+    console.error(
+      "[browse] Chromium closed cleanly (user-initiated quit). Server exiting (0).",
+    );
     process.exit(0);
   }
-  console.error('[browse] FATAL: Chromium process crashed or was killed. Server exiting (1).');
-  console.error('[browse] Console/network logs flushed to .gstack/browse-*.log');
+  console.error(
+    "[browse] FATAL: Chromium process crashed or was killed. Server exiting (1).",
+  );
+  console.error(
+    "[browse] Console/network logs flushed to .gstack/browse-*.log",
+  );
   process.exit(1);
 }
 
@@ -130,13 +160,16 @@ export interface BrowserState {
   pages: Array<{
     url: string;
     isActive: boolean;
-    storage: { localStorage: Record<string, string>; sessionStorage: Record<string, string> } | null;
+    storage: {
+      localStorage: Record<string, string>;
+      sessionStorage: Record<string, string>;
+    } | null;
     /**
      * HTML content loaded via load-html (setContent), replayed after context recreation.
      * In-memory only — never persisted to disk (HTML may contain secrets or customer data).
      */
     loadedHtml?: string;
-    loadedHtmlWaitUntil?: 'load' | 'domcontentloaded' | 'networkidle';
+    loadedHtmlWaitUntil?: "load" | "domcontentloaded" | "networkidle";
     /**
      * Tab owner clientId for multi-agent isolation. Survives context recreation so
      * scoped agents don't get locked out of their own tabs after viewport --scale.
@@ -153,7 +186,11 @@ export class BrowserManager {
   // at startup based on BROWSE_PROXY_URL. For SOCKS5 with auth, server.ts
   // points this at the local bridge (socks5://127.0.0.1:<bridgePort>); for
   // HTTP/HTTPS or unauth SOCKS5, it's the upstream URL directly.
-  private proxyConfig: { server: string; username?: string; password?: string } | null = null;
+  private proxyConfig: {
+    server: string;
+    username?: string;
+    password?: string;
+  } | null = null;
   private pages: Map<number, Page> = new Map();
   private tabSessions: Map<number, TabSession> = new Map();
   private activeTabId: number = 0;
@@ -167,7 +204,10 @@ export class BrowserManager {
   // require recreateContext(). Viewport width/height can change on-page, but we
   // track the latest so context recreation restores it instead of hardcoding 1280x720.
   private deviceScaleFactor: number = 1;
-  private currentViewport: { width: number; height: number } = { width: 1280, height: 720 };
+  private currentViewport: { width: number; height: number } = {
+    width: 1280,
+    height: 720,
+  };
 
   /** Server port — set after server starts, used by cookie-import-browser command */
   public serverPort: number = 0;
@@ -194,7 +234,7 @@ export class BrowserManager {
   private watchStartTime: number = 0;
 
   // ─── Headed State ────────────────────────────────────────
-  private connectionMode: 'launched' | 'headed' = 'launched';
+  private connectionMode: "launched" | "headed" = "launched";
   private intentionalDisconnect = false;
 
   // ─── Tab Count Guardrail (D5 + Codex single-tab flag) ───────
@@ -217,17 +257,33 @@ export class BrowserManager {
    */
   private checkTabGuardrails(): void {
     const total = this.pages.size;
-    if (!this.tabGuardrailSoftHit && total >= BrowserManager.TAB_GUARDRAIL_SOFT) {
+    if (
+      !this.tabGuardrailSoftHit &&
+      total >= BrowserManager.TAB_GUARDRAIL_SOFT
+    ) {
       this.tabGuardrailSoftHit = true;
       const msg = `Tab count crossed ${BrowserManager.TAB_GUARDRAIL_SOFT} (now ${total}). Consider closing unused tabs — each Chromium tab holds 50–300 MB.`;
       console.warn(`[browse] ${msg}`);
-      emitActivity({ type: 'error', command: 'tab-guardrail', error: msg, tabs: total });
+      emitActivity({
+        type: "error",
+        command: "tab-guardrail",
+        error: msg,
+        tabs: total,
+      });
     }
-    if (!this.tabGuardrailHardHit && total >= BrowserManager.TAB_GUARDRAIL_HARD) {
+    if (
+      !this.tabGuardrailHardHit &&
+      total >= BrowserManager.TAB_GUARDRAIL_HARD
+    ) {
       this.tabGuardrailHardHit = true;
       const msg = `Tab count crossed ${BrowserManager.TAB_GUARDRAIL_HARD} (now ${total}). OOM risk imminent. Open the sidebar to see top RAM consumers.`;
       console.error(`[browse] ${msg}`);
-      emitActivity({ type: 'error', command: 'tab-guardrail', error: msg, tabs: total });
+      emitActivity({
+        type: "error",
+        command: "tab-guardrail",
+        error: msg,
+        tabs: total,
+      });
     }
   }
 
@@ -250,12 +306,17 @@ export class BrowserManager {
   // 0 on clean user-initiated quit (e.g., Cmd+Q on headed Chromium), 2 on
   // crash/signal-kill. Callers (server.ts) forward it to their shutdown
   // pipeline so process supervisors (gbrowser's gbd) read the right signal.
-  public onDisconnect: ((exitCode?: number) => void | Promise<void>) | null = null;
+  public onDisconnect: ((exitCode?: number) => void | Promise<void>) | null =
+    null;
 
-  getConnectionMode(): 'launched' | 'headed' { return this.connectionMode; }
+  getConnectionMode(): "launched" | "headed" {
+    return this.connectionMode;
+  }
 
   // ─── Watch Mode Methods ─────────────────────────────────
-  isWatching(): boolean { return this.watching; }
+  isWatching(): boolean {
+    return this.watching;
+  }
 
   startWatch(): void {
     this.watching = true;
@@ -285,33 +346,45 @@ export class BrowserManager {
    * Checks: repo root /extension, global install, dev install.
    */
   private findExtensionPath(): string | null {
-    const fs = require('fs');
-    const path = require('path');
+    const fs = require("fs");
+    const path = require("path");
     const candidates = [
       // Explicit override via env var (used by GStack Browser.app bundle)
-      process.env.BROWSE_EXTENSIONS_DIR || '',
+      process.env.BROWSE_EXTENSIONS_DIR || "",
       // Relative to this source file (dev mode: browse/src/ -> ../../extension)
-      path.resolve(__dirname, '..', '..', 'extension'),
+      path.resolve(__dirname, "..", "..", "extension"),
       // Global gstack install
-      path.join(process.env.HOME || '', '.claude', 'skills', 'gstack', 'extension'),
+      path.join(
+        process.env.HOME || "",
+        ".claude",
+        "skills",
+        "gstack",
+        "extension",
+      ),
       // Git repo root (detected via BROWSE_STATE_FILE location)
       (() => {
-        const stateFile = process.env.BROWSE_STATE_FILE || '';
+        const stateFile = process.env.BROWSE_STATE_FILE || "";
         if (stateFile) {
-          const repoRoot = path.resolve(path.dirname(stateFile), '..');
-          return path.join(repoRoot, '.claude', 'skills', 'gstack', 'extension');
+          const repoRoot = path.resolve(path.dirname(stateFile), "..");
+          return path.join(
+            repoRoot,
+            ".claude",
+            "skills",
+            "gstack",
+            "extension",
+          );
         }
-        return '';
+        return "";
       })(),
     ].filter(Boolean);
 
     for (const candidate of candidates) {
       try {
-        if (fs.existsSync(path.join(candidate, 'manifest.json'))) {
+        if (fs.existsSync(path.join(candidate, "manifest.json"))) {
           return candidate;
         }
       } catch (err: any) {
-        if (err?.code !== 'ENOENT' && err?.code !== 'EACCES') throw err;
+        if (err?.code !== "ENOENT" && err?.code !== "EACCES") throw err;
       }
     }
     return null;
@@ -322,7 +395,9 @@ export class BrowserManager {
    * launchHeaded(). Called by server.ts at startup once the (optional) SOCKS5
    * bridge is up.
    */
-  setProxyConfig(cfg: { server: string; username?: string; password?: string } | null): void {
+  setProxyConfig(
+    cfg: { server: string; username?: string; password?: string } | null,
+  ): void {
     this.proxyConfig = cfg;
   }
 
@@ -342,16 +417,21 @@ export class BrowserManager {
     // BROWSE_EXTENSIONS_DIR points to an unpacked Chrome extension directory.
     // Extensions only work in headed mode, so we use an off-screen window.
     const extensionsDir = process.env.BROWSE_EXTENSIONS_DIR;
-    const { STEALTH_LAUNCH_ARGS, buildGStackLaunchArgs } = await import('./stealth');
-    const launchArgs: string[] = [...STEALTH_LAUNCH_ARGS, ...buildGStackLaunchArgs()];
+    const { STEALTH_LAUNCH_ARGS, buildGStackLaunchArgs } =
+      await import("./stealth");
+    const launchArgs: string[] = [
+      ...STEALTH_LAUNCH_ARGS,
+      ...buildGStackLaunchArgs(),
+    ];
     let useHeadless = true;
 
     // Docker/CI/root: Chromium sandbox requires unprivileged user namespaces which
     // are typically disabled in containers and are never available for the root
     // user on Linux. Detect all three cases and add --no-sandbox automatically.
-    const isRoot = typeof process.getuid === 'function' && process.getuid() === 0;
+    const isRoot =
+      typeof process.getuid === "function" && process.getuid() === 0;
     if (process.env.CI || process.env.CONTAINER || isRoot) {
-      launchArgs.push('--no-sandbox');
+      launchArgs.push("--no-sandbox");
     }
 
     if (extensionsDir) {
@@ -364,7 +444,7 @@ export class BrowserManager {
           `--load-extension=${extensionsDir}`,
         );
       }
-      launchArgs.push('--window-position=-9999,-9999', '--window-size=1,1');
+      launchArgs.push("--window-position=-9999,-9999", "--window-size=1,1");
       useHeadless = false; // extensions require headed mode; off-screen window simulates headless
       console.log(`[browse] Extensions loaded from: ${extensionsDir}`);
     }
@@ -390,12 +470,15 @@ export class BrowserManager {
     // means "user wanted this, don't restart"; non-zero means "crash, please
     // bring me back." Without this distinction every Cmd+Q gets treated as
     // a crash and the user-visible window keeps respawning.
-    this.browser.on('disconnected', () => {
+    this.browser.on("disconnected", () => {
       void handleChromiumDisconnect(this.browser);
     });
 
     const contextOptions: BrowserContextOptions = {
-      viewport: { width: this.currentViewport.width, height: this.currentViewport.height },
+      viewport: {
+        width: this.currentViewport.width,
+        height: this.currentViewport.height,
+      },
       deviceScaleFactor: this.deviceScaleFactor,
     };
     if (this.customUserAgent) {
@@ -412,7 +495,7 @@ export class BrowserManager {
     // per-install hardware, and strips automation globals + the Permissions
     // notifications tell. We still do NOT fake navigator.plugins/languages —
     // faking those to fixed values flags more bot-like, not less (D7).
-    const { applyStealth } = await import('./stealth');
+    const { applyStealth } = await import("./stealth");
     await applyStealth(this.context);
 
     // Create first tab
@@ -437,9 +520,10 @@ export class BrowserManager {
 
     // Find the gstack extension directory for auto-loading
     const extensionPath = this.findExtensionPath();
-    const { STEALTH_LAUNCH_ARGS, buildGStackLaunchArgs } = await import('./stealth');
+    const { STEALTH_LAUNCH_ARGS, buildGStackLaunchArgs } =
+      await import("./stealth");
     const launchArgs = [
-      '--hide-crash-restore-bubble',
+      "--hide-crash-restore-bubble",
       // Anti-bot-detection: --disable-blink-features=AutomationControlled (and any
       // future blink-level tells) via the shared STEALTH_LAUNCH_ARGS constant — the
       // same flag launch() and handoff() use, kept in one place instead of a literal.
@@ -466,13 +550,19 @@ export class BrowserManager {
       // Write to ~/.gstack/.auth.json (not the extension dir, which may be read-only
       // in .app bundles and breaks codesigning).
       if (authToken) {
-        const fs = require('fs');
-        const path = require('path');
-        const gstackDir = path.join(process.env.HOME || '/tmp', '.gstack');
+        const fs = require("fs");
+        const path = require("path");
+        const gstackDir = path.join(process.env.HOME || "/tmp", ".gstack");
         mkdirSecure(gstackDir);
-        const authFile = path.join(gstackDir, '.auth.json');
+        const authFile = path.join(gstackDir, ".auth.json");
         try {
-          writeSecureFile(authFile, JSON.stringify({ token: authToken, port: this.serverPort || 34567 }));
+          writeSecureFile(
+            authFile,
+            JSON.stringify({
+              token: authToken,
+              port: this.serverPort || 34567,
+            }),
+          );
         } catch (err: any) {
           console.warn(`[browse] Could not write .auth.json: ${err.message}`);
         }
@@ -483,8 +573,8 @@ export class BrowserManager {
     // Extensions REQUIRE launchPersistentContext (not launch + newContext).
     // Real Chrome (executablePath/channel) silently blocks --load-extension,
     // so we use Playwright's bundled Chromium which reliably loads extensions.
-    const fs = require('fs');
-    const path = require('path');
+    const fs = require("fs");
+    const path = require("path");
     const userDataDir = resolveChromiumProfile();
     fs.mkdirSync(userDataDir, { recursive: true });
 
@@ -508,38 +598,50 @@ export class BrowserManager {
       // Walk up from binary to the .app's Info.plist
       // e.g. .../Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing
       //   → .../Google Chrome for Testing.app/Contents/Info.plist
-      const chromeContentsDir = path.resolve(path.dirname(chromePath), '..');
-      const chromePlist = path.join(chromeContentsDir, 'Info.plist');
+      const chromeContentsDir = path.resolve(path.dirname(chromePath), "..");
+      const chromePlist = path.join(chromeContentsDir, "Info.plist");
       if (fs.existsSync(chromePlist)) {
-        const plistContent = fs.readFileSync(chromePlist, 'utf-8');
-        if (plistContent.includes('Google Chrome for Testing')) {
-          const patched = plistContent
-            .replace(/Google Chrome for Testing/g, 'GStack Browser');
+        const plistContent = fs.readFileSync(chromePlist, "utf-8");
+        if (plistContent.includes("Google Chrome for Testing")) {
+          const patched = plistContent.replace(
+            /Google Chrome for Testing/g,
+            "GStack Browser",
+          );
           fs.writeFileSync(chromePlist, patched);
         }
         // Replace Chromium's Dock icon with ours (Chromium's process owns the Dock icon)
         const iconCandidates = [
-          path.join(__dirname, '..', '..', 'scripts', 'app', 'icon.icns'),       // repo dev mode
-          path.join(process.env.HOME || '', '.claude', 'skills', 'gstack', 'scripts', 'app', 'icon.icns'), // global install
+          path.join(__dirname, "..", "..", "scripts", "app", "icon.icns"), // repo dev mode
+          path.join(
+            process.env.HOME || "",
+            ".claude",
+            "skills",
+            "gstack",
+            "scripts",
+            "app",
+            "icon.icns",
+          ), // global install
         ];
-        const iconSrc = iconCandidates.find(p => fs.existsSync(p));
+        const iconSrc = iconCandidates.find((p) => fs.existsSync(p));
         if (iconSrc) {
-          const chromeResources = path.join(chromeContentsDir, 'Resources');
+          const chromeResources = path.join(chromeContentsDir, "Resources");
           // Read original icon name from plist
-          const iconMatch = plistContent.match(/<key>CFBundleIconFile<\/key>\s*<string>([^<]+)<\/string>/);
-          let origIcon = iconMatch ? iconMatch[1] : 'app';
-          if (!origIcon.endsWith('.icns')) origIcon += '.icns';
+          const iconMatch = plistContent.match(
+            /<key>CFBundleIconFile<\/key>\s*<string>([^<]+)<\/string>/,
+          );
+          let origIcon = iconMatch ? iconMatch[1] : "app";
+          if (!origIcon.endsWith(".icns")) origIcon += ".icns";
           const destIcon = path.join(chromeResources, origIcon);
           try {
             fs.copyFileSync(iconSrc, destIcon);
           } catch (err: any) {
-            if (err?.code !== 'ENOENT' && err?.code !== 'EACCES') throw err;
+            if (err?.code !== "ENOENT" && err?.code !== "EACCES") throw err;
           }
         }
       }
     } catch (err: any) {
       // Non-fatal: app name stays as Chrome for Testing (ENOENT/EACCES expected)
-      if (err?.code !== 'ENOENT' && err?.code !== 'EACCES') throw err;
+      if (err?.code !== "ENOENT" && err?.code !== "EACCES") throw err;
     }
 
     // Build custom user agent: report as stock Chrome with the version
@@ -555,17 +657,20 @@ export class BrowserManager {
       // Detect Chrome version from the Chromium binary
       const chromePath = executablePath || chromium.executablePath();
       try {
-        const versionProc = Bun.spawnSync([chromePath, '--version'], {
-          stdout: 'pipe', stderr: 'pipe', timeout: 5000,
+        const versionProc = Bun.spawnSync([chromePath, "--version"], {
+          stdout: "pipe",
+          stderr: "pipe",
+          timeout: 5000,
         });
         const versionOutput = versionProc.stdout.toString().trim();
         // Output like: "Google Chrome for Testing 145.0.6422.0" or "Chromium 145.0.6422.0"
         const versionMatch = versionOutput.match(/(\d+\.\d+\.\d+\.\d+)/);
-        const chromeVersion = versionMatch ? versionMatch[1] : '131.0.0.0';
+        const chromeVersion = versionMatch ? versionMatch[1] : "131.0.0.0";
         customUA = `Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${chromeVersion} Safari/537.36`;
       } catch {
         // Fallback: generic modern Chrome UA
-        customUA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
+        customUA =
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
       }
     }
 
@@ -575,7 +680,7 @@ export class BrowserManager {
     // and the chrome-runtime shape changes Playwright otherwise triggers) and
     // three more (--disable-popup-blocking, --disable-component-update,
     // --disable-default-apps — each a documented automation tell per Patchright).
-    const { STEALTH_IGNORE_DEFAULT_ARGS } = await import('./stealth');
+    const { STEALTH_IGNORE_DEFAULT_ARGS } = await import("./stealth");
     this.context = await chromium.launchPersistentContext(userDataDir, {
       headless: false,
       // Match the sandbox policy used by launch() above. Without this,
@@ -583,14 +688,14 @@ export class BrowserManager {
       // sees Chromium's "unsupported command-line flag" yellow infobar.
       chromiumSandbox: shouldEnableChromiumSandbox(),
       args: launchArgs,
-      viewport: null,  // Use browser's default viewport (real window size)
+      viewport: null, // Use browser's default viewport (real window size)
       userAgent: this.customUserAgent || customUA,
       ...(executablePath ? { executablePath } : {}),
       ...(this.proxyConfig ? { proxy: this.proxyConfig } : {}),
       ignoreDefaultArgs: STEALTH_IGNORE_DEFAULT_ARGS,
     });
     this.browser = this.context.browser();
-    this.connectionMode = 'headed';
+    this.connectionMode = "headed";
     this.intentionalDisconnect = false;
 
     // ─── Anti-bot-detection patches ───────────────────────────────
@@ -602,17 +707,17 @@ export class BrowserManager {
     // more bot-like, not less (D7). The cdc/Permissions cleanup moved into
     // applyStealth so headless launch() and handoff() get it too, not just
     // this headed path.
-    const { applyStealth } = await import('./stealth');
+    const { applyStealth } = await import("./stealth");
     await applyStealth(this.context);
 
     // Inject visual indicator — subtle top-edge amber gradient
     // Extension's content script handles the floating pill
     const indicatorScript = () => {
       const injectIndicator = () => {
-        if (document.getElementById('gstack-ctrl')) return;
+        if (document.getElementById("gstack-ctrl")) return;
 
-        const topLine = document.createElement('div');
-        topLine.id = 'gstack-ctrl';
+        const topLine = document.createElement("div");
+        topLine.id = "gstack-ctrl";
         topLine.style.cssText = `
           position: fixed; top: 0; left: 0; right: 0; height: 2px;
           background: linear-gradient(90deg, #F59E0B, #FBBF24, #F59E0B);
@@ -622,7 +727,7 @@ export class BrowserManager {
           opacity: 0.8;
         `;
 
-        const style = document.createElement('style');
+        const style = document.createElement("style");
         style.textContent = `
           @keyframes gstack-shimmer {
             0% { background-position: 200% 0; }
@@ -636,8 +741,8 @@ export class BrowserManager {
         document.documentElement.appendChild(style);
         document.documentElement.appendChild(topLine);
       };
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', injectIndicator);
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", injectIndicator);
       } else {
         injectIndicator();
       }
@@ -645,7 +750,7 @@ export class BrowserManager {
     await this.context.addInitScript(indicatorScript);
 
     // Track user-created tabs automatically (Cmd+T, link opens in new tab, etc.)
-    this.context.on('page', (page) => {
+    this.context.on("page", (page) => {
       const id = this.nextTabId++;
       this.pages.set(id, page);
       this.tabSessions.set(id, new TabSession(page));
@@ -653,7 +758,9 @@ export class BrowserManager {
       this.wirePageEvents(page);
       // Inject indicator on the new tab
       page.evaluate(indicatorScript).catch(() => {});
-      console.log(`[browse] New tab detected (id=${id}, total=${this.pages.size})`);
+      console.log(
+        `[browse] New tab detected (id=${id}, total=${this.pages.size})`,
+      );
       this.checkTabGuardrails();
     });
 
@@ -683,17 +790,21 @@ export class BrowserManager {
     // sidebar-agent, save session, clean profile locks + state file) so
     // crashes don't strand resources either.
     if (this.browser) {
-      this.browser.on('disconnected', () => {
+      this.browser.on("disconnected", () => {
         if (this.intentionalDisconnect) return;
         const browserRef = this.browser;
         void (async () => {
           const cause = await resolveDisconnectCause(browserRef);
-          const exitCode = cause === 'clean' ? 0 : 2;
-          if (cause === 'clean') {
-            console.error('[browse] Real browser closed cleanly (user-initiated quit). Server exiting (0).');
+          const exitCode = cause === "clean" ? 0 : 2;
+          if (cause === "clean") {
+            console.error(
+              "[browse] Real browser closed cleanly (user-initiated quit). Server exiting (0).",
+            );
           } else {
-            console.error('[browse] Real browser disconnected (crash or kill). Server exiting (2).');
-            console.error('[browse] Run `$B connect` to reconnect.');
+            console.error(
+              "[browse] Real browser disconnected (crash or kill). Server exiting (2).",
+            );
+            console.error("[browse] Run `$B connect` to reconnect.");
           }
           if (!this.onDisconnect) {
             process.exit(exitCode);
@@ -701,15 +812,18 @@ export class BrowserManager {
           }
           try {
             const result = this.onDisconnect(exitCode);
-            if (result && typeof (result as Promise<void>).catch === 'function') {
+            if (
+              result &&
+              typeof (result as Promise<void>).catch === "function"
+            ) {
               (result as Promise<void>).catch((err) => {
-                console.error('[browse] onDisconnect rejected:', err);
+                console.error("[browse] onDisconnect rejected:", err);
                 process.exit(exitCode);
               });
             }
             // onDisconnect is responsible for exit on the success path.
           } catch (err) {
-            console.error('[browse] onDisconnect threw:', err);
+            console.error("[browse] onDisconnect threw:", err);
             process.exit(exitCode);
           }
         })();
@@ -717,27 +831,27 @@ export class BrowserManager {
     }
 
     // Headed mode defaults
-    this.dialogAutoAccept = false;  // Don't dismiss user's real dialogs
+    this.dialogAutoAccept = false; // Don't dismiss user's real dialogs
     this.isHeaded = true;
     this.consecutiveFailures = 0;
   }
 
   async close() {
-    if (this.browser || (this.connectionMode === 'headed' && this.context)) {
-      if (this.connectionMode === 'headed') {
+    if (this.browser || (this.connectionMode === "headed" && this.context)) {
+      if (this.connectionMode === "headed") {
         // Headed/persistent context mode: close the context (which closes the browser)
         this.intentionalDisconnect = true;
-        if (this.browser) this.browser.removeAllListeners('disconnected');
+        if (this.browser) this.browser.removeAllListeners("disconnected");
         await Promise.race([
           this.context ? this.context.close() : Promise.resolve(),
-          new Promise(resolve => setTimeout(resolve, 5000)),
+          new Promise((resolve) => setTimeout(resolve, 5000)),
         ]).catch(() => {});
       } else {
         // Launched mode: close the browser we spawned
-        this.browser.removeAllListeners('disconnected');
+        this.browser.removeAllListeners("disconnected");
         await Promise.race([
           this.browser.close(),
-          new Promise(resolve => setTimeout(resolve, 5000)),
+          new Promise((resolve) => setTimeout(resolve, 5000)),
         ]).catch(() => {});
       }
       this.browser = null;
@@ -751,8 +865,10 @@ export class BrowserManager {
       const page = this.pages.get(this.activeTabId);
       if (!page) return true; // connected but no pages — still healthy
       await Promise.race([
-        page.evaluate('1'),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 2000)),
+        page.evaluate("1"),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("timeout")), 2000),
+        ),
       ]);
       return true;
     } catch {
@@ -762,7 +878,7 @@ export class BrowserManager {
 
   // ─── Tab Management ────────────────────────────────────────
   async newTab(url?: string, clientId?: string): Promise<number> {
-    if (!this.context) throw new Error('Browser not launched');
+    if (!this.context) throw new Error("Browser not launched");
 
     // Validate URL before allocating page to avoid zombie tabs on rejection.
     // Use the normalized return value for navigation — it handles file://./x and
@@ -787,7 +903,10 @@ export class BrowserManager {
     this.wirePageEvents(page);
 
     if (normalizedUrl) {
-      await page.goto(normalizedUrl, { waitUntil: 'domcontentloaded', timeout: 15000 });
+      await page.goto(normalizedUrl, {
+        waitUntil: "domcontentloaded",
+        timeout: 15000,
+      });
     }
 
     return id;
@@ -835,7 +954,7 @@ export class BrowserManager {
     if (!activeUrl || this.pages.size <= 1) return;
     // Try exact match first, then fuzzy match (origin+pathname, ignoring query/fragment)
     let fuzzyId: number | null = null;
-    let activeOriginPath = '';
+    let activeOriginPath = "";
     try {
       const u = new URL(activeUrl);
       activeOriginPath = u.origin + u.pathname;
@@ -909,8 +1028,12 @@ export class BrowserManager {
    * branch on it elsewhere, but the access decision itself only depends on
    * `ownOnly` + ownership map state.
    */
-  checkTabAccess(tabId: number, clientId: string, options: { isWrite?: boolean; ownOnly?: boolean } = {}): boolean {
-    if (clientId === 'root') return true;
+  checkTabAccess(
+    tabId: number,
+    clientId: string,
+    options: { isWrite?: boolean; ownOnly?: boolean } = {},
+  ): boolean {
+    if (clientId === "root") return true;
     if (options.ownOnly) {
       const owner = this.tabOwnership.get(tabId);
       return owner === clientId;
@@ -924,13 +1047,20 @@ export class BrowserManager {
     this.tabOwnership.set(tabId, toClientId);
   }
 
-  async getTabListWithTitles(): Promise<Array<{ id: number; url: string; title: string; active: boolean }>> {
-    const tabs: Array<{ id: number; url: string; title: string; active: boolean }> = [];
+  async getTabListWithTitles(): Promise<
+    Array<{ id: number; url: string; title: string; active: boolean }>
+  > {
+    const tabs: Array<{
+      id: number;
+      url: string;
+      title: string;
+      active: boolean;
+    }> = [];
     for (const [id, page] of this.pages) {
       tabs.push({
         id,
         url: page.url(),
-        title: await page.title().catch(() => ''),
+        title: await page.title().catch(() => ""),
         active: id === this.activeTabId,
       });
     }
@@ -941,7 +1071,8 @@ export class BrowserManager {
   /** Get the TabSession for the active tab. */
   getActiveSession(): TabSession {
     const session = this.tabSessions.get(this.activeTabId);
-    if (!session) throw new Error('No active page. Use "browse goto <url>" first.');
+    if (!session)
+      throw new Error('No active page. Use "browse goto <url>" first.');
     return session;
   }
 
@@ -976,17 +1107,30 @@ export class BrowserManager {
   async acquireTabLock(tabId: number, timeoutMs: number): Promise<() => void> {
     const existing = this.tabLocks.get(tabId) ?? Promise.resolve();
     // Wait for any held global lock first (cross-tier serialization).
-    const tail = Promise.all([existing, this.globalCdpLockTail]).then(() => undefined);
+    const tail = Promise.all([existing, this.globalCdpLockTail]).then(
+      () => undefined,
+    );
     let release!: () => void;
-    const next = new Promise<void>((resolve) => { release = resolve; });
-    this.tabLocks.set(tabId, tail.then(() => next));
+    const next = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    this.tabLocks.set(
+      tabId,
+      tail.then(() => next),
+    );
 
     const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error(
-        `CDPMutexAcquireTimeout: tab ${tabId} lock not acquired within ${timeoutMs}ms.\n` +
-        'Cause: a prior CDP or browser-scoped operation has held the lock too long.\n' +
-        'Action: retry; if this repeats, the prior operation may be hung — file a bug.'
-      )), timeoutMs),
+      setTimeout(
+        () =>
+          reject(
+            new Error(
+              `CDPMutexAcquireTimeout: tab ${tabId} lock not acquired within ${timeoutMs}ms.\n` +
+                "Cause: a prior CDP or browser-scoped operation has held the lock too long.\n" +
+                "Action: retry; if this repeats, the prior operation may be hung — file a bug.",
+            ),
+          ),
+        timeoutMs,
+      ),
     );
     try {
       await Promise.race([tail, timeoutPromise]);
@@ -1005,17 +1149,27 @@ export class BrowserManager {
   async acquireGlobalCdpLock(timeoutMs: number): Promise<() => void> {
     const allTabTails = Array.from(this.tabLocks.values());
     const priorGlobal = this.globalCdpLockTail;
-    const allPrior = Promise.all([priorGlobal, ...allTabTails]).then(() => undefined);
+    const allPrior = Promise.all([priorGlobal, ...allTabTails]).then(
+      () => undefined,
+    );
     let release!: () => void;
-    const next = new Promise<void>((resolve) => { release = resolve; });
+    const next = new Promise<void>((resolve) => {
+      release = resolve;
+    });
     this.globalCdpLockTail = allPrior.then(() => next);
 
     const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error(
-        `CDPMutexAcquireTimeout: global CDP lock not acquired within ${timeoutMs}ms.\n` +
-        'Cause: in-flight tab operations have not completed.\n' +
-        'Action: retry; if this repeats, file a bug — a tab op may be hung.'
-      )), timeoutMs),
+      setTimeout(
+        () =>
+          reject(
+            new Error(
+              `CDPMutexAcquireTimeout: global CDP lock not acquired within ${timeoutMs}ms.\n` +
+                "Cause: in-flight tab operations have not completed.\n" +
+                "Action: retry; if this repeats, file a bug — a tab op may be hung.",
+            ),
+          ),
+        timeoutMs,
+      ),
     );
     try {
       await Promise.race([allPrior, timeoutPromise]);
@@ -1035,7 +1189,7 @@ export class BrowserManager {
     try {
       return this.getPage().url();
     } catch {
-      return 'about:blank';
+      return "about:blank";
     }
   }
 
@@ -1056,7 +1210,9 @@ export class BrowserManager {
    * `structures` is passed in by the caller (read-commands / server) so
    * browser-manager doesn't take a hard dep on every buffer-owning module.
    */
-  async getMemorySnapshot(structures: MemoryStructureStats): Promise<MemorySnapshot> {
+  async getMemorySnapshot(
+    structures: MemoryStructureStats,
+  ): Promise<MemorySnapshot> {
     const bunMem = process.memoryUsage();
     const notes: string[] = [];
 
@@ -1065,12 +1221,21 @@ export class BrowserManager {
     const tabs: MemoryTabSnapshot[] = [];
     for (const [id, page] of this.pages) {
       try {
-        const url = (() => { try { return page.url(); } catch { return ''; } })();
-        const title = await page.title().catch(() => '');
+        const url = (() => {
+          try {
+            return page.url();
+          } catch {
+            return "";
+          }
+        })();
+        const title = await page.title().catch(() => "");
         const metrics = await withCdpSession(page, async (session) => {
-          await session.send('Performance.enable').catch(() => undefined);
-          const result = await session.send('Performance.getMetrics');
-          return ((result as { metrics?: Array<{ name: string; value: number }> }).metrics) ?? [];
+          await session.send("Performance.enable").catch(() => undefined);
+          const result = await session.send("Performance.getMetrics");
+          return (
+            (result as { metrics?: Array<{ name: string; value: number }> })
+              .metrics ?? []
+          );
         });
         const mm: Record<string, number> = {};
         for (const m of metrics) mm[m.name] = m.value;
@@ -1093,7 +1258,8 @@ export class BrowserManager {
     // (launched mode) or accessible via `context.browser()` (persistent
     // context / headed mode); try both.
     let processes: MemoryProcess[] | null = null;
-    const browser: Browser | null = this.browser ?? (this.context ? this.context.browser() : null);
+    const browser: Browser | null =
+      this.browser ?? (this.context ? this.context.browser() : null);
     if (browser) {
       try {
         // `newBrowserCDPSession` is browser-wide. Not exposed on every
@@ -1106,11 +1272,17 @@ export class BrowserManager {
           }>;
         };
         const maybeFactory = (browser as BrowserWithCDP).newBrowserCDPSession;
-        if (typeof maybeFactory === 'function') {
+        if (typeof maybeFactory === "function") {
           const browserSession = await maybeFactory.call(browser);
           try {
-            const info = (await browserSession.send('SystemInfo.getProcessInfo')) as {
-              processInfo?: Array<{ id: number; type: string; cpuTime: number }>;
+            const info = (await browserSession.send(
+              "SystemInfo.getProcessInfo",
+            )) as {
+              processInfo?: Array<{
+                id: number;
+                type: string;
+                cpuTime: number;
+              }>;
             };
             processes = (info.processInfo ?? []).map((p) => ({
               id: p.id,
@@ -1118,20 +1290,26 @@ export class BrowserManager {
               cpuTime: p.cpuTime,
             }));
             notes.push(
-              'Per-Chromium-process RSS not collected — SystemInfo.getProcessInfo exposes PID+type+CPU only. ' +
-              'See follow-up TODO "native/GPU memory breakdown" for the deferred fix.',
+              "Per-Chromium-process RSS not collected — SystemInfo.getProcessInfo exposes PID+type+CPU only. " +
+                'See follow-up TODO "native/GPU memory breakdown" for the deferred fix.',
             );
           } finally {
             await browserSession.detach().catch(() => undefined);
           }
         } else {
-          notes.push('Playwright build does not expose newBrowserCDPSession; per-process info skipped.');
+          notes.push(
+            "Playwright build does not expose newBrowserCDPSession; per-process info skipped.",
+          );
         }
       } catch (err: any) {
-        notes.push(`CDP browser session unavailable: ${err?.message ?? String(err)}`);
+        notes.push(
+          `CDP browser session unavailable: ${err?.message ?? String(err)}`,
+        );
       }
     } else {
-      notes.push('Browser handle unavailable (server connection mode); per-process info skipped.');
+      notes.push(
+        "Browser handle unavailable (server connection mode); per-process info skipped.",
+      );
     }
 
     return {
@@ -1158,7 +1336,9 @@ export class BrowserManager {
     this.getActiveSession().clearRefs();
   }
 
-  async resolveRef(selector: string): Promise<{ locator: Locator } | { selector: string }> {
+  async resolveRef(
+    selector: string,
+  ): Promise<{ locator: Locator } | { selector: string }> {
     return this.getActiveSession().resolveRef(selector);
   }
 
@@ -1246,15 +1426,17 @@ export class BrowserManager {
   }
 
   // ─── Frame context (delegates to active session) ────────────
-  setFrame(frame: import('playwright').Frame | null): void {
+  setFrame(frame: import("playwright").Frame | null): void {
     this.getActiveSession().setFrame(frame);
   }
 
-  getFrame(): import('playwright').Frame | null {
+  getFrame(): import("playwright").Frame | null {
     return this.getActiveSession().getFrame();
   }
 
-  getActiveFrameOrPage(): import('playwright').Page | import('playwright').Frame {
+  getActiveFrameOrPage():
+    | import("playwright").Page
+    | import("playwright").Frame {
     return this.getActiveSession().getActiveFrameOrPage();
   }
 
@@ -1264,10 +1446,10 @@ export class BrowserManager {
    * Skips pages that fail storage reads (e.g., already closed).
    */
   async saveState(): Promise<BrowserState> {
-    if (!this.context) throw new Error('Browser not launched');
+    if (!this.context) throw new Error("Browser not launched");
 
     const cookies = await this.context.cookies();
-    const pages: BrowserState['pages'] = [];
+    const pages: BrowserState["pages"] = [];
 
     for (const [id, page] of this.pages) {
       const url = page.url();
@@ -1287,7 +1469,7 @@ export class BrowserManager {
       const owner = this.tabOwnership.get(id);
 
       pages.push({
-        url: url === 'about:blank' ? '' : url,
+        url: url === "about:blank" ? "" : url,
         isActive: id === this.activeTabId,
         storage,
         loadedHtml: loaded?.html,
@@ -1305,7 +1487,7 @@ export class BrowserManager {
    * Failures on individual pages are swallowed — partial restore is better than none.
    */
   async restoreState(state: BrowserState): Promise<void> {
-    if (!this.context) throw new Error('Browser not launched');
+    if (!this.context) throw new Error("Browser not launched");
 
     // Restore cookies
     if (state.cookies.length > 0) {
@@ -1339,9 +1521,13 @@ export class BrowserManager {
         // TabSession.loadedHtml so the next saveState sees it. page.setContent()
         // alone would restore the DOM but lose the replay metadata.
         try {
-          await newSession.setTabContent(saved.loadedHtml, { waitUntil: saved.loadedHtmlWaitUntil });
+          await newSession.setTabContent(saved.loadedHtml, {
+            waitUntil: saved.loadedHtmlWaitUntil,
+          });
         } catch (err: any) {
-          console.warn(`[browse] Failed to replay loadedHtml for tab ${id}: ${err.message}`);
+          console.warn(
+            `[browse] Failed to replay loadedHtml for tab ${id}: ${err.message}`,
+          );
         }
       } else if (saved.url) {
         // Validate the saved URL before navigating — the state file is user-writable and
@@ -1351,26 +1537,39 @@ export class BrowserManager {
         try {
           normalizedUrl = await validateNavigationUrl(saved.url);
         } catch (err: any) {
-          console.warn(`[browse] Skipping invalid URL in state file: ${saved.url} — ${err.message}`);
+          console.warn(
+            `[browse] Skipping invalid URL in state file: ${saved.url} — ${err.message}`,
+          );
           continue;
         }
-        await page.goto(normalizedUrl, { waitUntil: 'domcontentloaded', timeout: 15000 }).catch(() => {});
+        await page
+          .goto(normalizedUrl, {
+            waitUntil: "domcontentloaded",
+            timeout: 15000,
+          })
+          .catch(() => {});
       }
 
       if (saved.storage) {
         try {
-          await page.evaluate((s: { localStorage: Record<string, string>; sessionStorage: Record<string, string> }) => {
-            if (s.localStorage) {
-              for (const [k, v] of Object.entries(s.localStorage)) {
-                localStorage.setItem(k, v);
+          await page.evaluate(
+            (s: {
+              localStorage: Record<string, string>;
+              sessionStorage: Record<string, string>;
+            }) => {
+              if (s.localStorage) {
+                for (const [k, v] of Object.entries(s.localStorage)) {
+                  localStorage.setItem(k, v);
+                }
               }
-            }
-            if (s.sessionStorage) {
-              for (const [k, v] of Object.entries(s.sessionStorage)) {
-                sessionStorage.setItem(k, v);
+              if (s.sessionStorage) {
+                for (const [k, v] of Object.entries(s.sessionStorage)) {
+                  sessionStorage.setItem(k, v);
+                }
               }
-            }
-          }, saved.storage);
+            },
+            saved.storage,
+          );
         } catch {}
       }
 
@@ -1394,11 +1593,13 @@ export class BrowserManager {
    * Falls back to a clean slate on any failure.
    */
   async recreateContext(): Promise<string | null> {
-    if (this.connectionMode === 'headed') {
-      throw new Error('Cannot recreate context in headed mode. Use disconnect first.');
+    if (this.connectionMode === "headed") {
+      throw new Error(
+        "Cannot recreate context in headed mode. Use disconnect first.",
+      );
     }
     if (!this.browser || !this.context) {
-      throw new Error('Browser not launched');
+      throw new Error("Browser not launched");
     }
 
     try {
@@ -1415,7 +1616,10 @@ export class BrowserManager {
 
       // 3. Create new context with updated settings
       const contextOptions: BrowserContextOptions = {
-        viewport: { width: this.currentViewport.width, height: this.currentViewport.height },
+        viewport: {
+          width: this.currentViewport.width,
+          height: this.currentViewport.height,
+        },
         deviceScaleFactor: this.deviceScaleFactor,
       };
       if (this.customUserAgent) {
@@ -1428,7 +1632,7 @@ export class BrowserManager {
       // webdriver mask, window.chrome.* shape, hardware spoof, and cdc/
       // Permissions cleanup on every restored page. Must run before
       // restoreState() navigates the restored tabs.
-      const { applyStealth } = await import('./stealth');
+      const { applyStealth } = await import("./stealth");
       await applyStealth(this.context);
 
       if (Object.keys(this.extraHeaders).length > 0) {
@@ -1447,7 +1651,10 @@ export class BrowserManager {
         if (this.context) await this.context.close().catch(() => {});
 
         const contextOptions: BrowserContextOptions = {
-          viewport: { width: this.currentViewport.width, height: this.currentViewport.height },
+          viewport: {
+            width: this.currentViewport.width,
+            height: this.currentViewport.height,
+          },
           deviceScaleFactor: this.deviceScaleFactor,
         };
         if (this.customUserAgent) {
@@ -1455,7 +1662,7 @@ export class BrowserManager {
         }
         this.context = await this.browser!.newContext(contextOptions);
         // Stealth applies to the fallback blank context too.
-        const { applyStealth } = await import('./stealth');
+        const { applyStealth } = await import("./stealth");
         await applyStealth(this.context);
         await this.newTab();
         this.clearRefs();
@@ -1477,15 +1684,25 @@ export class BrowserManager {
    * Returns null on success, or an error string if the new context couldn't be built
    * (state may have been lost, per recreateContext's fallback behavior).
    */
-  async setDeviceScaleFactor(scale: number, width: number, height: number): Promise<string | null> {
+  async setDeviceScaleFactor(
+    scale: number,
+    width: number,
+    height: number,
+  ): Promise<string | null> {
     if (!Number.isFinite(scale)) {
-      throw new Error(`viewport --scale: value must be a finite number, got ${scale}`);
+      throw new Error(
+        `viewport --scale: value must be a finite number, got ${scale}`,
+      );
     }
     if (scale < 1 || scale > 3) {
-      throw new Error(`viewport --scale: value must be between 1 and 3 (gstack policy cap), got ${scale}`);
+      throw new Error(
+        `viewport --scale: value must be between 1 and 3 (gstack policy cap), got ${scale}`,
+      );
     }
-    if (this.connectionMode === 'headed') {
-      throw new Error('viewport --scale is not supported in headed mode — scale is controlled by the real browser window.');
+    if (this.connectionMode === "headed") {
+      throw new Error(
+        "viewport --scale is not supported in headed mode — scale is controlled by the real browser window.",
+      );
     }
 
     const prevScale = this.deviceScaleFactor;
@@ -1535,11 +1752,11 @@ export class BrowserManager {
    *   If step 2 fails → return error, headless browser untouched
    */
   async handoff(message: string): Promise<string> {
-    if (this.connectionMode === 'headed' || this.isHeaded) {
+    if (this.connectionMode === "headed" || this.isHeaded) {
       return `HANDOFF: Already in headed mode at ${this.getCurrentUrl()}`;
     }
     if (!this.browser || !this.context) {
-      throw new Error('Browser not launched');
+      throw new Error("Browser not launched");
     }
 
     // 1. Save state from current browser
@@ -1550,31 +1767,44 @@ export class BrowserManager {
     //    Uses launchPersistentContext so the extension auto-loads.
     let newContext: BrowserContext;
     try {
-      const fs = require('fs');
-      const path = require('path');
+      const fs = require("fs");
+      const path = require("path");
       const extensionPath = this.findExtensionPath();
-      const { STEALTH_LAUNCH_ARGS, buildGStackLaunchArgs } = await import('./stealth');
+      const { STEALTH_LAUNCH_ARGS, buildGStackLaunchArgs } =
+        await import("./stealth");
       // Same blink-level stealth flags as launch()/launchHeaded(). Without
       // STEALTH_LAUNCH_ARGS the handed-off browser kept the AutomationControlled
       // tell that the other two paths strip.
-      const launchArgs: string[] = ['--hide-crash-restore-bubble', ...STEALTH_LAUNCH_ARGS, ...buildGStackLaunchArgs()];
+      const launchArgs: string[] = [
+        "--hide-crash-restore-bubble",
+        ...STEALTH_LAUNCH_ARGS,
+        ...buildGStackLaunchArgs(),
+      ];
       if (extensionPath) {
         launchArgs.push(`--disable-extensions-except=${extensionPath}`);
         launchArgs.push(`--load-extension=${extensionPath}`);
         // Auth token is served via /health endpoint now (no file write needed).
         // Extension reads token from /health on connect.
-        console.log(`[browse] Handoff: loading extension from ${extensionPath}`);
+        console.log(
+          `[browse] Handoff: loading extension from ${extensionPath}`,
+        );
       } else {
-        console.log('[browse] Handoff: extension not found — headed mode without side panel');
+        console.log(
+          "[browse] Handoff: extension not found — headed mode without side panel",
+        );
       }
 
-      const userDataDir = path.join(process.env.HOME || '/tmp', '.gstack', 'chromium-profile');
+      const userDataDir = path.join(
+        process.env.HOME || "/tmp",
+        ".gstack",
+        "chromium-profile",
+      );
       fs.mkdirSync(userDataDir, { recursive: true });
 
       // T1: same automation-tell-stripping defaults as launchHeaded().
       // The handoff path (headless → headed re-launch) takes the same
       // anti-detection posture.
-      const { STEALTH_IGNORE_DEFAULT_ARGS } = await import('./stealth');
+      const { STEALTH_IGNORE_DEFAULT_ARGS } = await import("./stealth");
       newContext = await chromium.launchPersistentContext(userDataDir, {
         headless: false,
         // Match the sandbox policy used by launchHeaded() / launch(). The
@@ -1601,13 +1831,13 @@ export class BrowserManager {
       this.browser = newContext.browser();
       this.pages.clear();
       this.tabSessions.clear();
-      this.connectionMode = 'headed';
+      this.connectionMode = "headed";
 
       // Same Layer C stealth as launch()/launchHeaded(). Must run BEFORE
       // restoreState() navigates so the init scripts apply to the restored
       // pages — without this the handed-off browser had cmdline args but no
       // JS stealth (no webdriver mask, no chrome.* shape, no toString proxy).
-      const { applyStealth } = await import('./stealth');
+      const { applyStealth } = await import("./stealth");
       await applyStealth(newContext);
 
       if (Object.keys(this.extraHeaders).length > 0) {
@@ -1619,7 +1849,7 @@ export class BrowserManager {
       // Cmd+Q after a handoff doesn't trigger gbd's restart loop.
       if (this.browser) {
         const browserRef = this.browser;
-        this.browser.on('disconnected', () => {
+        this.browser.on("disconnected", () => {
           if (this.intentionalDisconnect) return;
           void handleChromiumDisconnect(browserRef);
         });
@@ -1627,17 +1857,17 @@ export class BrowserManager {
 
       await this.restoreState(state);
       this.isHeaded = true;
-      this.dialogAutoAccept = false;  // User controls dialogs in headed mode
+      this.dialogAutoAccept = false; // User controls dialogs in headed mode
 
       // 4. Close old headless browser (fire-and-forget)
-      oldBrowser.removeAllListeners('disconnected');
+      oldBrowser.removeAllListeners("disconnected");
       oldBrowser.close().catch(() => {});
 
       return [
         `HANDOFF: Browser opened at ${currentUrl}`,
         `MESSAGE: ${message}`,
         `STATUS: Waiting for user. Run 'resume' when done.`,
-      ].join('\n');
+      ].join("\n");
     } catch (err: unknown) {
       // Restore failed — close the new context, keep old state
       await newContext.close().catch(() => {});
@@ -1684,16 +1914,19 @@ export class BrowserManager {
   // ─── Console/Network/Dialog/Ref Wiring ────────────────────
   private wirePageEvents(page: Page) {
     // Track tab close — remove from pages and sessions maps, switch to another tab
-    page.on('close', () => {
+    page.on("close", () => {
       for (const [id, p] of this.pages) {
         if (p === page) {
           this.pages.delete(id);
           this.tabSessions.delete(id);
-          console.log(`[browse] Tab closed (id=${id}, remaining=${this.pages.size})`);
+          console.log(
+            `[browse] Tab closed (id=${id}, remaining=${this.pages.size})`,
+          );
           // If the closed tab was active, switch to another
           if (this.activeTabId === id) {
             const remaining = [...this.pages.keys()];
-            this.activeTabId = remaining.length > 0 ? remaining[remaining.length - 1] : 0;
+            this.activeTabId =
+              remaining.length > 0 ? remaining[remaining.length - 1] : 0;
           }
           break;
         }
@@ -1703,7 +1936,7 @@ export class BrowserManager {
 
     // Clear ref map on navigation — refs point to stale elements after page change
     // (lastSnapshot is NOT cleared — it's a text baseline for diffing)
-    page.on('framenavigated', (frame) => {
+    page.on("framenavigated", (frame) => {
       if (frame === page.mainFrame()) {
         // Find the TabSession for this page and clear its per-tab state
         for (const session of this.tabSessions.values()) {
@@ -1716,14 +1949,16 @@ export class BrowserManager {
     });
 
     // ─── Dialog auto-handling (prevents browser lockup) ─────
-    page.on('dialog', async (dialog) => {
+    page.on("dialog", async (dialog) => {
       const entry: DialogEntry = {
         timestamp: Date.now(),
         type: dialog.type(),
         message: dialog.message(),
         defaultValue: dialog.defaultValue() || undefined,
-        action: this.dialogAutoAccept ? 'accepted' : 'dismissed',
-        response: this.dialogAutoAccept ? (this.dialogPromptText ?? undefined) : undefined,
+        action: this.dialogAutoAccept ? "accepted" : "dismissed",
+        response: this.dialogAutoAccept
+          ? (this.dialogPromptText ?? undefined)
+          : undefined,
       };
       addDialogEntry(entry);
 
@@ -1738,7 +1973,7 @@ export class BrowserManager {
       }
     });
 
-    page.on('console', (msg) => {
+    page.on("console", (msg) => {
       addConsoleEntry({
         timestamp: Date.now(),
         level: msg.type(),
@@ -1746,7 +1981,7 @@ export class BrowserManager {
       });
     });
 
-    page.on('request', (req) => {
+    page.on("request", (req) => {
       addNetworkEntry({
         timestamp: Date.now(),
         method: req.method(),
@@ -1754,14 +1989,18 @@ export class BrowserManager {
       });
     });
 
-    page.on('response', (res) => {
+    page.on("response", (res) => {
       // Find matching request entry and update it (backward scan)
       const url = res.url();
       const status = res.status();
       for (let i = networkBuffer.length - 1; i >= 0; i--) {
         const entry = networkBuffer.get(i);
         if (entry && entry.url === url && !entry.status) {
-          networkBuffer.set(i, { ...entry, status, duration: Date.now() - entry.timestamp });
+          networkBuffer.set(i, {
+            ...entry,
+            status,
+            duration: Date.now() - entry.timestamp,
+          });
           break;
         }
       }
@@ -1781,7 +2020,7 @@ export class BrowserManager {
     // The "single context-level CDP listener" architecture (D10's
     // stretch goal — would reduce per-page listener count from N to 1
     // via Target.setAutoAttach) is deferred. TODOS.md tracks it.
-    page.on('requestfinished', async (req) => {
+    page.on("requestfinished", async (req) => {
       try {
         const sizes = await req.sizes().catch(() => null);
         if (!sizes) return;

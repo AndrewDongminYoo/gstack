@@ -10,12 +10,12 @@
  * override — debugging confusion is worse than a one-time setup error.
  */
 
-import { createHash } from 'crypto';
-import type { UpstreamConfig } from './socks-bridge';
+import { createHash } from "crypto";
+import type { UpstreamConfig } from "./socks-bridge";
 
 export interface ParsedProxyConfig {
   /** Original scheme: 'socks5' | 'http' | 'https' */
-  scheme: 'socks5' | 'http' | 'https';
+  scheme: "socks5" | "http" | "https";
   host: string;
   port: number;
   userId?: string;
@@ -25,9 +25,12 @@ export interface ParsedProxyConfig {
 }
 
 export class ProxyConfigError extends Error {
-  constructor(public readonly hint: string, message: string) {
+  constructor(
+    public readonly hint: string,
+    message: string,
+  ) {
     super(message);
-    this.name = 'ProxyConfigError';
+    this.name = "ProxyConfigError";
   }
 }
 
@@ -47,32 +50,36 @@ export function parseProxyConfig(opts: {
     url = new URL(opts.proxyUrl);
   } catch {
     throw new ProxyConfigError(
-      'expected scheme://[user:pass@]host:port',
+      "expected scheme://[user:pass@]host:port",
       `invalid proxy URL — could not parse`,
     );
   }
 
-  const scheme = url.protocol.replace(':', '');
-  if (scheme !== 'socks5' && scheme !== 'http' && scheme !== 'https') {
+  const scheme = url.protocol.replace(":", "");
+  if (scheme !== "socks5" && scheme !== "http" && scheme !== "https") {
     throw new ProxyConfigError(
-      'use socks5://, http://, or https://',
+      "use socks5://, http://, or https://",
       `unsupported proxy scheme '${scheme}'`,
     );
   }
 
   if (!url.hostname) {
     throw new ProxyConfigError(
-      'expected scheme://[user:pass@]host:port',
+      "expected scheme://[user:pass@]host:port",
       `invalid proxy URL — missing host`,
     );
   }
 
   const port = url.port
     ? parseInt(url.port, 10)
-    : (scheme === 'http' ? 80 : scheme === 'https' ? 443 : 1080);
+    : scheme === "http"
+      ? 80
+      : scheme === "https"
+        ? 443
+        : 1080;
   if (!Number.isInteger(port) || port <= 0 || port > 65535) {
     throw new ProxyConfigError(
-      'expected scheme://[user:pass@]host:port',
+      "expected scheme://[user:pass@]host:port",
       `invalid proxy URL — bad port`,
     );
   }
@@ -89,7 +96,7 @@ export function parseProxyConfig(opts: {
   // wins over a fresh --proxy URL, the user can't tell why.
   if (urlHasCreds && envHasCreds) {
     throw new ProxyConfigError(
-      'unset BROWSE_PROXY_USER/PASS or remove user:pass@ from --proxy',
+      "unset BROWSE_PROXY_USER/PASS or remove user:pass@ from --proxy",
       `proxy creds set in both env (BROWSE_PROXY_USER) and URL — pick one source`,
     );
   }
@@ -105,7 +112,7 @@ export function parseProxyConfig(opts: {
   }
 
   return {
-    scheme: scheme as 'socks5' | 'http' | 'https',
+    scheme: scheme as "socks5" | "http" | "https",
     host: url.hostname,
     port,
     ...(userId ? { userId } : {}),
@@ -138,7 +145,7 @@ export function computeConfigHash(opts: {
 }): string {
   const proxyKey = canonicalizeProxyUrl(opts.proxyUrl);
   const input = JSON.stringify({ proxy: proxyKey, headed: opts.headed });
-  return createHash('sha256').update(input).digest('hex').slice(0, 16);
+  return createHash("sha256").update(input).digest("hex").slice(0, 16);
 }
 
 /** Strip creds from a proxy URL for hashing. Returns null for empty input. */
@@ -146,10 +153,10 @@ function canonicalizeProxyUrl(input: string | null | undefined): string | null {
   if (!input) return null;
   try {
     const u = new URL(input);
-    u.username = '';
-    u.password = '';
+    u.username = "";
+    u.password = "";
     return `${u.protocol}//${u.host}`;
   } catch {
-    return '<unparseable>';
+    return "<unparseable>";
   }
 }

@@ -5,17 +5,17 @@
  * Outputs the absolute path to the browse binary on stdout, or exits 1 if not found.
  */
 
-import { accessSync, constants } from 'fs';
-import { join } from 'path';
-import { homedir } from 'os';
+import { accessSync, constants } from "fs";
+import { join } from "path";
+import { homedir } from "os";
 
 // ─── Binary Discovery ───────────────────────────────────────────
 
 function getGitRoot(): string | null {
   try {
-    const proc = Bun.spawnSync(['git', 'rev-parse', '--show-toplevel'], {
-      stdout: 'pipe',
-      stderr: 'pipe',
+    const proc = Bun.spawnSync(["git", "rev-parse", "--show-toplevel"], {
+      stdout: "pipe",
+      stderr: "pipe",
     });
     if (proc.exitCode !== 0) return null;
     return proc.stdout.toString().trim();
@@ -44,8 +44,8 @@ function isExecutable(p: string): boolean {
 // make-pdf/src/browseClient.ts:89 and make-pdf/src/pdftotext.ts:52.
 function findExecutable(base: string): string | null {
   if (isExecutable(base)) return base;
-  if (process.platform === 'win32') {
-    for (const ext of ['.exe', '.cmd', '.bat']) {
+  if (process.platform === "win32") {
+    for (const ext of [".exe", ".cmd", ".bat"]) {
       const withExt = base + ext;
       if (isExecutable(withExt)) return withExt;
     }
@@ -56,12 +56,20 @@ function findExecutable(base: string): string | null {
 export function locateBinary(): string | null {
   const root = getGitRoot();
   const home = homedir();
-  const markers = ['.codex', '.agents', '.claude'];
+  const markers = [".codex", ".agents", ".claude"];
 
   // Workspace-local takes priority (for development)
   if (root) {
     for (const m of markers) {
-      const local = join(root, m, 'skills', 'gstack', 'browse', 'dist', 'browse');
+      const local = join(
+        root,
+        m,
+        "skills",
+        "gstack",
+        "browse",
+        "dist",
+        "browse",
+      );
       const found = findExecutable(local);
       if (found) return found;
     }
@@ -72,14 +80,22 @@ export function locateBinary(): string | null {
     // - the windows-setup-e2e.yml CI workflow which builds binaries
     //   in place but never installs them under a marker dir
     // - make-pdf consumers running from a sibling source checkout
-    const sourceCheckout = join(root, 'browse', 'dist', 'browse');
+    const sourceCheckout = join(root, "browse", "dist", "browse");
     const sourceFound = findExecutable(sourceCheckout);
     if (sourceFound) return sourceFound;
   }
 
   // Global fallback
   for (const m of markers) {
-    const global = join(home, m, 'skills', 'gstack', 'browse', 'dist', 'browse');
+    const global = join(
+      home,
+      m,
+      "skills",
+      "gstack",
+      "browse",
+      "dist",
+      "browse",
+    );
     const found = findExecutable(global);
     if (found) return found;
   }
@@ -92,7 +108,9 @@ export function locateBinary(): string | null {
 function main() {
   const bin = locateBinary();
   if (!bin) {
-    process.stderr.write('ERROR: browse binary not found. Run: cd <skill-dir> && ./setup\n');
+    process.stderr.write(
+      "ERROR: browse binary not found. Run: cd <skill-dir> && ./setup\n",
+    );
     process.exit(1);
   }
 

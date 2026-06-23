@@ -18,20 +18,20 @@
  *   cdp_method_lock_acquire_ms  {domain, method, ms}
  */
 
-import { promises as fs } from 'fs';
-import * as path from 'path';
-import * as os from 'os';
+import { promises as fs } from "fs";
+import * as path from "path";
+import * as os from "os";
 
 function gstackHome(): string {
-  return process.env.GSTACK_HOME || path.join(os.homedir(), '.gstack');
+  return process.env.GSTACK_HOME || path.join(os.homedir(), ".gstack");
 }
 
 function analyticsDir(): string {
-  return path.join(gstackHome(), 'analytics');
+  return path.join(gstackHome(), "analytics");
 }
 
 function telemetryFile(): string {
-  return path.join(analyticsDir(), 'browse-telemetry.jsonl');
+  return path.join(analyticsDir(), "browse-telemetry.jsonl");
 }
 
 let lastEnsuredDir: string | null = null;
@@ -46,7 +46,7 @@ let telemetryDisabled: boolean | null = null;
 function isDisabled(): boolean {
   if (telemetryDisabled !== null) return telemetryDisabled;
   // Check env (set by preamble or test harnesses).
-  if (process.env.GSTACK_TELEMETRY_OFF === '1') {
+  if (process.env.GSTACK_TELEMETRY_OFF === "1") {
     telemetryDisabled = true;
     return true;
   }
@@ -66,7 +66,9 @@ export function logTelemetry(payload: TelemetryEvent): void {
   if (isDisabled()) return;
   const enriched = { ...payload, ts: new Date().toISOString() };
   ensureDir()
-    .then(() => fs.appendFile(telemetryFile(), JSON.stringify(enriched) + '\n', 'utf8'))
+    .then(() =>
+      fs.appendFile(telemetryFile(), JSON.stringify(enriched) + "\n", "utf8"),
+    )
     .catch(() => {
       // Telemetry must never crash the caller. If the disk is full or perms
       // are wrong, swallow silently — there's nothing useful to do here.

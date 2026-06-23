@@ -20,18 +20,20 @@
  * Bun 1.3.10): pass cols/rows + a data callback; write input via
  * `proc.terminal.write(buf)`; resize via `proc.terminal.resize(cols, rows)`.
  */
-import * as fs from 'fs';
-import * as path from 'path';
-import * as crypto from 'crypto';
-import { writeSecureFile, mkdirSecure } from './file-permissions';
-import { safeUnlink } from './error-handling';
-import { writeAgentRecord, clearAgentRecord } from './terminal-agent-control';
+import * as fs from "fs";
+import * as path from "path";
+import * as crypto from "crypto";
+import { writeSecureFile, mkdirSecure } from "./file-permissions";
+import { safeUnlink } from "./error-handling";
+import { writeAgentRecord, clearAgentRecord } from "./terminal-agent-control";
 
-const STATE_FILE = process.env.BROWSE_STATE_FILE || path.join(process.env.HOME || '/tmp', '.gstack', 'browse.json');
-const PORT_FILE = path.join(path.dirname(STATE_FILE), 'terminal-port');
-const BROWSE_SERVER_PORT = parseInt(process.env.BROWSE_SERVER_PORT || '0', 10);
-const EXTENSION_ID = process.env.BROWSE_EXTENSION_ID || ''; // optional: tighten Origin check
-const INTERNAL_TOKEN = crypto.randomBytes(32).toString('base64url'); // shared with parent server via env at spawn
+const STATE_FILE =
+  process.env.BROWSE_STATE_FILE ||
+  path.join(process.env.HOME || "/tmp", ".gstack", "browse.json");
+const PORT_FILE = path.join(path.dirname(STATE_FILE), "terminal-port");
+const BROWSE_SERVER_PORT = parseInt(process.env.BROWSE_SERVER_PORT || "0", 10);
+const EXTENSION_ID = process.env.BROWSE_EXTENSION_ID || ""; // optional: tighten Origin check
+const INTERNAL_TOKEN = crypto.randomBytes(32).toString("base64url"); // shared with parent server via env at spawn
 /**
  * Per-boot generation identifier. Loopback /internal/* callers include
  * `X-Browse-Gen: <CURRENT_GEN>` so a slow agent the watchdog respawned
@@ -39,7 +41,7 @@ const INTERNAL_TOKEN = crypto.randomBytes(32).toString('base64url'); // shared w
  * header means "legacy caller" and is accepted (backward compat); a
  * present-but-mismatched header returns 409 stale generation.
  */
-const CURRENT_GEN = crypto.randomBytes(16).toString('base64url');
+const CURRENT_GEN = crypto.randomBytes(16).toString("base64url");
 
 // In-memory attach-token registry. Parent posts /internal/grant after
 // /pty-session; we validate WS upgrades against this map.
@@ -70,15 +72,15 @@ const sessionsById = new Map<string, PtySession>();
 // Active PTY session per WS. One terminal per connection. Codex finding #4:
 // uncaught handlers below catch bugs in framing/cleanup so they don't kill
 // the listener loop.
-process.on('uncaughtException', (err) => {
-  console.error('[terminal-agent] uncaughtException:', err);
+process.on("uncaughtException", (err) => {
+  console.error("[terminal-agent] uncaughtException:", err);
 });
-process.on('unhandledRejection', (reason) => {
-  console.error('[terminal-agent] unhandledRejection:', reason);
+process.on("unhandledRejection", (reason) => {
+  console.error("[terminal-agent] unhandledRejection:", reason);
 });
 
 export interface PtySession {
-  proc: any | null;        // Bun.Subprocess once spawned
+  proc: any | null; // Bun.Subprocess once spawned
   cols: number;
   rows: number;
   cookie: string;
@@ -145,7 +147,7 @@ export interface PtySession {
  * minute per assertion.
  */
 const KEEPALIVE_INTERVAL_MS = parseInt(
-  process.env.GSTACK_PTY_KEEPALIVE_INTERVAL_MS || '25000',
+  process.env.GSTACK_PTY_KEEPALIVE_INTERVAL_MS || "25000",
   10,
 );
 
@@ -170,7 +172,7 @@ const RING_BUFFER_MAX_BYTES = parseInt(
  * stack up unbounded.
  */
 const DETACH_WINDOW_MS = parseInt(
-  process.env.GSTACK_PTY_DETACH_WINDOW_MS || '60000',
+  process.env.GSTACK_PTY_DETACH_WINDOW_MS || "60000",
   10,
 );
 
@@ -188,18 +190,21 @@ const DETACH_WINDOW_MS = parseInt(
 export function appendToRingBuffer(session: PtySession, frame: Buffer): void {
   session.ringBuffer.push(frame);
   session.ringBufferBytes += frame.length;
-  while (session.ringBufferBytes > RING_BUFFER_MAX_BYTES && session.ringBuffer.length > 1) {
+  while (
+    session.ringBufferBytes > RING_BUFFER_MAX_BYTES &&
+    session.ringBuffer.length > 1
+  ) {
     const evicted = session.ringBuffer.shift()!;
     session.ringBufferBytes -= evicted.length;
   }
   // Alt-screen tracking. Scan for the canonical xterm enter/exit pairs.
   // We do this on every append (not just on attach) so the state is
   // correct even if many frames have flowed since the last attach.
-  const ascii = frame.toString('latin1'); // single-byte view is enough — the codes are 7-bit ASCII
+  const ascii = frame.toString("latin1"); // single-byte view is enough — the codes are 7-bit ASCII
   // Use lastIndexOf so trailing state wins when both appear in one frame
   // (e.g., a quick tool-call open+close inside one render pass).
-  const enterIdx = ascii.lastIndexOf('\x1b[?1049h');
-  const exitIdx = ascii.lastIndexOf('\x1b[?1049l');
+  const enterIdx = ascii.lastIndexOf("\x1b[?1049h");
+  const exitIdx = ascii.lastIndexOf("\x1b[?1049l");
   if (enterIdx >= 0 && enterIdx > exitIdx) session.altScreenActive = true;
   else if (exitIdx >= 0 && exitIdx > enterIdx) session.altScreenActive = false;
 }
@@ -221,8 +226,8 @@ export function appendToRingBuffer(session: PtySession, frame: Buffer): void {
  */
 export function buildReplayPayload(session: PtySession): Buffer {
   const parts: Buffer[] = [];
-  parts.push(Buffer.from('\x1b[!p'));
-  if (session.altScreenActive) parts.push(Buffer.from('\x1b[?1049h'));
+  parts.push(Buffer.from("\x1b[!p"));
+  if (session.altScreenActive) parts.push(Buffer.from("\x1b[?1049h"));
   for (const frame of session.ringBuffer) parts.push(frame);
   return Buffer.concat(parts);
 }
@@ -239,17 +244,20 @@ function findClaude(): string | null {
   // Bun.which is sync and respects PATH. Falls back to a small list of
   // common install locations if PATH is stripped (e.g., launched from
   // Conductor with a minimal env).
-  const which = (Bun as any).which?.('claude');
+  const which = (Bun as any).which?.("claude");
   if (which) return which;
   const candidates = [
-    '/opt/homebrew/bin/claude',
-    '/usr/local/bin/claude',
+    "/opt/homebrew/bin/claude",
+    "/usr/local/bin/claude",
     `${process.env.HOME}/.local/bin/claude`,
     `${process.env.HOME}/.bun/bin/claude`,
     `${process.env.HOME}/.npm-global/bin/claude`,
   ];
   for (const c of candidates) {
-    try { fs.accessSync(c, fs.constants.X_OK); return c; } catch {}
+    try {
+      fs.accessSync(c, fs.constants.X_OK);
+      return c;
+    } catch {}
   }
   return null;
 }
@@ -257,15 +265,17 @@ function findClaude(): string | null {
 /** Probe + persist claude availability for the bootstrap card. */
 function writeClaudeAvailable(): void {
   const stateDir = path.dirname(STATE_FILE);
-  try { mkdirSecure(stateDir); } catch {}
+  try {
+    mkdirSecure(stateDir);
+  } catch {}
   const found = findClaude();
   const status = {
     available: !!found,
     path: found || undefined,
-    install_url: 'https://docs.anthropic.com/en/docs/claude-code',
+    install_url: "https://docs.anthropic.com/en/docs/claude-code",
     checked_at: new Date().toISOString(),
   };
-  const target = path.join(stateDir, 'claude-available.json');
+  const target = path.join(stateDir, "claude-available.json");
   const tmp = path.join(stateDir, `.tmp-claude-${process.pid}`);
   try {
     writeSecureFile(tmp, JSON.stringify(status, null, 2));
@@ -289,33 +299,37 @@ function writeClaudeAvailable(): void {
  *      returns per-tab results as JSON.
  */
 function buildTabAwarenessHint(stateDir: string): string {
-  const tabsFile = path.join(stateDir, 'tabs.json');
-  const activeFile = path.join(stateDir, 'active-tab.json');
+  const tabsFile = path.join(stateDir, "tabs.json");
+  const activeFile = path.join(stateDir, "active-tab.json");
   return [
-    'You are running inside the gstack browser sidebar with live access to the user\'s browser tabs.',
-    '',
-    'Tab state files (kept fresh automatically by the extension):',
+    "You are running inside the gstack browser sidebar with live access to the user's browser tabs.",
+    "",
+    "Tab state files (kept fresh automatically by the extension):",
     `  ${tabsFile}        — all open tabs (id, url, title, active, pinned)`,
     `  ${activeFile}    — the currently active tab`,
     'Read these any time the user asks about "tabs", "the current page", or anything multi-tab. Do NOT shell out to $B tabs just to learn what\'s open — read the file.',
-    '',
-    'Tab manipulation commands (via $B):',
-    '  $B tab <id>                 — switch to a tab',
-    '  $B newtab [url]             — open a new tab',
-    '  $B closetab [id]            — close a tab (current if no id)',
-    '  $B tab-each <command>       — fan out a command across every tab; returns JSON results',
-    '',
-    'When the user asks for multi-tab work, prefer $B tab-each. Examples:',
-    '  $B tab-each snapshot -i     — grab a snapshot from every tab',
-    '  $B tab-each text            — pull clean text from every tab',
-    '  $B tab-each title           — list every tab\'s title',
-    '',
-    'You\'re in a real terminal with a real PTY — slash commands, /resume, ANSI colors all work as in a normal claude session.',
-  ].join('\n');
+    "",
+    "Tab manipulation commands (via $B):",
+    "  $B tab <id>                 — switch to a tab",
+    "  $B newtab [url]             — open a new tab",
+    "  $B closetab [id]            — close a tab (current if no id)",
+    "  $B tab-each <command>       — fan out a command across every tab; returns JSON results",
+    "",
+    "When the user asks for multi-tab work, prefer $B tab-each. Examples:",
+    "  $B tab-each snapshot -i     — grab a snapshot from every tab",
+    "  $B tab-each text            — pull clean text from every tab",
+    "  $B tab-each title           — list every tab's title",
+    "",
+    "You're in a real terminal with a real PTY — slash commands, /resume, ANSI colors all work as in a normal claude session.",
+  ].join("\n");
 }
 
 /** Spawn claude in a PTY. Returns null if claude not on PATH. */
-function spawnClaude(cols: number, rows: number, onData: (chunk: Buffer) => void) {
+function spawnClaude(
+  cols: number,
+  rows: number,
+  onData: (chunk: Buffer) => void,
+) {
   const claudePath = findClaude();
   if (!claudePath) return null;
 
@@ -324,13 +338,13 @@ function spawnClaude(cols: number, rows: number, onData: (chunk: Buffer) => void
   // headed-mode browser; BROWSE_NO_AUTOSTART prevents claude's gstack
   // tooling from racing to spawn another server.
   const env: Record<string, string> = {
-    ...process.env as any,
+    ...(process.env as any),
     BROWSE_PORT: String(BROWSE_SERVER_PORT),
     BROWSE_STATE_FILE: STATE_FILE,
-    BROWSE_NO_AUTOSTART: '1',
-    BROWSE_HEADED: '1',
-    TERM: 'xterm-256color',
-    COLORTERM: 'truecolor',
+    BROWSE_NO_AUTOSTART: "1",
+    BROWSE_HEADED: "1",
+    TERM: "xterm-256color",
+    COLORTERM: "truecolor",
   };
 
   // --append-system-prompt is the right injection surface (per `claude --help`):
@@ -341,25 +355,35 @@ function spawnClaude(cols: number, rows: number, onData: (chunk: Buffer) => void
   const stateDir = path.dirname(STATE_FILE);
   const tabHint = buildTabAwarenessHint(stateDir);
 
-  const proc = (Bun as any).spawn([claudePath, '--append-system-prompt', tabHint], {
-    terminal: {
-      rows,
-      cols,
-      data(_terminal: any, chunk: Buffer) { onData(chunk); },
+  const proc = (Bun as any).spawn(
+    [claudePath, "--append-system-prompt", tabHint],
+    {
+      terminal: {
+        rows,
+        cols,
+        data(_terminal: any, chunk: Buffer) {
+          onData(chunk);
+        },
+      },
+      env,
     },
-    env,
-  });
+  );
   return proc;
 }
 
 /** Cleanup a PTY session: SIGINT, then SIGKILL after 3s. */
 function disposeSession(session: PtySession): void {
-  try { session.proc?.terminal?.close?.(); } catch {}
+  try {
+    session.proc?.terminal?.close?.();
+  } catch {}
   if (session.proc?.pid) {
-    try { session.proc.kill?.('SIGINT'); } catch {}
+    try {
+      session.proc.kill?.("SIGINT");
+    } catch {}
     setTimeout(() => {
       try {
-        if (session.proc && !session.proc.killed) session.proc.kill?.('SIGKILL');
+        if (session.proc && !session.proc.killed)
+          session.proc.kill?.("SIGKILL");
       } catch {}
     }, 3000);
   }
@@ -381,13 +405,13 @@ function disposeSession(session: PtySession): void {
  * /internal/* route is a one-liner.
  */
 function checkInternalAuth(req: Request): Response | null {
-  const auth = req.headers.get('authorization');
+  const auth = req.headers.get("authorization");
   if (auth !== `Bearer ${INTERNAL_TOKEN}`) {
-    return new Response('forbidden', { status: 403 });
+    return new Response("forbidden", { status: 403 });
   }
-  const headerGen = req.headers.get('x-browse-gen');
+  const headerGen = req.headers.get("x-browse-gen");
   if (headerGen && headerGen !== CURRENT_GEN) {
-    return new Response('stale generation', { status: 409 });
+    return new Response("stale generation", { status: 409 });
   }
   return null;
 }
@@ -413,18 +437,18 @@ async function internalHandler<T>(
   try {
     body = await req.json();
   } catch {
-    return new Response('bad', { status: 400 });
+    return new Response("bad", { status: 400 });
   }
   try {
     const result = await fn(body);
     if (result instanceof Response) return result;
-    if (result === undefined || result === null) return new Response('ok');
+    if (result === undefined || result === null) return new Response("ok");
     return new Response(JSON.stringify(result), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { "Content-Type": "application/json" },
     });
   } catch {
-    return new Response('bad', { status: 400 });
+    return new Response("bad", { status: 400 });
   }
 }
 
@@ -446,12 +470,19 @@ function maybeSpawnPty(ws: any, session: PtySession): boolean {
     // UTF-8 boundary detection (issue #1272). Look back at most 3 bytes
     // for the start of an incomplete multibyte sequence and defer it.
     let safeEnd = combined.length;
-    for (let i = combined.length - 1; i >= Math.max(0, combined.length - 3); i--) {
+    for (
+      let i = combined.length - 1;
+      i >= Math.max(0, combined.length - 3);
+      i--
+    ) {
       const b = combined[i];
-      if ((b & 0x80) === 0) { safeEnd = i + 1; break; }
-      if ((b & 0xC0) === 0x80) continue;
-      const expected = (b & 0xE0) === 0xC0 ? 2 : (b & 0xF0) === 0xE0 ? 3 : 4;
-      safeEnd = (combined.length - i >= expected) ? combined.length : i;
+      if ((b & 0x80) === 0) {
+        safeEnd = i + 1;
+        break;
+      }
+      if ((b & 0xc0) === 0x80) continue;
+      const expected = (b & 0xe0) === 0xc0 ? 2 : (b & 0xf0) === 0xe0 ? 3 : 4;
+      safeEnd = combined.length - i >= expected ? combined.length : i;
       break;
     }
     const flush = combined.slice(0, safeEnd);
@@ -464,31 +495,38 @@ function maybeSpawnPty(ws: any, session: PtySession): boolean {
       // detached and liveWs is null).
       appendToRingBuffer(session, flush);
       if (session.liveWs) {
-        try { session.liveWs.sendBinary(flush); } catch {}
+        try {
+          session.liveWs.sendBinary(flush);
+        } catch {}
       }
     }
   });
   if (!proc) {
     try {
-      ws.send(JSON.stringify({
-        type: 'error',
-        code: 'CLAUDE_NOT_FOUND',
-        message: 'claude CLI not on PATH. Install: https://docs.anthropic.com/en/docs/claude-code',
-      }));
-      ws.close(4404, 'claude not found');
+      ws.send(
+        JSON.stringify({
+          type: "error",
+          code: "CLAUDE_NOT_FOUND",
+          message:
+            "claude CLI not on PATH. Install: https://docs.anthropic.com/en/docs/claude-code",
+        }),
+      );
+      ws.close(4404, "claude not found");
     } catch {}
     return false;
   }
   session.proc = proc;
   proc.exited?.then?.(() => {
-    try { session.liveWs?.close(1000, 'pty exited'); } catch {}
+    try {
+      session.liveWs?.close(1000, "pty exited");
+    } catch {}
   });
   return true;
 }
 
 function buildServer() {
   return Bun.serve({
-    hostname: '127.0.0.1',
+    hostname: "127.0.0.1",
     port: 0,
     idleTimeout: 0, // PTY connections are long-lived; default idleTimeout would kill them
 
@@ -501,21 +539,22 @@ function buildServer() {
       // back to the same PtySession. Legacy callers passing just `{token}`
       // still work — sessionId becomes null and re-attach is unavailable
       // for that grant.
-      if (url.pathname === '/internal/grant' && req.method === 'POST') {
+      if (url.pathname === "/internal/grant" && req.method === "POST") {
         return internalHandler(req, (body) => {
-          if (typeof body?.token === 'string' && body.token.length > 16) {
-            const sid = typeof body?.sessionId === 'string' && body.sessionId.length > 0
-              ? body.sessionId
-              : null;
+          if (typeof body?.token === "string" && body.token.length > 16) {
+            const sid =
+              typeof body?.sessionId === "string" && body.sessionId.length > 0
+                ? body.sessionId
+                : null;
             validTokens.set(body.token, sid);
           }
         });
       }
 
       // /internal/revoke — drop a token (called on WS close or bootstrap reload)
-      if (url.pathname === '/internal/revoke' && req.method === 'POST') {
+      if (url.pathname === "/internal/revoke" && req.method === "POST") {
         return internalHandler(req, (body) => {
-          if (typeof body?.token === 'string') validTokens.delete(body.token);
+          if (typeof body?.token === "string") validTokens.delete(body.token);
         });
       }
 
@@ -525,9 +564,10 @@ function buildServer() {
       // leaving any other live sidebar tabs untouched. Codex T2 of the
       // eng review caught this gap — pre-spec the route would have
       // disposed all sessions.
-      if (url.pathname === '/internal/restart' && req.method === 'POST') {
+      if (url.pathname === "/internal/restart" && req.method === "POST") {
         return internalHandler(req, (body) => {
-          const sid = typeof body?.sessionId === 'string' ? body.sessionId : null;
+          const sid =
+            typeof body?.sessionId === "string" ? body.sessionId : null;
           if (!sid) return { killed: 0 };
           const session = sessionsById.get(sid);
           if (!session) return { killed: 0 };
@@ -548,24 +588,30 @@ function buildServer() {
       // touching claude binary lookup (which can fail for non-process
       // reasons and isn't a useful liveness signal). GET — no body to parse,
       // so it stays on the bare checkInternalAuth gate.
-      if (url.pathname === '/internal/healthz' && req.method === 'GET') {
+      if (url.pathname === "/internal/healthz" && req.method === "GET") {
         const denied = checkInternalAuth(req);
         if (denied) return denied;
-        return new Response(JSON.stringify({
-          pid: process.pid,
-          gen: CURRENT_GEN,
-          sessions: validTokens.size,
-        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        return new Response(
+          JSON.stringify({
+            pid: process.pid,
+            gen: CURRENT_GEN,
+            sessions: validTokens.size,
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
       }
 
       // /claude-available — bootstrap card hits this when user clicks "I installed it".
-      if (url.pathname === '/claude-available' && req.method === 'GET') {
+      if (url.pathname === "/claude-available" && req.method === "GET") {
         writeClaudeAvailable();
         const found = findClaude();
-        return new Response(JSON.stringify({ available: !!found, path: found }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
-        });
+        return new Response(
+          JSON.stringify({ available: !!found, path: found }),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          },
+        );
       }
 
       // /ws — WebSocket upgrade. CRITICAL gates:
@@ -582,25 +628,30 @@ function buildServer() {
       //       Either path works; both verify against the same in-memory
       //       validTokens Set, populated by the parent server's
       //       authenticated /pty-session → /internal/grant chain.
-      if (url.pathname === '/ws') {
-        const origin = req.headers.get('origin') || '';
-        const isExtensionOrigin = origin.startsWith('chrome-extension://');
+      if (url.pathname === "/ws") {
+        const origin = req.headers.get("origin") || "";
+        const isExtensionOrigin = origin.startsWith("chrome-extension://");
         if (!isExtensionOrigin) {
-          return new Response('forbidden origin', { status: 403 });
+          return new Response("forbidden origin", { status: 403 });
         }
         if (EXTENSION_ID && origin !== `chrome-extension://${EXTENSION_ID}`) {
-          return new Response('forbidden origin', { status: 403 });
+          return new Response("forbidden origin", { status: 403 });
         }
 
         // Try Sec-WebSocket-Protocol first. Format: a single token, possibly
         // with a `gstack-pty.` prefix (which we strip). Browsers send a
         // comma-separated list when multiple were requested; we pick the
         // first that matches a known token.
-        const protoHeader = req.headers.get('sec-websocket-protocol') || '';
+        const protoHeader = req.headers.get("sec-websocket-protocol") || "";
         let token: string | null = null;
         let acceptedProtocol: string | null = null;
-        for (const raw of protoHeader.split(',').map(s => s.trim()).filter(Boolean)) {
-          const candidate = raw.startsWith('gstack-pty.') ? raw.slice('gstack-pty.'.length) : raw;
+        for (const raw of protoHeader
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean)) {
+          const candidate = raw.startsWith("gstack-pty.")
+            ? raw.slice("gstack-pty.".length)
+            : raw;
           if (validTokens.has(candidate)) {
             token = candidate;
             acceptedProtocol = raw;
@@ -610,11 +661,11 @@ function buildServer() {
 
         // Fallback: Cookie gstack_pty (legacy / non-browser callers).
         if (!token) {
-          const cookieHeader = req.headers.get('cookie') || '';
-          for (const part of cookieHeader.split(';')) {
-            const [name, ...rest] = part.trim().split('=');
-            if (name === 'gstack_pty') {
-              const candidate = rest.join('=') || null;
+          const cookieHeader = req.headers.get("cookie") || "";
+          for (const part of cookieHeader.split(";")) {
+            const [name, ...rest] = part.trim().split("=");
+            if (name === "gstack_pty") {
+              const candidate = rest.join("=") || null;
               if (candidate && validTokens.has(candidate)) {
                 token = candidate;
               }
@@ -624,7 +675,7 @@ function buildServer() {
         }
 
         if (!token) {
-          return new Response('unauthorized', { status: 401 });
+          return new Response("unauthorized", { status: 401 });
         }
 
         // v1.44+: surface the token's sessionId binding to the upgraded ws.
@@ -638,12 +689,16 @@ function buildServer() {
           // Required when the client sends Sec-WebSocket-Protocol — the
           // server MUST select one of the offered protocols, otherwise
           // the browser closes the connection immediately.
-          ...(acceptedProtocol ? { headers: { 'Sec-WebSocket-Protocol': acceptedProtocol } } : {}),
+          ...(acceptedProtocol
+            ? { headers: { "Sec-WebSocket-Protocol": acceptedProtocol } }
+            : {}),
         });
-        return upgraded ? undefined : new Response('upgrade failed', { status: 500 });
+        return upgraded
+          ? undefined
+          : new Response("upgrade failed", { status: 500 });
       }
 
-      return new Response('not found', { status: 404 });
+      return new Response("not found", { status: 404 });
     },
 
     websocket: {
@@ -657,7 +712,7 @@ function buildServer() {
        */
       open(ws) {
         const sessionId = (ws.data as any)?.sessionId ?? null;
-        const cookie = (ws.data as any)?.cookie || '';
+        const cookie = (ws.data as any)?.cookie || "";
 
         // Commit 3 re-attach: if this sessionId already has a detached
         // PtySession in sessionsById, REPLACE its liveWs ref and replay
@@ -679,13 +734,19 @@ function buildServer() {
             // Restart keepalive on the new ws.
             if (existing.pingInterval) clearInterval(existing.pingInterval);
             existing.pingInterval = setInterval(() => {
-              try { ws.send(JSON.stringify({ type: 'ping', ts: Date.now() })); } catch {}
+              try {
+                ws.send(JSON.stringify({ type: "ping", ts: Date.now() }));
+              } catch {}
             }, KEEPALIVE_INTERVAL_MS);
             // Tell the client to prep its xterm (write RIS) before the
             // replay binary arrives. Order matters — the binary frame
             // immediately after this text frame IS the replay.
-            try { ws.send(JSON.stringify({ type: 'reattach-begin', sessionId })); } catch {}
-            try { ws.sendBinary(buildReplayPayload(existing)); } catch {}
+            try {
+              ws.send(JSON.stringify({ type: "reattach-begin", sessionId }));
+            } catch {}
+            try {
+              ws.sendBinary(buildReplayPayload(existing));
+            } catch {}
             return;
           }
         }
@@ -707,7 +768,7 @@ function buildServer() {
         };
         session.pingInterval = setInterval(() => {
           try {
-            ws.send(JSON.stringify({ type: 'ping', ts: Date.now() }));
+            ws.send(JSON.stringify({ type: "ping", ts: Date.now() }));
           } catch {
             // ws likely closed mid-tick; close handler clears the interval.
           }
@@ -727,7 +788,7 @@ function buildServer() {
             proc: null,
             cols: 80,
             rows: 24,
-            cookie: (ws.data as any)?.cookie || '',
+            cookie: (ws.data as any)?.cookie || "",
             liveWs: ws,
             sessionId: (ws.data as any)?.sessionId ?? null,
             spawned: false,
@@ -746,26 +807,36 @@ function buildServer() {
         // {type: "tabSwitch", tabId, url, title}, {type: "tabState", ...},
         // or v1.44 keepalive frames: {type: "pong", ts}, {type: "keepalive"}.
         // Binary frames are raw input bytes destined for the PTY stdin.
-        if (typeof raw === 'string') {
+        if (typeof raw === "string") {
           let msg: any;
-          try { msg = JSON.parse(raw); } catch { return; }
-          if (msg?.type === 'resize') {
+          try {
+            msg = JSON.parse(raw);
+          } catch {
+            return;
+          }
+          if (msg?.type === "resize") {
             const cols = Math.max(2, Math.floor(Number(msg.cols) || 80));
             const rows = Math.max(2, Math.floor(Number(msg.rows) || 24));
             session.cols = cols;
             session.rows = rows;
-            try { session.proc?.terminal?.resize?.(cols, rows); } catch {}
+            try {
+              session.proc?.terminal?.resize?.(cols, rows);
+            } catch {}
             return;
           }
-          if (msg?.type === 'tabSwitch') {
+          if (msg?.type === "tabSwitch") {
             handleTabSwitch(msg);
             return;
           }
-          if (msg?.type === 'tabState') {
+          if (msg?.type === "tabState") {
             handleTabState(msg);
             return;
           }
-          if (msg?.type === 'pong' || msg?.type === 'keepalive' || msg?.type === 'ping') {
+          if (
+            msg?.type === "pong" ||
+            msg?.type === "keepalive" ||
+            msg?.type === "ping"
+          ) {
             // Keepalive frames — accepted and silently dropped. The mere
             // fact that the WS carried this frame is the liveness signal;
             // there's no application-level state to update at this layer.
@@ -773,7 +844,7 @@ function buildServer() {
             // future agent peer) mirrors our server-side ping shape.
             return;
           }
-          if (msg?.type === 'start') {
+          if (msg?.type === "start") {
             // v1.44 explicit spawn trigger. forceRestart sends this
             // immediately on every fresh WS so claude boots without the
             // user having to type a keystroke (pre-v1.44, the lazy-binary
@@ -797,7 +868,7 @@ function buildServer() {
           // Convert to Buffer for safety.
           session.proc?.terminal?.write?.(Buffer.from(raw as Uint8Array));
         } catch (err) {
-          console.error('[terminal-agent] terminal.write failed:', err);
+          console.error("[terminal-agent] terminal.write failed:", err);
         }
       },
 
@@ -862,28 +933,38 @@ function buildServer() {
  */
 function handleTabState(msg: {
   active?: { tabId?: number; url?: string; title?: string } | null;
-  tabs?: Array<{ tabId?: number; url?: string; title?: string; active?: boolean; windowId?: number; pinned?: boolean; audible?: boolean }>;
+  tabs?: Array<{
+    tabId?: number;
+    url?: string;
+    title?: string;
+    active?: boolean;
+    windowId?: number;
+    pinned?: boolean;
+    audible?: boolean;
+  }>;
   reason?: string;
 }): void {
   const stateDir = path.dirname(STATE_FILE);
-  try { mkdirSecure(stateDir); } catch {}
+  try {
+    mkdirSecure(stateDir);
+  } catch {}
 
   // tabs.json — full list
   if (Array.isArray(msg.tabs)) {
     const payload = {
       updatedAt: new Date().toISOString(),
-      reason: msg.reason || 'unknown',
-      tabs: msg.tabs.map(t => ({
+      reason: msg.reason || "unknown",
+      tabs: msg.tabs.map((t) => ({
         tabId: t.tabId ?? null,
-        url: t.url || '',
-        title: t.title || '',
+        url: t.url || "",
+        title: t.title || "",
         active: !!t.active,
         windowId: t.windowId ?? null,
         pinned: !!t.pinned,
         audible: !!t.audible,
       })),
     };
-    const target = path.join(stateDir, 'tabs.json');
+    const target = path.join(stateDir, "tabs.json");
     const tmp = path.join(stateDir, `.tmp-tabs-${process.pid}`);
     try {
       writeSecureFile(tmp, JSON.stringify(payload, null, 2));
@@ -897,15 +978,23 @@ function handleTabState(msg: {
   // claude doesn't see chrome:// or chrome-extension:// URLs as
   // "current target."
   const active = msg.active;
-  if (active && active.url && !active.url.startsWith('chrome://') && !active.url.startsWith('chrome-extension://')) {
-    const ctxFile = path.join(stateDir, 'active-tab.json');
+  if (
+    active &&
+    active.url &&
+    !active.url.startsWith("chrome://") &&
+    !active.url.startsWith("chrome-extension://")
+  ) {
+    const ctxFile = path.join(stateDir, "active-tab.json");
     const tmp = path.join(stateDir, `.tmp-tab-${process.pid}`);
     try {
-      writeSecureFile(tmp, JSON.stringify({
-        tabId: active.tabId ?? null,
-        url: active.url,
-        title: active.title ?? '',
-      }));
+      writeSecureFile(
+        tmp,
+        JSON.stringify({
+          tabId: active.tabId ?? null,
+          url: active.url,
+          title: active.title ?? "",
+        }),
+      );
       fs.renameSync(tmp, ctxFile);
     } catch {
       safeUnlink(tmp);
@@ -913,19 +1002,31 @@ function handleTabState(msg: {
   }
 }
 
-function handleTabSwitch(msg: { tabId?: number; url?: string; title?: string }): void {
-  const url = msg.url || '';
-  if (!url || url.startsWith('chrome://') || url.startsWith('chrome-extension://')) return;
+function handleTabSwitch(msg: {
+  tabId?: number;
+  url?: string;
+  title?: string;
+}): void {
+  const url = msg.url || "";
+  if (
+    !url ||
+    url.startsWith("chrome://") ||
+    url.startsWith("chrome-extension://")
+  )
+    return;
 
   const stateDir = path.dirname(STATE_FILE);
-  const ctxFile = path.join(stateDir, 'active-tab.json');
+  const ctxFile = path.join(stateDir, "active-tab.json");
   const tmp = path.join(stateDir, `.tmp-tab-${process.pid}`);
   try {
-    writeSecureFile(tmp, JSON.stringify({
-      tabId: msg.tabId ?? null,
-      url,
-      title: msg.title ?? '',
-    }));
+    writeSecureFile(
+      tmp,
+      JSON.stringify({
+        tabId: msg.tabId ?? null,
+        url,
+        title: msg.title ?? "",
+      }),
+    );
     fs.renameSync(tmp, ctxFile);
   } catch {
     safeUnlink(tmp);
@@ -935,14 +1036,14 @@ function handleTabSwitch(msg: { tabId?: number; url?: string; title?: string }):
   // No await; this is fire-and-forget.
   if (BROWSE_SERVER_PORT > 0) {
     fetch(`http://127.0.0.1:${BROWSE_SERVER_PORT}/command`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${readBrowseToken()}`,
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${readBrowseToken()}`,
       },
       body: JSON.stringify({
-        command: 'tab',
-        args: [String(msg.tabId ?? ''), '--no-focus'],
+        command: "tab",
+        args: [String(msg.tabId ?? ""), "--no-focus"],
       }),
     }).catch(() => {});
   }
@@ -950,10 +1051,12 @@ function handleTabSwitch(msg: { tabId?: number; url?: string; title?: string }):
 
 function readBrowseToken(): string {
   try {
-    const raw = fs.readFileSync(STATE_FILE, 'utf-8');
+    const raw = fs.readFileSync(STATE_FILE, "utf-8");
     const j = JSON.parse(raw);
-    return j.token || '';
-  } catch { return ''; }
+    return j.token || "";
+  } catch {
+    return "";
+  }
 }
 
 // Boot.
@@ -962,13 +1065,15 @@ function main() {
   const server = buildServer();
   const port = (server as any).port || (server as any).address?.port;
   if (!port) {
-    console.error('[terminal-agent] failed to bind: no port');
+    console.error("[terminal-agent] failed to bind: no port");
     process.exit(1);
   }
 
   // Write port file atomically so the parent server can pick it up.
   const dir = path.dirname(PORT_FILE);
-  try { mkdirSecure(dir); } catch {}
+  try {
+    mkdirSecure(dir);
+  } catch {}
   const tmp = `${PORT_FILE}.tmp-${process.pid}`;
   writeSecureFile(tmp, String(port));
   fs.renameSync(tmp, PORT_FILE);
@@ -978,13 +1083,19 @@ function main() {
   // sibling gstack sessions. Callers (cli.ts spawn site, server.ts
   // shutdown, the v1.44 watchdog) now route through killAgentByRecord in
   // terminal-agent-control.ts.
-  writeAgentRecord(dir, { pid: process.pid, gen: CURRENT_GEN, startedAt: Date.now() });
+  writeAgentRecord(dir, {
+    pid: process.pid,
+    gen: CURRENT_GEN,
+    startedAt: Date.now(),
+  });
 
   // Hand the parent the internal token so it can call /internal/grant.
   // Parent learns INTERNAL_TOKEN via env (TERMINAL_AGENT_INTERNAL_TOKEN below).
   // We just print it on stdout for the supervising process to pick up if it's
   // not already in env. Defense against env races at spawn time.
-  console.log(`[terminal-agent] listening on 127.0.0.1:${port} pid=${process.pid} gen=${CURRENT_GEN}`);
+  console.log(
+    `[terminal-agent] listening on 127.0.0.1:${port} pid=${process.pid} gen=${CURRENT_GEN}`,
+  );
 
   // Cleanup port file + agent record on exit.
   const cleanup = () => {
@@ -992,8 +1103,8 @@ function main() {
     clearAgentRecord(dir);
     process.exit(0);
   };
-  process.on('SIGTERM', cleanup);
-  process.on('SIGINT', cleanup);
+  process.on("SIGTERM", cleanup);
+  process.on("SIGINT", cleanup);
 }
 
 // Export the internal token so cli.ts can pass the SAME value to the parent
@@ -1002,7 +1113,10 @@ function main() {
 //
 // In practice, the agent generates INTERNAL_TOKEN once at boot and writes it
 // to a state file the parent reads. This avoids env-passing races. See main().
-const INTERNAL_TOKEN_FILE = path.join(path.dirname(STATE_FILE), 'terminal-internal-token');
+const INTERNAL_TOKEN_FILE = path.join(
+  path.dirname(STATE_FILE),
+  "terminal-internal-token",
+);
 try {
   mkdirSecure(path.dirname(INTERNAL_TOKEN_FILE));
   writeSecureFile(INTERNAL_TOKEN_FILE, INTERNAL_TOKEN);

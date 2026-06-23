@@ -38,7 +38,7 @@
  * Until then, this is the best JS-only approach.
  */
 
-import type { BrowserContext } from 'playwright';
+import type { BrowserContext } from "playwright";
 
 /**
  * Host hardware values resolved at browser-manager startup. Values come
@@ -62,7 +62,8 @@ export function readHostProfile(): HostProfile {
   return {
     // Clamp to a plausible default: 0/NaN/negative/missing all fall back to 8.
     // deviceMemory=0 or NaN would be a glaring bot tell, so never report it.
-    hwConcurrency: Number.isFinite(concurrency) && concurrency > 0 ? concurrency : 8,
+    hwConcurrency:
+      Number.isFinite(concurrency) && concurrency > 0 ? concurrency : 8,
     deviceMemory: Number.isFinite(memory) && memory > 0 ? memory : 8,
   };
 }
@@ -375,7 +376,7 @@ export const EXTENDED_STEALTH_SCRIPT = `
 
 function extendedModeEnabled(): boolean {
   const v = process.env.GSTACK_STEALTH;
-  return v === 'extended' || v === '1' || v === 'true';
+  return v === "extended" || v === "1" || v === "true";
 }
 
 /**
@@ -475,7 +476,7 @@ export const WEBDRIVER_MASK_SCRIPT = `Object.defineProperty(navigator, 'webdrive
  * script — it changes how Chromium identifies itself in the protocol layer.
  */
 export const STEALTH_LAUNCH_ARGS = [
-  '--disable-blink-features=AutomationControlled',
+  "--disable-blink-features=AutomationControlled",
 ];
 
 /**
@@ -522,12 +523,12 @@ export function buildGStackLaunchArgs(): string[] {
   // platform string Chromium emits natively. Other future platforms
   // would map similarly (Win32 → "Windows", Linux → "Linux").
   const platform = env.GSTACK_PLATFORM;
-  if (platform === 'MacARM' || platform === 'MacIntel') {
-    args.push('--gstack-ua-platform=macOS');
-  } else if (platform === 'Win32') {
-    args.push('--gstack-ua-platform=Windows');
-  } else if (platform && platform.startsWith('Linux')) {
-    args.push('--gstack-ua-platform=Linux');
+  if (platform === "MacARM" || platform === "MacIntel") {
+    args.push("--gstack-ua-platform=macOS");
+  } else if (platform === "Win32") {
+    args.push("--gstack-ua-platform=Windows");
+  } else if (platform && platform.startsWith("Linux")) {
+    args.push("--gstack-ua-platform=Linux");
   }
 
   const chipset = env.GSTACK_GPU_CHIPSET;
@@ -551,8 +552,8 @@ export function buildGStackLaunchArgs(): string[] {
   // Chromium that wouldn't understand it. (Previously this was on-by-default
   // unless GSTACK_CDP_STEALTH=off, which contradicted this very comment.)
   const cdpStealth = env.GSTACK_CDP_STEALTH;
-  if (cdpStealth === 'on' || cdpStealth === '1' || cdpStealth === 'true') {
-    args.push('--gstack-suppress-prepare-stack-trace');
+  if (cdpStealth === "on" || cdpStealth === "1" || cdpStealth === "true") {
+    args.push("--gstack-suppress-prepare-stack-trace");
   }
 
   return args;
@@ -574,12 +575,12 @@ export function buildGStackLaunchArgs(): string[] {
  * the list in one place across launchHeaded() and handoff().
  */
 export const STEALTH_IGNORE_DEFAULT_ARGS = [
-  '--enable-automation',
-  '--disable-extensions',
-  '--disable-component-extensions-with-background-pages',
-  '--disable-popup-blocking',
-  '--disable-component-update',
-  '--disable-default-apps',
+  "--enable-automation",
+  "--disable-extensions",
+  "--disable-component-extensions-with-background-pages",
+  "--disable-popup-blocking",
+  "--disable-component-update",
+  "--disable-default-apps",
 ];
 
 /** Test-only helper: report whether extended mode is currently active. */

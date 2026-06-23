@@ -13,59 +13,139 @@
  *   Port:       random 10000-60000 (or BROWSE_PORT env for debug override)
  */
 
-import { BrowserManager } from './browser-manager';
-import { handleReadCommand, hasOutArg } from './read-commands';
-import { handleWriteCommand } from './write-commands';
-import { handleMetaCommand } from './meta-commands';
-import { handleCookiePickerRoute, hasActivePicker } from './cookie-picker-routes';
-import { sanitizeExtensionUrl } from './sidebar-utils';
-import { COMMAND_DESCRIPTIONS, PAGE_CONTENT_COMMANDS, DOM_CONTENT_COMMANDS, wrapUntrustedContent, canonicalizeCommand, buildUnknownCommandError, ALL_COMMANDS } from './commands';
+import { BrowserManager } from "./browser-manager";
+import { handleReadCommand, hasOutArg } from "./read-commands";
+import { handleWriteCommand } from "./write-commands";
+import { handleMetaCommand } from "./meta-commands";
 import {
-  wrapUntrustedPageContent, datamarkContent,
-  runContentFilters, type ContentFilterResult,
-  markHiddenElements, getCleanTextWithStripping, cleanupHiddenMarkers,
-} from './content-security';
-import { generateCanary, injectCanary, getStatus as getSecurityStatus, writeDecision } from './security';
-import { isSidecarAvailable, scanWithSidecar } from './security-sidecar-client';
-import { writeSecureFile, mkdirSecure } from './file-permissions';
-import { handleSnapshot, SNAPSHOT_FLAGS } from './snapshot';
+  handleCookiePickerRoute,
+  hasActivePicker,
+} from "./cookie-picker-routes";
+import { sanitizeExtensionUrl } from "./sidebar-utils";
 import {
-  initRegistry, validateToken as validateScopedToken, checkScope, checkDomain,
-  checkRate, createToken, createSetupKey, exchangeSetupKey, revokeToken,
-  rotateRoot, listTokens, serializeRegistry, restoreRegistry, recordCommand,
-  isRootToken, checkConnectRateLimit, type TokenInfo,
-} from './token-registry';
-import { validateTempPath } from './path-security';
-import { resolveConfig, ensureStateDir, readVersionHash, resolveChromiumProfile, cleanSingletonLocks } from './config';
-import { emitActivity, subscribe, getActivityAfter, getActivityHistory, getSubscriberCount } from './activity';
-import { createSseEndpoint } from './sse-helpers';
-import { initAuditLog, writeAuditEntry } from './audit';
-import { inspectElement, modifyStyle, resetModifications, getModificationHistory, detachSession, type InspectorResult } from './cdp-inspector';
+  COMMAND_DESCRIPTIONS,
+  PAGE_CONTENT_COMMANDS,
+  DOM_CONTENT_COMMANDS,
+  wrapUntrustedContent,
+  canonicalizeCommand,
+  buildUnknownCommandError,
+  ALL_COMMANDS,
+} from "./commands";
+import {
+  wrapUntrustedPageContent,
+  datamarkContent,
+  runContentFilters,
+  type ContentFilterResult,
+  markHiddenElements,
+  getCleanTextWithStripping,
+  cleanupHiddenMarkers,
+} from "./content-security";
+import {
+  generateCanary,
+  injectCanary,
+  getStatus as getSecurityStatus,
+  writeDecision,
+} from "./security";
+import { isSidecarAvailable, scanWithSidecar } from "./security-sidecar-client";
+import { writeSecureFile, mkdirSecure } from "./file-permissions";
+import { handleSnapshot, SNAPSHOT_FLAGS } from "./snapshot";
+import {
+  initRegistry,
+  validateToken as validateScopedToken,
+  checkScope,
+  checkDomain,
+  checkRate,
+  createToken,
+  createSetupKey,
+  exchangeSetupKey,
+  revokeToken,
+  rotateRoot,
+  listTokens,
+  serializeRegistry,
+  restoreRegistry,
+  recordCommand,
+  isRootToken,
+  checkConnectRateLimit,
+  type TokenInfo,
+} from "./token-registry";
+import { validateTempPath } from "./path-security";
+import {
+  resolveConfig,
+  ensureStateDir,
+  readVersionHash,
+  resolveChromiumProfile,
+  cleanSingletonLocks,
+} from "./config";
+import {
+  emitActivity,
+  subscribe,
+  getActivityAfter,
+  getActivityHistory,
+  getSubscriberCount,
+} from "./activity";
+import { createSseEndpoint } from "./sse-helpers";
+import { initAuditLog, writeAuditEntry } from "./audit";
+import {
+  inspectElement,
+  modifyStyle,
+  resetModifications,
+  getModificationHistory,
+  detachSession,
+  type InspectorResult,
+} from "./cdp-inspector";
 // Bun.spawn used instead of child_process.spawn (compiled bun binaries
 // fail posix_spawn on all executables including /bin/bash)
-import { safeUnlink, safeUnlinkQuiet, safeKill } from './error-handling';
-import { readAgentRecord, killAgentByRecord, clearAgentRecord, agentRecordPath, spawnTerminalAgent } from './terminal-agent-control';
-import { isProcessAlive } from './error-handling';
-import { sanitizeBody, stripLoneSurrogateEscapes } from './sanitize';
-import { startSocksBridge, testUpstream, type BridgeHandle } from './socks-bridge';
-import { parseProxyConfig, toUpstreamConfig, ProxyConfigError } from './proxy-config';
-import { redactProxyUrl } from './proxy-redact';
-import { shouldSpawnXvfb, pickFreeDisplay, spawnXvfb, xvfbInstallHint, type XvfbHandle } from './xvfb';
-import { logTunnelDenial } from './tunnel-denial-log';
+import { safeUnlink, safeUnlinkQuiet, safeKill } from "./error-handling";
 import {
-  mintSseSessionToken, validateSseSessionToken, extractSseCookie,
-  buildSseSetCookie, SSE_COOKIE_NAME,
-} from './sse-session-cookie';
+  readAgentRecord,
+  killAgentByRecord,
+  clearAgentRecord,
+  agentRecordPath,
+  spawnTerminalAgent,
+} from "./terminal-agent-control";
+import { isProcessAlive } from "./error-handling";
+import { sanitizeBody, stripLoneSurrogateEscapes } from "./sanitize";
 import {
-  mintPtySessionToken, buildPtySetCookie, revokePtySessionToken,
-} from './pty-session-cookie';
+  startSocksBridge,
+  testUpstream,
+  type BridgeHandle,
+} from "./socks-bridge";
 import {
-  mintLease, validateLease, refreshLease, revokeLease,
-} from './pty-session-lease';
-import * as fs from 'fs';
-import * as net from 'net';
-import * as path from 'path';
-import * as crypto from 'crypto';
+  parseProxyConfig,
+  toUpstreamConfig,
+  ProxyConfigError,
+} from "./proxy-config";
+import { redactProxyUrl } from "./proxy-redact";
+import {
+  shouldSpawnXvfb,
+  pickFreeDisplay,
+  spawnXvfb,
+  xvfbInstallHint,
+  type XvfbHandle,
+} from "./xvfb";
+import { logTunnelDenial } from "./tunnel-denial-log";
+import {
+  mintSseSessionToken,
+  validateSseSessionToken,
+  extractSseCookie,
+  buildSseSetCookie,
+  SSE_COOKIE_NAME,
+} from "./sse-session-cookie";
+import {
+  mintPtySessionToken,
+  buildPtySetCookie,
+  revokePtySessionToken,
+} from "./pty-session-cookie";
+import {
+  mintLease,
+  validateLease,
+  refreshLease,
+  revokeLease,
+} from "./pty-session-lease";
+import * as fs from "fs";
+import * as net from "net";
+import * as path from "path";
+import * as crypto from "crypto";
 
 // ─── Unicode Sanitization ───────────────────────────────────────
 // Remove unpaired UTF-16 surrogate halves (\uD800–\uDFFF). Page DOM text,
@@ -85,15 +165,15 @@ import * as crypto from 'crypto';
 function sanitizeLoneSurrogates(str: string): string {
   return str.replace(/[\uD800-\uDFFF]/g, (match, offset) => {
     const code = match.charCodeAt(0);
-    if (code >= 0xD800 && code <= 0xDBFF) {
+    if (code >= 0xd800 && code <= 0xdbff) {
       const next = str.charCodeAt(offset + 1);
-      if (next >= 0xDC00 && next <= 0xDFFF) return match;
+      if (next >= 0xdc00 && next <= 0xdfff) return match;
     }
-    if (code >= 0xDC00 && code <= 0xDFFF) {
+    if (code >= 0xdc00 && code <= 0xdfff) {
       const prev = str.charCodeAt(offset - 1);
-      if (prev >= 0xD800 && prev <= 0xDBFF) return match;
+      if (prev >= 0xd800 && prev <= 0xdbff) return match;
     }
-    return '�';
+    return "�";
   });
 }
 
@@ -101,7 +181,7 @@ function sanitizeLoneSurrogates(str: string): string {
 // escape-encoded. Pair with stringify when the consumer will JSON.parse the
 // payload back into JS strings (SSE clients do this).
 function sanitizeReplacer(_key: string, value: unknown): unknown {
-  return typeof value === 'string' ? sanitizeLoneSurrogates(value) : value;
+  return typeof value === "string" ? sanitizeLoneSurrogates(value) : value;
 }
 
 // ─── Config ─────────────────────────────────────────────────────
@@ -130,7 +210,7 @@ let activeShutdown: ((code?: number) => Promise<void>) | null = null;
 // silently weakened by misconfiguration.
 function sanitizeAuthToken(raw: string | undefined): string | null {
   if (!raw) return null;
-  const stripped = raw.replace(/[\s ​-‍﻿]/g, '');
+  const stripped = raw.replace(/[\s ​-‍﻿]/g, "");
   if (stripped.length < 16) return null;
   return stripped;
 }
@@ -139,8 +219,11 @@ function sanitizeAuthToken(raw: string | undefined): string | null {
 // single source of truth, factory body calls initRegistry(cfg.authToken),
 // and factory-scoped validateAuth closes over the same value. start() reads
 // env once via resolveConfigFromEnv() and threads the result through.
-const BROWSE_PORT = parseInt(process.env.BROWSE_PORT || '0', 10);
-const IDLE_TIMEOUT_MS = parseInt(process.env.BROWSE_IDLE_TIMEOUT || '1800000', 10); // 30 min
+const BROWSE_PORT = parseInt(process.env.BROWSE_PORT || "0", 10);
+const IDLE_TIMEOUT_MS = parseInt(
+  process.env.BROWSE_IDLE_TIMEOUT || "1800000",
+  10,
+); // 30 min
 
 /**
  * Port the local listener bound to. Set once the daemon picks a port.
@@ -163,11 +246,11 @@ let LOCAL_LISTEN_PORT: number = 0;
 // socket, not because of any per-request check.
 let tunnelActive = false;
 let tunnelUrl: string | null = null;
-let tunnelListener: any = null;           // ngrok listener handle
+let tunnelListener: any = null; // ngrok listener handle
 let tunnelServer: ReturnType<typeof Bun.serve> | null = null; // tunnel HTTP listener
 
 /** Which HTTP listener accepted this request. */
-export type Surface = 'local' | 'tunnel';
+export type Surface = "local" | "tunnel";
 
 /**
  * Factory contract for embedders (gbrowser phoenix overlay).
@@ -210,7 +293,11 @@ export interface ServerConfig {
    * (no token presented). Returning a Response short-circuits gstack
    * dispatch; returning null falls through.
    */
-  beforeRoute?: (req: Request, surface: Surface, auth: TokenInfo | null) => Promise<Response | null>;
+  beforeRoute?: (
+    req: Request,
+    surface: Surface,
+    auth: TokenInfo | null,
+  ) => Promise<Response | null>;
   /**
    * Whether gstack owns the lifecycle of the terminal-agent process and its
    * discovery files (`<stateDir>/terminal-port`, `<stateDir>/terminal-internal-token`,
@@ -274,7 +361,10 @@ export interface ServerHandle {
  * initAuditLog/initRegistry — those happen inside the buildFetchHandler
  * lifecycle.
  */
-export function resolveConfigFromEnv(): Omit<ServerConfig, 'browserManager' | 'startTime'> & {
+export function resolveConfigFromEnv(): Omit<
+  ServerConfig,
+  "browserManager" | "startTime"
+> & {
   config: ReturnType<typeof resolveConfig>;
 } {
   return {
@@ -282,8 +372,8 @@ export function resolveConfigFromEnv(): Omit<ServerConfig, 'browserManager' | 's
     // whitespace and rejects tokens shorter than 16 chars so a misconfigured
     // embedder can't ship a BOM/zero-width as the bearer secret.
     authToken: sanitizeAuthToken(process.env.AUTH_TOKEN) || crypto.randomUUID(),
-    browsePort: parseInt(process.env.BROWSE_PORT || '0', 10),
-    idleTimeoutMs: parseInt(process.env.BROWSE_IDLE_TIMEOUT || '1800000', 10),
+    browsePort: parseInt(process.env.BROWSE_PORT || "0", 10),
+    idleTimeoutMs: parseInt(process.env.BROWSE_IDLE_TIMEOUT || "1800000", 10),
     config: resolveConfig(),
   };
 }
@@ -299,11 +389,7 @@ export function resolveConfigFromEnv(): Omit<ServerConfig, 'browserManager' | 's
  * Updating this set is a deliberate security decision. Every addition widens
  * the tunnel attack surface.
  */
-const TUNNEL_PATHS = new Set<string>([
-  '/connect',
-  '/command',
-  '/sidebar-chat',
-]);
+const TUNNEL_PATHS = new Set<string>(["/connect", "/command", "/sidebar-chat"]);
 
 /**
  * Commands reachable via POST /command over the tunnel surface. A paired
@@ -314,14 +400,34 @@ const TUNNEL_PATHS = new Set<string>([
  */
 export const TUNNEL_COMMANDS = new Set<string>([
   // Original 17
-  'goto', 'click', 'text', 'screenshot',
-  'html', 'links', 'forms', 'accessibility',
-  'attrs', 'media', 'data',
-  'scroll', 'press', 'type', 'select', 'wait', 'eval',
+  "goto",
+  "click",
+  "text",
+  "screenshot",
+  "html",
+  "links",
+  "forms",
+  "accessibility",
+  "attrs",
+  "media",
+  "data",
+  "scroll",
+  "press",
+  "type",
+  "select",
+  "wait",
+  "eval",
   // Tab + navigation primitives operator docs and CLI hints already promised
-  'newtab', 'tabs', 'back', 'forward', 'reload',
+  "newtab",
+  "tabs",
+  "back",
+  "forward",
+  "reload",
   // Read/inspect/write operators paired agents need to be useful
-  'snapshot', 'fill', 'url', 'closetab',
+  "snapshot",
+  "fill",
+  "url",
+  "closetab",
 ]);
 
 /**
@@ -336,8 +442,11 @@ export const TUNNEL_COMMANDS = new Set<string>([
  * local-disk WRITE, and the tunnel surface never grants disk-write capability to
  * remote paired agents. Omitting `args` preserves the old command-only behavior.
  */
-export function canDispatchOverTunnel(command: string | undefined | null, args?: string[]): boolean {
-  if (typeof command !== 'string' || command.length === 0) return false;
+export function canDispatchOverTunnel(
+  command: string | undefined | null,
+  args?: string[],
+): boolean {
+  if (typeof command !== "string" || command.length === 0) return false;
   if (Array.isArray(args) && hasOutArg(args)) return false;
   const cmd = canonicalizeCommand(command);
   return TUNNEL_COMMANDS.has(cmd);
@@ -352,24 +461,24 @@ function resolveNgrokAuthtoken(): string | null {
   let authtoken = process.env.NGROK_AUTHTOKEN;
   if (authtoken) return authtoken;
 
-  const home = process.env.HOME || '';
-  const ngrokEnvPath = path.join(home, '.gstack', 'ngrok.env');
+  const home = process.env.HOME || "";
+  const ngrokEnvPath = path.join(home, ".gstack", "ngrok.env");
   if (fs.existsSync(ngrokEnvPath)) {
     try {
-      const envContent = fs.readFileSync(ngrokEnvPath, 'utf-8');
+      const envContent = fs.readFileSync(ngrokEnvPath, "utf-8");
       const match = envContent.match(/^NGROK_AUTHTOKEN=(.+)$/m);
       if (match) return match[1].trim();
     } catch {}
   }
 
   const ngrokConfigs = [
-    path.join(home, 'Library', 'Application Support', 'ngrok', 'ngrok.yml'),
-    path.join(home, '.config', 'ngrok', 'ngrok.yml'),
-    path.join(home, '.ngrok2', 'ngrok.yml'),
+    path.join(home, "Library", "Application Support", "ngrok", "ngrok.yml"),
+    path.join(home, ".config", "ngrok", "ngrok.yml"),
+    path.join(home, ".ngrok2", "ngrok.yml"),
   ];
   for (const conf of ngrokConfigs) {
     try {
-      const content = fs.readFileSync(conf, 'utf-8');
+      const content = fs.readFileSync(conf, "utf-8");
       const match = content.match(/authtoken:\s*(.+)/);
       if (match) return match[1].trim();
     } catch {}
@@ -383,8 +492,12 @@ function resolveNgrokAuthtoken(): string | null {
  * tunnel state regardless of individual close failures.
  */
 async function closeTunnel(): Promise<void> {
-  try { if (tunnelListener) await tunnelListener.close(); } catch {}
-  try { if (tunnelServer) tunnelServer.stop(true); } catch {}
+  try {
+    if (tunnelListener) await tunnelListener.close();
+  } catch {}
+  try {
+    if (tunnelServer) tunnelServer.stop(true);
+  } catch {}
   tunnelListener = null;
   tunnelServer = null;
   tunnelUrl = null;
@@ -404,17 +517,24 @@ async function closeTunnel(): Promise<void> {
  */
 function readTerminalPort(): number | null {
   try {
-    const f = path.join(path.dirname(config.stateFile), 'terminal-port');
-    const v = parseInt(fs.readFileSync(f, 'utf-8').trim(), 10);
+    const f = path.join(path.dirname(config.stateFile), "terminal-port");
+    const v = parseInt(fs.readFileSync(f, "utf-8").trim(), 10);
     return Number.isFinite(v) && v > 0 ? v : null;
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 function readTerminalInternalToken(): string | null {
   try {
-    const f = path.join(path.dirname(config.stateFile), 'terminal-internal-token');
-    const t = fs.readFileSync(f, 'utf-8').trim();
+    const f = path.join(
+      path.dirname(config.stateFile),
+      "terminal-internal-token",
+    );
+    const t = fs.readFileSync(f, "utf-8").trim();
     return t.length > 16 ? t : null;
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -425,22 +545,27 @@ function readTerminalInternalToken(): string | null {
  * with the internal token written by the agent at startup. If the agent
  * isn't up yet, the extension just retries /pty-session.
  */
-async function grantPtyToken(token: string, sessionId?: string): Promise<boolean> {
+async function grantPtyToken(
+  token: string,
+  sessionId?: string,
+): Promise<boolean> {
   const port = readTerminalPort();
   const internal = readTerminalInternalToken();
   if (!port || !internal) return false;
   try {
     const resp = await fetch(`http://127.0.0.1:${port}/internal/grant`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${internal}`,
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${internal}`,
       },
       body: JSON.stringify(sessionId ? { token, sessionId } : { token }),
       signal: AbortSignal.timeout(2000),
     });
     return resp.ok;
-  } catch { return false; }
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -454,22 +579,24 @@ async function restartPtySession(sessionId: string): Promise<boolean> {
   if (!port || !internal) return false;
   try {
     const resp = await fetch(`http://127.0.0.1:${port}/internal/restart`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${internal}`,
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${internal}`,
       },
       body: JSON.stringify({ sessionId }),
       signal: AbortSignal.timeout(5000),
     });
     return resp.ok;
-  } catch { return false; }
+  } catch {
+    return false;
+  }
 }
 
 /** Extract bearer token from request. Returns the token string or null. */
 function extractToken(req: Request): string | null {
-  const header = req.headers.get('authorization');
-  if (!header?.startsWith('Bearer ')) return null;
+  const header = req.headers.get("authorization");
+  if (!header?.startsWith("Bearer ")) return null;
   return header.slice(7);
 }
 
@@ -502,38 +629,71 @@ function generateHelpText(): string {
   }
 
   const categoryOrder = [
-    'Navigation', 'Reading', 'Interaction', 'Inspection',
-    'Visual', 'Snapshot', 'Meta', 'Tabs', 'Server',
+    "Navigation",
+    "Reading",
+    "Interaction",
+    "Inspection",
+    "Visual",
+    "Snapshot",
+    "Meta",
+    "Tabs",
+    "Server",
   ];
 
-  const lines = ['gstack browse — headless browser for AI agents', '', 'Commands:'];
+  const lines = [
+    "gstack browse — headless browser for AI agents",
+    "",
+    "Commands:",
+  ];
   for (const cat of categoryOrder) {
     const cmds = groups.get(cat);
     if (!cmds) continue;
-    lines.push(`  ${(cat + ':').padEnd(15)}${cmds.join(', ')}`);
+    lines.push(`  ${(cat + ":").padEnd(15)}${cmds.join(", ")}`);
   }
 
   // Snapshot flags from source of truth
-  lines.push('');
-  lines.push('Snapshot flags:');
+  lines.push("");
+  lines.push("Snapshot flags:");
   const flagPairs: string[] = [];
   for (const flag of SNAPSHOT_FLAGS) {
-    const label = flag.valueHint ? `${flag.short} ${flag.valueHint}` : flag.short;
+    const label = flag.valueHint
+      ? `${flag.short} ${flag.valueHint}`
+      : flag.short;
     flagPairs.push(`${label}  ${flag.long}`);
   }
   // Print two flags per line for compact display
   for (let i = 0; i < flagPairs.length; i += 2) {
     const left = flagPairs[i].padEnd(28);
-    const right = flagPairs[i + 1] || '';
+    const right = flagPairs[i + 1] || "";
     lines.push(`  ${left}${right}`);
   }
 
-  return lines.join('\n');
+  return lines.join("\n");
 }
 
 // ─── Buffer (from buffers.ts) ────────────────────────────────────
-import { consoleBuffer, networkBuffer, dialogBuffer, addConsoleEntry, addNetworkEntry, addDialogEntry, type LogEntry, type NetworkEntry, type DialogEntry } from './buffers';
-export { consoleBuffer, networkBuffer, dialogBuffer, addConsoleEntry, addNetworkEntry, addDialogEntry, type LogEntry, type NetworkEntry, type DialogEntry };
+import {
+  consoleBuffer,
+  networkBuffer,
+  dialogBuffer,
+  addConsoleEntry,
+  addNetworkEntry,
+  addDialogEntry,
+  type LogEntry,
+  type NetworkEntry,
+  type DialogEntry,
+} from "./buffers";
+export {
+  consoleBuffer,
+  networkBuffer,
+  dialogBuffer,
+  addConsoleEntry,
+  addNetworkEntry,
+  addDialogEntry,
+  type LogEntry,
+  type NetworkEntry,
+  type DialogEntry,
+};
 
 const CONSOLE_LOG_PATH = config.consoleLog;
 const NETWORK_LOG_PATH = config.networkLog;
@@ -557,9 +717,8 @@ const DIALOG_LOG_PATH = config.dialogLog;
  * concurrent writers no longer kill each other on the rename.
  */
 function tmpStatePath(): string {
-  return `${config.stateFile}.tmp.${process.pid}.${crypto.randomBytes(4).toString('hex')}`;
+  return `${config.stateFile}.tmp.${process.pid}.${crypto.randomBytes(4).toString("hex")}`;
 }
-
 
 // ─── Sidebar agent / chat state ripped ──────────────────────────────
 // ChatEntry, SidebarSession, TabAgentState interfaces; chatBuffer,
@@ -584,10 +743,16 @@ async function flushBuffers() {
     // Console buffer
     const newConsoleCount = consoleBuffer.totalAdded - lastConsoleFlushed;
     if (newConsoleCount > 0) {
-      const entries = consoleBuffer.last(Math.min(newConsoleCount, consoleBuffer.length));
-      const lines = entries.map(e =>
-        `[${new Date(e.timestamp).toISOString()}] [${e.level}] ${e.text}`
-      ).join('\n') + '\n';
+      const entries = consoleBuffer.last(
+        Math.min(newConsoleCount, consoleBuffer.length),
+      );
+      const lines =
+        entries
+          .map(
+            (e) =>
+              `[${new Date(e.timestamp).toISOString()}] [${e.level}] ${e.text}`,
+          )
+          .join("\n") + "\n";
       fs.appendFileSync(CONSOLE_LOG_PATH, lines);
       lastConsoleFlushed = consoleBuffer.totalAdded;
     }
@@ -595,10 +760,16 @@ async function flushBuffers() {
     // Network buffer
     const newNetworkCount = networkBuffer.totalAdded - lastNetworkFlushed;
     if (newNetworkCount > 0) {
-      const entries = networkBuffer.last(Math.min(newNetworkCount, networkBuffer.length));
-      const lines = entries.map(e =>
-        `[${new Date(e.timestamp).toISOString()}] ${e.method} ${e.url} → ${e.status || 'pending'} (${e.duration || '?'}ms, ${e.size || '?'}B)`
-      ).join('\n') + '\n';
+      const entries = networkBuffer.last(
+        Math.min(newNetworkCount, networkBuffer.length),
+      );
+      const lines =
+        entries
+          .map(
+            (e) =>
+              `[${new Date(e.timestamp).toISOString()}] ${e.method} ${e.url} → ${e.status || "pending"} (${e.duration || "?"}ms, ${e.size || "?"}B)`,
+          )
+          .join("\n") + "\n";
       fs.appendFileSync(NETWORK_LOG_PATH, lines);
       lastNetworkFlushed = networkBuffer.totalAdded;
     }
@@ -606,15 +777,21 @@ async function flushBuffers() {
     // Dialog buffer
     const newDialogCount = dialogBuffer.totalAdded - lastDialogFlushed;
     if (newDialogCount > 0) {
-      const entries = dialogBuffer.last(Math.min(newDialogCount, dialogBuffer.length));
-      const lines = entries.map(e =>
-        `[${new Date(e.timestamp).toISOString()}] [${e.type}] "${e.message}" → ${e.action}${e.response ? ` "${e.response}"` : ''}`
-      ).join('\n') + '\n';
+      const entries = dialogBuffer.last(
+        Math.min(newDialogCount, dialogBuffer.length),
+      );
+      const lines =
+        entries
+          .map(
+            (e) =>
+              `[${new Date(e.timestamp).toISOString()}] [${e.type}] "${e.message}" → ${e.action}${e.response ? ` "${e.response}"` : ""}`,
+          )
+          .join("\n") + "\n";
       fs.appendFileSync(DIALOG_LOG_PATH, lines);
       lastDialogFlushed = dialogBuffer.totalAdded;
     }
   } catch (err: any) {
-    console.error('[browse] Buffer flush failed:', err.message);
+    console.error("[browse] Buffer flush failed:", err.message);
   } finally {
     flushInProgress = false;
   }
@@ -638,7 +815,7 @@ function idleCheckTick() {
   // Only shut down when the user explicitly disconnects or closes the window.
   // Reads via the activeBrowserManager indirection so embedders that pass
   // their own BrowserManager into buildFetchHandler hit the right instance.
-  if (activeBrowserManager.getConnectionMode() === 'headed') return;
+  if (activeBrowserManager.getConnectionMode() === "headed") return;
   // Tunnel mode: remote agents may send commands sporadically. Never auto-die.
   if (tunnelActive) return;
   if (Date.now() - lastActivity > IDLE_TIMEOUT_MS) {
@@ -655,15 +832,21 @@ const idleCheckInterval = setInterval(idleCheckTick, 60_000);
 // dual-instance fix` describe block for usage.
 export const __testInternals__ = {
   idleCheckTick,
-  setTunnelActive: (v: boolean) => { tunnelActive = v; },
-  setLastActivity: (t: number) => { lastActivity = t; },
+  setTunnelActive: (v: boolean) => {
+    tunnelActive = v;
+  },
+  setLastActivity: (t: number) => {
+    lastActivity = t;
+  },
   formatExplicitPortUnavailableError,
   formatRandomPortUnavailableError,
   // Reset the module-level shutdown latch so tests that drive shutdown to
   // completion (process.exit-stubbed) can be followed by tests that also
   // need shutdown to fire. Without this, the second test's shutdown
   // returns early at the `if (isShuttingDown) return;` guard.
-  resetShutdownState: () => { isShuttingDown = false; },
+  resetShutdownState: () => {
+    isShuttingDown = false;
+  },
 };
 
 // ─── Parent-Process Watchdog ────────────────────────────────────────
@@ -678,12 +861,12 @@ export const __testInternals__ = {
 // as defense-in-depth — the CLI sets PID=0 for headed mode, and the server
 // also checks BROWSE_HEADED in case a future launcher forgets.
 // Cleanup happens via browser disconnect event or $B disconnect.
-const BROWSE_PARENT_PID = parseInt(process.env.BROWSE_PARENT_PID || '0', 10);
+const BROWSE_PARENT_PID = parseInt(process.env.BROWSE_PARENT_PID || "0", 10);
 // Outer gate: if the spawner explicitly marks this as headed (env var set at
 // launch time), skip registering the watchdog entirely. Cheaper than entering
 // the closure every 15s. The CLI's connect path sets BROWSE_HEADED=1 + PID=0,
 // so this branch is the normal path for /open-gstack-browser.
-const IS_HEADED_WATCHDOG = process.env.BROWSE_HEADED === '1';
+const IS_HEADED_WATCHDOG = process.env.BROWSE_HEADED === "1";
 if (BROWSE_PARENT_PID > 0 && !IS_HEADED_WATCHDOG) {
   let parentGone = false;
   setInterval(() => {
@@ -702,24 +885,30 @@ if (BROWSE_PARENT_PID > 0 && !IS_HEADED_WATCHDOG) {
       //    the parent shell between invocations. The idle timeout (30 min)
       //    handles eventual cleanup.
       if (hasActivePicker()) return;
-      const headed = activeBrowserManager.getConnectionMode() === 'headed';
+      const headed = activeBrowserManager.getConnectionMode() === "headed";
       if (headed || tunnelActive) {
-        console.log(`[browse] Parent process ${BROWSE_PARENT_PID} exited in ${headed ? 'headed' : 'tunnel'} mode, shutting down`);
+        console.log(
+          `[browse] Parent process ${BROWSE_PARENT_PID} exited in ${headed ? "headed" : "tunnel"} mode, shutting down`,
+        );
         activeShutdown?.();
       } else if (!parentGone) {
         parentGone = true;
-        console.log(`[browse] Parent process ${BROWSE_PARENT_PID} exited (server stays alive, idle timeout will clean up)`);
+        console.log(
+          `[browse] Parent process ${BROWSE_PARENT_PID} exited (server stays alive, idle timeout will clean up)`,
+        );
       }
     }
   }, 15_000);
 } else if (IS_HEADED_WATCHDOG) {
-  console.log('[browse] Parent-process watchdog disabled (headed mode)');
+  console.log("[browse] Parent-process watchdog disabled (headed mode)");
 } else if (BROWSE_PARENT_PID === 0) {
-  console.log('[browse] Parent-process watchdog disabled (BROWSE_PARENT_PID=0)');
+  console.log(
+    "[browse] Parent-process watchdog disabled (BROWSE_PARENT_PID=0)",
+  );
 }
 
 // ─── Command Sets (from commands.ts — single source of truth) ───
-import { READ_COMMANDS, WRITE_COMMANDS, META_COMMANDS } from './commands';
+import { READ_COMMANDS, WRITE_COMMANDS, META_COMMANDS } from "./commands";
 export { READ_COMMANDS, WRITE_COMMANDS, META_COMMANDS };
 
 /**
@@ -751,8 +940,13 @@ export function getInspectorSubscriberCount(): number {
 function emitInspectorEvent(event: any): void {
   for (const notify of inspectorSubscribers) {
     queueMicrotask(() => {
-      try { notify(event); } catch (err: any) {
-        console.error('[browse] Inspector event subscriber threw:', err.message);
+      try {
+        notify(event);
+      } catch (err: any) {
+        console.error(
+          "[browse] Inspector event subscriber threw:",
+          err.message,
+        );
       }
     });
   }
@@ -792,7 +986,9 @@ const RANDOM_PORT_MIN = 10000;
 const RANDOM_PORT_MAX = 60000;
 const RANDOM_PORT_RETRIES = 5;
 
-function normalizePortError(err: unknown): Extract<PortCheckResult, { available: false }> {
+function normalizePortError(
+  err: unknown,
+): Extract<PortCheckResult, { available: false }> {
   const maybeNodeError = err as NodeJS.ErrnoException | undefined;
   return {
     available: false,
@@ -801,48 +997,58 @@ function normalizePortError(err: unknown): Extract<PortCheckResult, { available:
   };
 }
 
-function isOccupiedPort(result: Extract<PortCheckResult, { available: false }>): boolean {
-  return result.code === 'EADDRINUSE';
+function isOccupiedPort(
+  result: Extract<PortCheckResult, { available: false }>,
+): boolean {
+  return result.code === "EADDRINUSE";
 }
 
 function formatPortFailureDetail(attempt: FailedPortAttempt): string {
   const { code, message } = attempt.result;
-  return code ? `${attempt.port} (${code}: ${message})` : `${attempt.port} (${message})`;
+  return code
+    ? `${attempt.port} (${code}: ${message})`
+    : `${attempt.port} (${message})`;
 }
 
 function formatExplicitPortUnavailableError(
   port: number,
-  result: Extract<PortCheckResult, { available: false }>
+  result: Extract<PortCheckResult, { available: false }>,
 ): Error {
   if (isOccupiedPort(result)) {
     return new Error(`[browse] Port ${port} (from BROWSE_PORT env) is in use`);
   }
 
-  const detail = result.code ? `${result.code}: ${result.message}` : result.message;
+  const detail = result.code
+    ? `${result.code}: ${result.message}`
+    : result.message;
   return new Error(
     `[browse] Cannot bind BROWSE_PORT=${port} on 127.0.0.1 (${detail}). ` +
-    `This usually means localhost port binding is blocked by the current sandbox or OS permissions, ` +
-    `not that the port is occupied. Allow localhost binding, or run browse from an unrestricted terminal.`
+      `This usually means localhost port binding is blocked by the current sandbox or OS permissions, ` +
+      `not that the port is occupied. Allow localhost binding, or run browse from an unrestricted terminal.`,
   );
 }
 
-function formatRandomPortUnavailableError(attempts: FailedPortAttempt[]): Error {
-  const blockingAttempts = attempts.filter((attempt) => !isOccupiedPort(attempt.result));
+function formatRandomPortUnavailableError(
+  attempts: FailedPortAttempt[],
+): Error {
+  const blockingAttempts = attempts.filter(
+    (attempt) => !isOccupiedPort(attempt.result),
+  );
 
   if (blockingAttempts.length > 0) {
     const last = blockingAttempts[blockingAttempts.length - 1];
     return new Error(
       `[browse] Cannot bind localhost ports after ${attempts.length} attempts in range ` +
-      `${RANDOM_PORT_MIN}-${RANDOM_PORT_MAX}. Last error: ${formatPortFailureDetail(last)}. ` +
-      `This usually means the current sandbox or OS permissions are blocking localhost port binding, ` +
-      `not that every sampled port is occupied. Allow localhost binding, set BROWSE_PORT to an approved ` +
-      `port, or run browse from an unrestricted terminal.`
+        `${RANDOM_PORT_MIN}-${RANDOM_PORT_MAX}. Last error: ${formatPortFailureDetail(last)}. ` +
+        `This usually means the current sandbox or OS permissions are blocking localhost port binding, ` +
+        `not that every sampled port is occupied. Allow localhost binding, set BROWSE_PORT to an approved ` +
+        `port, or run browse from an unrestricted terminal.`,
     );
   }
 
   return new Error(
     `[browse] No available port after ${RANDOM_PORT_RETRIES} attempts in range ` +
-    `${RANDOM_PORT_MIN}-${RANDOM_PORT_MAX}; every sampled port was already in use`
+      `${RANDOM_PORT_MIN}-${RANDOM_PORT_MAX}; every sampled port was already in use`,
   );
 }
 
@@ -850,7 +1056,10 @@ function formatRandomPortUnavailableError(attempts: FailedPortAttempt[]): Error 
 // Uses net.createServer instead of Bun.serve to avoid a race condition
 // in the Node.js polyfill where listen/close are async but the caller
 // expects synchronous bind semantics. See: #486
-function checkPortAvailable(port: number, hostname: string = '127.0.0.1'): Promise<PortCheckResult> {
+function checkPortAvailable(
+  port: number,
+  hostname: string = "127.0.0.1",
+): Promise<PortCheckResult> {
   return new Promise((resolve) => {
     const srv = net.createServer();
     let settled = false;
@@ -860,7 +1069,7 @@ function checkPortAvailable(port: number, hostname: string = '127.0.0.1'): Promi
       resolve(result);
     };
 
-    srv.once('error', (err) => finish(normalizePortError(err)));
+    srv.once("error", (err) => finish(normalizePortError(err)));
     try {
       srv.listen(port, hostname, () => {
         srv.close(() => finish({ available: true }));
@@ -871,7 +1080,10 @@ function checkPortAvailable(port: number, hostname: string = '127.0.0.1'): Promi
   });
 }
 
-function isPortAvailable(port: number, hostname: string = '127.0.0.1'): Promise<boolean> {
+function isPortAvailable(
+  port: number,
+  hostname: string = "127.0.0.1",
+): Promise<boolean> {
   return checkPortAvailable(port, hostname).then((result) => result.available);
 }
 
@@ -889,7 +1101,9 @@ async function findPort(): Promise<number> {
   // Random port with retry
   const attempts: FailedPortAttempt[] = [];
   for (let attempt = 0; attempt < RANDOM_PORT_RETRIES; attempt++) {
-    const port = RANDOM_PORT_MIN + Math.floor(Math.random() * (RANDOM_PORT_MAX - RANDOM_PORT_MIN));
+    const port =
+      RANDOM_PORT_MIN +
+      Math.floor(Math.random() * (RANDOM_PORT_MAX - RANDOM_PORT_MIN));
     const result = await checkPortAvailable(port);
     if (result.available) {
       return port;
@@ -905,17 +1119,25 @@ async function findPort(): Promise<number> {
 function wrapError(err: any): string {
   const msg = err.message || String(err);
   // Timeout errors
-  if (err.name === 'TimeoutError' || msg.includes('Timeout') || msg.includes('timeout')) {
-    if (msg.includes('locator.click') || msg.includes('locator.fill') || msg.includes('locator.hover')) {
+  if (
+    err.name === "TimeoutError" ||
+    msg.includes("Timeout") ||
+    msg.includes("timeout")
+  ) {
+    if (
+      msg.includes("locator.click") ||
+      msg.includes("locator.fill") ||
+      msg.includes("locator.hover")
+    ) {
       return `Element not found or not interactable within timeout. Check your selector or run 'snapshot' for fresh refs.`;
     }
-    if (msg.includes('page.goto') || msg.includes('Navigation')) {
+    if (msg.includes("page.goto") || msg.includes("Navigation")) {
       return `Page navigation timed out. The URL may be unreachable or the page may be loading slowly.`;
     }
-    return `Operation timed out: ${msg.split('\n')[0]}`;
+    return `Operation timed out: ${msg.split("\n")[0]}`;
   }
   // Multiple elements matched
-  if (msg.includes('resolved to') && msg.includes('elements')) {
+  if (msg.includes("resolved to") && msg.includes("elements")) {
     return `Selector matched multiple elements. Be more specific or use @refs from 'snapshot'.`;
   }
   // Pass through other errors
@@ -942,13 +1164,21 @@ interface CommandResult {
 async function handleCommandInternalImpl(
   body: { command: string; args?: string[]; tabId?: number },
   tokenInfo?: TokenInfo | null,
-  opts?: { skipRateCheck?: boolean; skipActivity?: boolean; chainDepth?: number },
+  opts?: {
+    skipRateCheck?: boolean;
+    skipActivity?: boolean;
+    chainDepth?: number;
+  },
 ): Promise<CommandResult> {
   const { args = [], tabId } = body;
   const rawCommand = body.command;
 
   if (!rawCommand) {
-    return { status: 400, result: JSON.stringify({ error: 'Missing "command" field' }), json: true };
+    return {
+      status: 400,
+      result: JSON.stringify({ error: 'Missing "command" field' }),
+      json: true,
+    };
   }
 
   // ─── Alias canonicalization (before scope, watch, tab-ownership, dispatch) ─
@@ -960,18 +1190,25 @@ async function handleCommandInternalImpl(
   const isAliased = command !== rawCommand;
 
   // ─── Recursion guard: reject nested chains ──────────────────
-  if (command === 'chain' && (opts?.chainDepth ?? 0) > 0) {
-    return { status: 400, result: JSON.stringify({ error: 'Nested chain commands are not allowed' }), json: true };
+  if (command === "chain" && (opts?.chainDepth ?? 0) > 0) {
+    return {
+      status: 400,
+      result: JSON.stringify({
+        error: "Nested chain commands are not allowed",
+      }),
+      json: true,
+    };
   }
 
   // ─── Scope check (for scoped tokens) ──────────────────────────
-  if (tokenInfo && tokenInfo.clientId !== 'root') {
+  if (tokenInfo && tokenInfo.clientId !== "root") {
     if (!checkScope(tokenInfo, command)) {
       return {
-        status: 403, json: true,
+        status: 403,
+        json: true,
         result: JSON.stringify({
           error: `Command "${command}" not allowed by your token scope`,
-          hint: `Your scopes: ${tokenInfo.scopes.join(', ')}. Ask the user to re-pair with --admin for eval/cookies/storage access.`,
+          hint: `Your scopes: ${tokenInfo.scopes.join(", ")}. Ask the user to re-pair with --admin for eval/cookies/storage access.`,
         }),
       };
     }
@@ -979,24 +1216,26 @@ async function handleCommandInternalImpl(
     // `--out` writes the evaluate result to local disk, which is a WRITE
     // capability distinct from the JS-exec (admin) capability js/eval need.
     // Require write scope so an admin-but-not-write token can't write files.
-    if (hasOutArg(args) && !tokenInfo.scopes.includes('write')) {
+    if (hasOutArg(args) && !tokenInfo.scopes.includes("write")) {
       return {
-        status: 403, json: true,
+        status: 403,
+        json: true,
         result: JSON.stringify({
           error: `"--out" writes to disk and requires the "write" scope`,
-          hint: `Your scopes: ${tokenInfo.scopes.join(', ')}. Re-pair with write access to use --out.`,
+          hint: `Your scopes: ${tokenInfo.scopes.join(", ")}. Re-pair with write access to use --out.`,
         }),
       };
     }
 
     // Domain check for navigation commands
-    if ((command === 'goto' || command === 'newtab') && args[0]) {
+    if ((command === "goto" || command === "newtab") && args[0]) {
       if (!checkDomain(tokenInfo, args[0])) {
         return {
-          status: 403, json: true,
+          status: 403,
+          json: true,
           result: JSON.stringify({
             error: `Domain not allowed by your token scope`,
-            hint: `Allowed domains: ${tokenInfo.domains?.join(', ') || 'none configured'}`,
+            hint: `Allowed domains: ${tokenInfo.domains?.join(", ") || "none configured"}`,
           }),
         };
       }
@@ -1007,12 +1246,17 @@ async function handleCommandInternalImpl(
       const rateResult = checkRate(tokenInfo);
       if (!rateResult.allowed) {
         return {
-          status: 429, json: true,
+          status: 429,
+          json: true,
           result: JSON.stringify({
-            error: 'Rate limit exceeded',
+            error: "Rate limit exceeded",
             hint: `Max ${tokenInfo.rateLimit} requests/second. Retry after ${rateResult.retryAfterMs}ms.`,
           }),
-          headers: { 'Retry-After': String(Math.ceil((rateResult.retryAfterMs || 1000) / 1000)) },
+          headers: {
+            "Retry-After": String(
+              Math.ceil((rateResult.retryAfterMs || 1000) / 1000),
+            ),
+          },
         };
       }
     }
@@ -1028,8 +1272,10 @@ async function handleCommandInternalImpl(
   if (tabId !== undefined && tabId !== null) {
     savedTabId = browserManager.getActiveTabId();
     // bringToFront: false — internal tab pinning must NOT steal window focus
-    try { browserManager.switchTab(tabId, { bringToFront: false }); } catch (err: any) {
-      console.warn('[browse] Failed to pin tab', tabId, ':', err.message);
+    try {
+      browserManager.switchTab(tabId, { bringToFront: false });
+    } catch (err: any) {
+      console.warn("[browse] Failed to pin tab", tabId, ":", err.message);
     }
   }
 
@@ -1041,28 +1287,47 @@ async function handleCommandInternalImpl(
   // and rate limits already constrain what they can do.
   //
   // Skip for `newtab` — it creates a tab rather than accessing one.
-  if (command !== 'newtab' && tokenInfo && tokenInfo.clientId !== 'root' && tokenInfo.tabPolicy === 'own-only') {
+  if (
+    command !== "newtab" &&
+    tokenInfo &&
+    tokenInfo.clientId !== "root" &&
+    tokenInfo.tabPolicy === "own-only"
+  ) {
     const targetTab = tabId ?? browserManager.getActiveTabId();
-    if (!browserManager.checkTabAccess(targetTab, tokenInfo.clientId, { isWrite: isWriteInvocation(command, args), ownOnly: true })) {
+    if (
+      !browserManager.checkTabAccess(targetTab, tokenInfo.clientId, {
+        isWrite: isWriteInvocation(command, args),
+        ownOnly: true,
+      })
+    ) {
       return {
-        status: 403, json: true,
+        status: 403,
+        json: true,
         result: JSON.stringify({
-          error: 'Tab not owned by your agent. Use newtab to create your own tab.',
-          hint: `Tab ${targetTab} is owned by ${browserManager.getTabOwner(targetTab) || 'root'}. Your agent: ${tokenInfo.clientId}.`,
+          error:
+            "Tab not owned by your agent. Use newtab to create your own tab.",
+          hint: `Tab ${targetTab} is owned by ${browserManager.getTabOwner(targetTab) || "root"}. Your agent: ${tokenInfo.clientId}.`,
         }),
       };
     }
   }
 
   // ─── newtab with ownership for scoped tokens ──────────────
-  if (command === 'newtab' && tokenInfo && tokenInfo.clientId !== 'root') {
-    const newId = await browserManager.newTab(args[0] || undefined, tokenInfo.clientId);
+  if (command === "newtab" && tokenInfo && tokenInfo.clientId !== "root") {
+    const newId = await browserManager.newTab(
+      args[0] || undefined,
+      tokenInfo.clientId,
+    );
     return {
-      status: 200, json: true,
+      status: 200,
+      json: true,
       result: JSON.stringify({
         tabId: newId,
         owner: tokenInfo.clientId,
-        hint: 'Include "tabId": ' + newId + ' in subsequent commands to target this tab.',
+        hint:
+          'Include "tabId": ' +
+          newId +
+          " in subsequent commands to target this tab.",
       }),
     };
   }
@@ -1071,8 +1336,12 @@ async function handleCommandInternalImpl(
   // `--out` invocations count as mutations (they write the result to disk).
   if (browserManager.isWatching() && isWriteInvocation(command, args)) {
     return {
-      status: 400, json: true,
-      result: JSON.stringify({ error: 'Cannot run mutation commands while watching. Run `$B watch stop` first.' }),
+      status: 400,
+      json: true,
+      result: JSON.stringify({
+        error:
+          "Cannot run mutation commands while watching. Run `$B watch stop` first.",
+      }),
     };
   }
 
@@ -1080,7 +1349,7 @@ async function handleCommandInternalImpl(
   const startTime = Date.now();
   if (!opts?.skipActivity) {
     emitActivity({
-      type: 'command_start',
+      type: "command_start",
       command,
       args,
       url: browserManager.getCurrentUrl(),
@@ -1101,7 +1370,7 @@ async function handleCommandInternalImpl(
     let hiddenContentWarnings: string[] = [];
 
     if (READ_COMMANDS.has(command)) {
-      const isScoped = tokenInfo && tokenInfo.clientId !== 'root';
+      const isScoped = tokenInfo && tokenInfo.clientId !== "root";
       // Hidden-element / ARIA-injection detection for every scoped
       // DOM-reading channel (text, html, links, forms, accessibility,
       // attrs, data, media, ux-audit). Previously only `text` received
@@ -1114,53 +1383,83 @@ async function handleCommandInternalImpl(
         try {
           const strippedDescs = await markHiddenElements(page);
           if (strippedDescs.length > 0) {
-            console.warn(`[browse] Content security: ${strippedDescs.length} hidden elements flagged on ${command} for ${tokenInfo.clientId}`);
-            hiddenContentWarnings = strippedDescs.slice(0, 8).map(d =>
-              `hidden content: ${d.slice(0, 120)}`,
+            console.warn(
+              `[browse] Content security: ${strippedDescs.length} hidden elements flagged on ${command} for ${tokenInfo.clientId}`,
             );
+            hiddenContentWarnings = strippedDescs
+              .slice(0, 8)
+              .map((d) => `hidden content: ${d.slice(0, 120)}`);
             if (strippedDescs.length > 8) {
-              hiddenContentWarnings.push(`hidden content: +${strippedDescs.length - 8} more flagged elements`);
+              hiddenContentWarnings.push(
+                `hidden content: +${strippedDescs.length - 8} more flagged elements`,
+              );
             }
           }
-          if (command === 'text') {
+          if (command === "text") {
             const target = session.getActiveFrameOrPage();
             result = await getCleanTextWithStripping(target);
           } else {
-            result = await handleReadCommand(command, args, session, browserManager);
+            result = await handleReadCommand(
+              command,
+              args,
+              session,
+              browserManager,
+            );
           }
         } finally {
           await cleanupHiddenMarkers(page);
         }
       } else {
-        result = await handleReadCommand(command, args, session, browserManager);
+        result = await handleReadCommand(
+          command,
+          args,
+          session,
+          browserManager,
+        );
       }
     } else if (WRITE_COMMANDS.has(command)) {
       result = await handleWriteCommand(command, args, session, browserManager);
     } else if (META_COMMANDS.has(command)) {
       // Pass chain depth + executeCommand callback so chain routes subcommands
       // through the full security pipeline (scope, domain, tab, wrapping).
-      const chainDepth = (opts?.chainDepth ?? 0);
+      const chainDepth = opts?.chainDepth ?? 0;
       // shutdown is factory-scoped (deleted from module scope in v1.35.0.0);
       // route the call through activeShutdown which buildFetchHandler assigns.
-      const shutdownFn = () => activeShutdown ? activeShutdown() : Promise.resolve();
-      result = await handleMetaCommand(command, args, browserManager, shutdownFn, tokenInfo, {
-        chainDepth,
-        daemonPort: LOCAL_LISTEN_PORT,
-        executeCommand: (body, ti) => handleCommandInternal(body, ti, {
-          skipRateCheck: true,    // chain counts as 1 request
-          skipActivity: true,     // chain emits 1 event for all subcommands
-          chainDepth: chainDepth + 1,  // recursion guard
-        }),
-      });
+      const shutdownFn = () =>
+        activeShutdown ? activeShutdown() : Promise.resolve();
+      result = await handleMetaCommand(
+        command,
+        args,
+        browserManager,
+        shutdownFn,
+        tokenInfo,
+        {
+          chainDepth,
+          daemonPort: LOCAL_LISTEN_PORT,
+          executeCommand: (body, ti) =>
+            handleCommandInternal(body, ti, {
+              skipRateCheck: true, // chain counts as 1 request
+              skipActivity: true, // chain emits 1 event for all subcommands
+              chainDepth: chainDepth + 1, // recursion guard
+            }),
+        },
+      );
       // Start periodic snapshot interval when watch mode begins
-      if (command === 'watch' && args[0] !== 'stop' && browserManager.isWatching()) {
+      if (
+        command === "watch" &&
+        args[0] !== "stop" &&
+        browserManager.isWatching()
+      ) {
         const watchInterval = setInterval(async () => {
           if (!browserManager.isWatching()) {
             clearInterval(watchInterval);
             return;
           }
           try {
-            const snapshot = await handleSnapshot(['-i'], browserManager.getActiveSession());
+            const snapshot = await handleSnapshot(
+              ["-i"],
+              browserManager.getActiveSession(),
+            );
             browserManager.addWatchSnapshot(snapshot);
           } catch {
             // Page may be navigating — skip this snapshot
@@ -1168,7 +1467,7 @@ async function handleCommandInternalImpl(
         }, 5000);
         browserManager.watchInterval = watchInterval;
       }
-    } else if (command === 'help') {
+    } else if (command === "help") {
       const helpText = generateHelpText();
       return { status: 200, result: helpText };
     } else {
@@ -1176,10 +1475,11 @@ async function handleCommandInternalImpl(
       // match via Levenshtein (≤ 2 distance, ≥ 4 chars input), and appends an upgrade
       // hint if the command is listed in NEW_IN_VERSION.
       return {
-        status: 400, json: true,
+        status: 400,
+        json: true,
         result: JSON.stringify({
           error: buildUnknownCommandError(rawCommand, ALL_COMMANDS),
-          hint: `Available commands: ${[...READ_COMMANDS, ...WRITE_COMMANDS, ...META_COMMANDS].sort().join(', ')}`,
+          hint: `Available commands: ${[...READ_COMMANDS, ...WRITE_COMMANDS, ...META_COMMANDS].sort().join(", ")}`,
         }),
       };
     }
@@ -1188,27 +1488,37 @@ async function handleCommandInternalImpl(
     // Scoped tokens: content filter + enhanced envelope + datamarking
     // Root tokens: basic untrusted content wrapper (backward compat)
     // Chain exempt from top-level wrapping (each subcommand wrapped individually)
-    if (PAGE_CONTENT_COMMANDS.has(command) && command !== 'chain') {
-      const isScoped = tokenInfo && tokenInfo.clientId !== 'root';
+    if (PAGE_CONTENT_COMMANDS.has(command) && command !== "chain") {
+      const isScoped = tokenInfo && tokenInfo.clientId !== "root";
       if (isScoped) {
         // Run content filters
         const filterResult: ContentFilterResult = runContentFilters(
-          result, browserManager.getCurrentUrl(), command,
+          result,
+          browserManager.getCurrentUrl(),
+          command,
         );
         if (filterResult.blocked) {
-          return { status: 403, json: true, result: JSON.stringify({ error: filterResult.message }) };
+          return {
+            status: 403,
+            json: true,
+            result: JSON.stringify({ error: filterResult.message }),
+          };
         }
         // Datamark text command output only (not html, forms, or structured data)
-        if (command === 'text') {
+        if (command === "text") {
           result = datamarkContent(result);
         }
         // Enhanced envelope wrapping for scoped tokens.
         // Merge per-request hidden-element warnings with content-filter
         // warnings so both reach the LLM through the same CONTENT
         // WARNINGS header.
-        const combinedWarnings = [...filterResult.warnings, ...hiddenContentWarnings];
+        const combinedWarnings = [
+          ...filterResult.warnings,
+          ...hiddenContentWarnings,
+        ];
         result = wrapUntrustedPageContent(
-          result, command,
+          result,
+          command,
           combinedWarnings.length > 0 ? combinedWarnings : undefined,
         );
       } else {
@@ -1221,12 +1531,12 @@ async function handleCommandInternalImpl(
     const successDuration = Date.now() - startTime;
     if (!opts?.skipActivity) {
       emitActivity({
-        type: 'command_end',
+        type: "command_end",
         command,
         args,
         url: browserManager.getCurrentUrl(),
         duration: successDuration,
-        status: 'ok',
+        status: "ok",
         result: result,
         tabs: browserManager.getTabCount(),
         mode: browserManager.getConnectionMode(),
@@ -1238,10 +1548,10 @@ async function handleCommandInternalImpl(
       ts: new Date().toISOString(),
       cmd: command,
       aliasOf: isAliased ? rawCommand : undefined,
-      args: args.join(' '),
+      args: args.join(" "),
       origin: browserManager.getCurrentUrl(),
       durationMs: successDuration,
-      status: 'ok',
+      status: "ok",
       hasCookies: browserManager.hasCookieImports(),
       mode: browserManager.getConnectionMode(),
     });
@@ -1249,16 +1559,26 @@ async function handleCommandInternalImpl(
     browserManager.resetFailures();
     // Restore original active tab if we pinned to a specific one
     if (savedTabId !== null) {
-      try { browserManager.switchTab(savedTabId, { bringToFront: false }); } catch (restoreErr: any) {
-        console.warn('[browse] Failed to restore tab after command:', restoreErr.message);
+      try {
+        browserManager.switchTab(savedTabId, { bringToFront: false });
+      } catch (restoreErr: any) {
+        console.warn(
+          "[browse] Failed to restore tab after command:",
+          restoreErr.message,
+        );
       }
     }
     return { status: 200, result };
   } catch (err: any) {
     // Restore original active tab even on error
     if (savedTabId !== null) {
-      try { browserManager.switchTab(savedTabId, { bringToFront: false }); } catch (restoreErr: any) {
-        console.warn('[browse] Failed to restore tab after error:', restoreErr.message);
+      try {
+        browserManager.switchTab(savedTabId, { bringToFront: false });
+      } catch (restoreErr: any) {
+        console.warn(
+          "[browse] Failed to restore tab after error:",
+          restoreErr.message,
+        );
       }
     }
 
@@ -1266,12 +1586,12 @@ async function handleCommandInternalImpl(
     const errorDuration = Date.now() - startTime;
     if (!opts?.skipActivity) {
       emitActivity({
-        type: 'command_end',
+        type: "command_end",
         command,
         args,
         url: browserManager.getCurrentUrl(),
         duration: errorDuration,
-        status: 'error',
+        status: "error",
         error: err.message,
         tabs: browserManager.getTabCount(),
         mode: browserManager.getConnectionMode(),
@@ -1283,10 +1603,10 @@ async function handleCommandInternalImpl(
       ts: new Date().toISOString(),
       cmd: command,
       aliasOf: isAliased ? rawCommand : undefined,
-      args: args.join(' '),
+      args: args.join(" "),
       origin: browserManager.getCurrentUrl(),
       durationMs: errorDuration,
-      status: 'error',
+      status: "error",
       error: err.message,
       hasCookies: browserManager.hasCookieImports(),
       mode: browserManager.getConnectionMode(),
@@ -1295,8 +1615,12 @@ async function handleCommandInternalImpl(
     browserManager.incrementFailures();
     let errorMsg = wrapError(err);
     const hint = browserManager.getFailureHint();
-    if (hint) errorMsg += '\n' + hint;
-    return { status: 500, result: JSON.stringify({ error: errorMsg }), json: true };
+    if (hint) errorMsg += "\n" + hint;
+    return {
+      status: 500,
+      result: JSON.stringify({ error: errorMsg }),
+      json: true,
+    };
   }
 }
 
@@ -1309,7 +1633,11 @@ async function handleCommandInternalImpl(
 async function handleCommandInternal(
   body: { command: string; args?: string[]; tabId?: number },
   tokenInfo?: TokenInfo | null,
-  opts?: { skipRateCheck?: boolean; skipActivity?: boolean; chainDepth?: number },
+  opts?: {
+    skipRateCheck?: boolean;
+    skipActivity?: boolean;
+    chainDepth?: number;
+  },
 ): Promise<CommandResult> {
   const cr = await handleCommandInternalImpl(body, tokenInfo, opts);
   return { ...cr, result: sanitizeLoneSurrogates(cr.result) };
@@ -1323,11 +1651,14 @@ async function handleCommandInternal(
  * misses when the body has already been JSON-stringified.
  */
 export function buildCommandResponse(cr: CommandResult): Response {
-  const contentType = cr.json ? 'application/json' : 'text/plain';
-  const safeBody = typeof cr.result === 'string' ? sanitizeBody(cr.result, !!cr.json) : cr.result;
+  const contentType = cr.json ? "application/json" : "text/plain";
+  const safeBody =
+    typeof cr.result === "string"
+      ? sanitizeBody(cr.result, !!cr.json)
+      : cr.result;
   return new Response(safeBody, {
     status: cr.status,
-    headers: { 'Content-Type': contentType, ...cr.headers },
+    headers: { "Content-Type": contentType, ...cr.headers },
   });
 }
 
@@ -1335,7 +1666,10 @@ export function buildCommandResponse(cr: CommandResult): Response {
  * route dispatcher (line ~2158). The wrapper layer exists so
  * `buildCommandResponse` is independently unit-testable (v1.38.1.0).
  */
-async function handleCommand(body: any, tokenInfo?: TokenInfo | null): Promise<Response> {
+async function handleCommand(
+  body: any,
+  tokenInfo?: TokenInfo | null,
+): Promise<Response> {
   const cr = await handleCommandInternal(body, tokenInfo);
   return buildCommandResponse(cr);
 }
@@ -1356,7 +1690,7 @@ async function handleCommand(body: any, tokenInfo?: TokenInfo | null): Promise<R
 // fighting with gstack's. CLI path is unchanged.
 if (import.meta.main) {
   // SIGINT (Ctrl+C): user intentionally stopping → shutdown.
-  process.on('SIGINT', () => activeShutdown?.());
+  process.on("SIGINT", () => activeShutdown?.());
   // SIGTERM behavior depends on mode:
   // - Normal (headless) mode: Claude Code's Bash sandbox fires SIGTERM when the
   //   parent shell exits between tool invocations. Ignoring it keeps the server
@@ -1366,23 +1700,29 @@ if (import.meta.main) {
   //   without waiting forever. Ctrl+C and /stop still work either way.
   // - Active cookie picker: never tear down mid-import regardless of mode —
   //   would strand the picker UI with "Failed to fetch."
-  process.on('SIGTERM', () => {
+  process.on("SIGTERM", () => {
     if (hasActivePicker()) {
-      console.log('[browse] Received SIGTERM but cookie picker is active, ignoring to avoid stranding the picker UI');
+      console.log(
+        "[browse] Received SIGTERM but cookie picker is active, ignoring to avoid stranding the picker UI",
+      );
       return;
     }
-    const headed = activeBrowserManager.getConnectionMode() === 'headed';
+    const headed = activeBrowserManager.getConnectionMode() === "headed";
     if (headed || tunnelActive) {
-      console.log(`[browse] Received SIGTERM in ${headed ? 'headed' : 'tunnel'} mode, shutting down`);
+      console.log(
+        `[browse] Received SIGTERM in ${headed ? "headed" : "tunnel"} mode, shutting down`,
+      );
       activeShutdown?.();
     } else {
-      console.log('[browse] Received SIGTERM (ignoring — use /stop or Ctrl+C for intentional shutdown)');
+      console.log(
+        "[browse] Received SIGTERM (ignoring — use /stop or Ctrl+C for intentional shutdown)",
+      );
     }
   });
   // Windows: taskkill /F bypasses SIGTERM, but 'exit' fires for some shutdown paths.
   // Defense-in-depth — primary cleanup is the CLI's stale-state detection via health check.
-  if (process.platform === 'win32') {
-    process.on('exit', () => {
+  if (process.platform === "win32") {
+    process.on("exit", () => {
       safeUnlinkQuiet(config.stateFile);
     });
   }
@@ -1400,22 +1740,26 @@ function emergencyCleanup() {
   // delete the state file.
   try {
     if (fs.existsSync(config.stateFile)) {
-      const raw = fs.readFileSync(config.stateFile, 'utf-8');
+      const raw = fs.readFileSync(config.stateFile, "utf-8");
       const state = JSON.parse(raw);
       if (state.xvfbPid && state.xvfbStartTime) {
         // Lazy import — emergencyCleanup may run on platforms where
         // ./xvfb's Linux-specific helpers fail to load. Best effort.
         try {
-          const { cleanupXvfb } = require('./xvfb');
+          const { cleanupXvfb } = require("./xvfb");
           cleanupXvfb({
             pid: state.xvfbPid,
             startTime: state.xvfbStartTime,
-            display: state.xvfbDisplay || ':99',
+            display: state.xvfbDisplay || ":99",
           });
-        } catch { /* best effort */ }
+        } catch {
+          /* best effort */
+        }
       }
     }
-  } catch { /* state file unparseable — fall through to lock + state cleanup */ }
+  } catch {
+    /* state file unparseable — fall through to lock + state cleanup */
+  }
 
   // Clean Chromium profile locks via the shared helper (defensive guard
   // refuses to operate on unrecognized profile dirs).
@@ -1425,13 +1769,13 @@ function emergencyCleanup() {
 // Same import.meta.main gate as SIGINT/SIGTERM — embedders register their
 // own crash handlers.
 if (import.meta.main) {
-  process.on('uncaughtException', (err) => {
-    console.error('[browse] FATAL uncaught exception:', err.message);
+  process.on("uncaughtException", (err) => {
+    console.error("[browse] FATAL uncaught exception:", err.message);
     emergencyCleanup();
     process.exit(1);
   });
-  process.on('unhandledRejection', (err: any) => {
-    console.error('[browse] FATAL unhandled rejection:', err?.message || err);
+  process.on("unhandledRejection", (err: any) => {
+    console.error("[browse] FATAL unhandled rejection:", err?.message || err);
     emergencyCleanup();
     process.exit(1);
   });
@@ -1468,10 +1812,12 @@ if (import.meta.main) {
  */
 export function buildFetchHandler(cfg: ServerConfig): ServerHandle {
   if (!cfg.authToken || cfg.authToken.length < 16) {
-    throw new Error('buildFetchHandler: cfg.authToken must be a non-empty string >= 16 chars');
+    throw new Error(
+      "buildFetchHandler: cfg.authToken must be a non-empty string >= 16 chars",
+    );
   }
   if (!cfg.browserManager) {
-    throw new Error('buildFetchHandler: cfg.browserManager is required');
+    throw new Error("buildFetchHandler: cfg.browserManager is required");
   }
 
   // Re-run init with cfg-provided values. ensureStateDir is idempotent
@@ -1483,7 +1829,13 @@ export function buildFetchHandler(cfg: ServerConfig): ServerHandle {
   initAuditLog(cfg.config.auditLog);
   initRegistry(cfg.authToken);
 
-  const { authToken, browserManager: cfgBrowserManager, startTime, beforeRoute, browsePort } = cfg;
+  const {
+    authToken,
+    browserManager: cfgBrowserManager,
+    startTime,
+    beforeRoute,
+    browsePort,
+  } = cfg;
   // Strict opt-out: only explicit `false` flips the gate. Any other value
   // (undefined, truthy non-bool from a JS caller bypassing TS, etc.) defaults
   // to gstack-owns. Matches the "default-true preserves CLI bit-for-bit"
@@ -1514,7 +1866,7 @@ export function buildFetchHandler(cfg: ServerConfig): ServerHandle {
   let agentWatchdogInterval: ReturnType<typeof setInterval> | null = null;
   const respawnHistory: number[] = [];
   const AGENT_WATCHDOG_TICK_MS = parseInt(
-    process.env.GSTACK_AGENT_WATCHDOG_TICK_MS || '60000',
+    process.env.GSTACK_AGENT_WATCHDOG_TICK_MS || "60000",
     10,
   );
   const RESPAWN_GUARD_WINDOW_MS = 60_000;
@@ -1536,7 +1888,10 @@ export function buildFetchHandler(cfg: ServerConfig): ServerHandle {
       // Either no record (never spawned, or cleaned up after crash) or
       // PID is dead. Try to respawn.
       const now = Date.now();
-      while (respawnHistory.length && now - respawnHistory[0] > RESPAWN_GUARD_WINDOW_MS) {
+      while (
+        respawnHistory.length &&
+        now - respawnHistory[0] > RESPAWN_GUARD_WINDOW_MS
+      ) {
         respawnHistory.shift();
       }
       if (respawnHistory.length >= RESPAWN_GUARD_MAX) {
@@ -1554,12 +1909,19 @@ export function buildFetchHandler(cfg: ServerConfig): ServerHandle {
           cwd: cfg.config.projectDir,
         });
         if (pid) {
-          console.log(`[browse] terminal-agent respawned by watchdog (PID: ${pid})`);
+          console.log(
+            `[browse] terminal-agent respawned by watchdog (PID: ${pid})`,
+          );
         } else {
-          console.warn('[browse] terminal-agent respawn skipped — script not found on disk');
+          console.warn(
+            "[browse] terminal-agent respawn skipped — script not found on disk",
+          );
         }
       } catch (err: any) {
-        console.warn('[browse] terminal-agent respawn failed:', err?.message || err);
+        console.warn(
+          "[browse] terminal-agent respawn failed:",
+          err?.message || err,
+        );
       }
     }, AGENT_WATCHDOG_TICK_MS);
     // Detach the watchdog timer from Node's event-loop ref count so a
@@ -1572,7 +1934,7 @@ export function buildFetchHandler(cfg: ServerConfig): ServerHandle {
   // auth check sees the same token the routes receive. Module-level
   // validateAuth was deleted in v1.35.0.0.
   function validateAuth(req: Request): boolean {
-    const header = req.headers.get('authorization');
+    const header = req.headers.get("authorization");
     return header === `Bearer ${authToken}`;
   }
 
@@ -1583,7 +1945,7 @@ export function buildFetchHandler(cfg: ServerConfig): ServerHandle {
     if (isShuttingDown) return;
     isShuttingDown = true;
 
-    console.log('[browse] Shutting down...');
+    console.log("[browse] Shutting down...");
     if (ownsTerminalAgent) {
       // Identity-based kill (v1.44+). Replaces the v1.43- `pkill -f
       // terminal-agent\.ts` regex teardown which matched sibling gstack
@@ -1592,16 +1954,22 @@ export function buildFetchHandler(cfg: ServerConfig): ServerHandle {
       try {
         const stateDir = path.dirname(config.stateFile);
         const record = readAgentRecord(stateDir);
-        if (record) killAgentByRecord(record, 'SIGTERM');
+        if (record) killAgentByRecord(record, "SIGTERM");
       } catch (err: any) {
-        console.warn('[browse] Failed to kill terminal-agent:', err.message);
+        console.warn("[browse] Failed to kill terminal-agent:", err.message);
       }
-      safeUnlinkQuiet(path.join(path.dirname(config.stateFile), 'terminal-port'));
-      safeUnlinkQuiet(path.join(path.dirname(config.stateFile), 'terminal-internal-token'));
+      safeUnlinkQuiet(
+        path.join(path.dirname(config.stateFile), "terminal-port"),
+      );
+      safeUnlinkQuiet(
+        path.join(path.dirname(config.stateFile), "terminal-internal-token"),
+      );
       safeUnlinkQuiet(agentRecordPath(path.dirname(config.stateFile)));
     }
-    try { detachSession(); } catch (err: any) {
-      console.warn('[browse] Failed to detach CDP session:', err.message);
+    try {
+      detachSession();
+    } catch (err: any) {
+      console.warn("[browse] Failed to detach CDP session:", err.message);
     }
     inspectorSubscribers.clear();
     if (cfgBrowserManager.isWatching()) cfgBrowserManager.stopWatch();
@@ -1620,10 +1988,19 @@ export function buildFetchHandler(cfg: ServerConfig): ServerHandle {
   // Named lifecycle helper (matches closeTunnel style). Logs failures so
   // future debugging isn't blind to a stuck listener.
   async function stopListeners(local: any, tunnel?: any) {
-    try { if (local?.stop) local.stop(true); }
-    catch (err: any) { console.warn('[browse] local listener stop failed:', err?.message || err); }
-    try { if (tunnel?.stop) tunnel.stop(true); }
-    catch (err: any) { console.warn('[browse] tunnel listener stop failed:', err?.message || err); }
+    try {
+      if (local?.stop) local.stop(true);
+    } catch (err: any) {
+      console.warn("[browse] local listener stop failed:", err?.message || err);
+    }
+    try {
+      if (tunnel?.stop) tunnel.stop(true);
+    } catch (err: any) {
+      console.warn(
+        "[browse] tunnel listener stop failed:",
+        err?.message || err,
+      );
+    }
   }
 
   // Register this handle's shutdown as the active one. Module-level
@@ -1650,9 +2027,13 @@ export function buildFetchHandler(cfg: ServerConfig): ServerHandle {
   const callerOnDisconnect = cfgBrowserManager.onDisconnect;
   cfgBrowserManager.onDisconnect = async (code) => {
     if (callerOnDisconnect) {
-      try { await callerOnDisconnect(code); }
-      catch (err: any) {
-        console.warn('[browse] caller onDisconnect threw:', err?.message ?? err);
+      try {
+        await callerOnDisconnect(code);
+      } catch (err: any) {
+        console.warn(
+          "[browse] caller onDisconnect threw:",
+          err?.message ?? err,
+        );
       }
     }
     await activeShutdown?.(code ?? 2);
@@ -1665,98 +2046,114 @@ export function buildFetchHandler(cfg: ServerConfig): ServerHandle {
   // `authToken` (the cfg-derived value) explicitly.
   const browserManager = cfgBrowserManager;
 
+  const makeFetchHandler =
+    (surface: Surface) =>
+    async (req: Request): Promise<Response> => {
+      const url = new URL(req.url);
 
-  const makeFetchHandler = (surface: Surface) => async (req: Request): Promise<Response> => {
-    const url = new URL(req.url);
+      // ─── Tunnel surface filter (runs before any route dispatch) ──
+      if (surface === "tunnel") {
+        const isGetConnect =
+          req.method === "GET" && url.pathname === "/connect";
+        const allowed = TUNNEL_PATHS.has(url.pathname);
+        if (!allowed && !isGetConnect) {
+          logTunnelDenial(req, url, "path_not_on_tunnel");
+          return new Response(JSON.stringify({ error: "Not found" }), {
+            status: 404,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        if (isRootRequest(req)) {
+          logTunnelDenial(req, url, "root_token_on_tunnel");
+          return new Response(
+            JSON.stringify({
+              error: "Root token rejected on tunnel surface",
+              hint: "Remote agents must pair via /connect to receive a scoped token.",
+            }),
+            { status: 403, headers: { "Content-Type": "application/json" } },
+          );
+        }
+        if (url.pathname !== "/connect" && !getTokenInfo(req)) {
+          logTunnelDenial(req, url, "missing_scoped_token");
+          return new Response(JSON.stringify({ error: "Unauthorized" }), {
+            status: 401,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+      }
 
-    // ─── Tunnel surface filter (runs before any route dispatch) ──
-    if (surface === 'tunnel') {
-      const isGetConnect = req.method === 'GET' && url.pathname === '/connect';
-      const allowed = TUNNEL_PATHS.has(url.pathname);
-      if (!allowed && !isGetConnect) {
-        logTunnelDenial(req, url, 'path_not_on_tunnel');
-        return new Response(JSON.stringify({ error: 'Not found' }), {
-          status: 404, headers: { 'Content-Type': 'application/json' },
+      // beforeRoute overlay hook (v1.35.0.0). Runs AFTER the tunnel surface
+      // filter and BEFORE per-route dispatch. Pre-resolves bearer auth once
+      // so the hook receives TokenInfo | null. Note: getTokenInfo returns null
+      // for both missing AND invalid bearer — see the ServerConfig.beforeRoute
+      // JSDoc for the security implications.
+      if (beforeRoute) {
+        const auth = getTokenInfo(req);
+        const overlayResp = await beforeRoute(req, surface, auth);
+        if (overlayResp) return overlayResp;
+      }
+
+      // GET /connect — alive probe.  Unauth on both surfaces.  Used by /pair
+      // and /tunnel/start to detect dead ngrok tunnels via the tunnel URL,
+      // since /health is not tunnel-reachable under the dual-listener design.
+      //
+      // Shares the same rate limit as POST /connect — otherwise a tunnel
+      // caller can probe unlimited GETs and lock out nothing, which makes
+      // the endpoint a free daemon-enumeration surface.
+      if (url.pathname === "/connect" && req.method === "GET") {
+        if (!checkConnectRateLimit()) {
+          return new Response(JSON.stringify({ error: "Rate limited" }), {
+            status: 429,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        return new Response(JSON.stringify({ alive: true }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
         });
       }
-      if (isRootRequest(req)) {
-        logTunnelDenial(req, url, 'root_token_on_tunnel');
-        return new Response(JSON.stringify({
-          error: 'Root token rejected on tunnel surface',
-          hint: 'Remote agents must pair via /connect to receive a scoped token.',
-        }), { status: 403, headers: { 'Content-Type': 'application/json' } });
-      }
-      if (url.pathname !== '/connect' && !getTokenInfo(req)) {
-        logTunnelDenial(req, url, 'missing_scoped_token');
-        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-          status: 401, headers: { 'Content-Type': 'application/json' },
-        });
-      }
-    }
-
-    // beforeRoute overlay hook (v1.35.0.0). Runs AFTER the tunnel surface
-    // filter and BEFORE per-route dispatch. Pre-resolves bearer auth once
-    // so the hook receives TokenInfo | null. Note: getTokenInfo returns null
-    // for both missing AND invalid bearer — see the ServerConfig.beforeRoute
-    // JSDoc for the security implications.
-    if (beforeRoute) {
-      const auth = getTokenInfo(req);
-      const overlayResp = await beforeRoute(req, surface, auth);
-      if (overlayResp) return overlayResp;
-    }
-
-    // GET /connect — alive probe.  Unauth on both surfaces.  Used by /pair
-    // and /tunnel/start to detect dead ngrok tunnels via the tunnel URL,
-    // since /health is not tunnel-reachable under the dual-listener design.
-    //
-    // Shares the same rate limit as POST /connect — otherwise a tunnel
-    // caller can probe unlimited GETs and lock out nothing, which makes
-    // the endpoint a free daemon-enumeration surface.
-    if (url.pathname === '/connect' && req.method === 'GET') {
-      if (!checkConnectRateLimit()) {
-        return new Response(JSON.stringify({ error: 'Rate limited' }), {
-          status: 429, headers: { 'Content-Type': 'application/json' },
-        });
-      }
-      return new Response(JSON.stringify({ alive: true }), {
-        status: 200, headers: { 'Content-Type': 'application/json' },
-      });
-    }
 
       // Cookie picker routes — HTML page unauthenticated, data/action routes require auth
-      if (url.pathname.startsWith('/cookie-picker')) {
+      if (url.pathname.startsWith("/cookie-picker")) {
         return handleCookiePickerRoute(url, req, browserManager, authToken);
       }
 
       // Welcome page — served when GStack Browser launches in headed mode
-      if (url.pathname === '/welcome') {
+      if (url.pathname === "/welcome") {
         const welcomePath = (() => {
           // Gate GSTACK_SLUG on a strict regex BEFORE interpolating it into
           // the filesystem path. Without this, a slug like "../../etc/passwd"
           // would resolve to ~/.gstack/projects/../../etc/passwd/... — path
           // traversal.  Not exploitable today (attacker needs local env-var
           // access), but the gate is one regex and buys us defense-in-depth.
-          const rawSlug = process.env.GSTACK_SLUG || 'unknown';
-          const slug = /^[a-z0-9_-]+$/.test(rawSlug) ? rawSlug : 'unknown';
-          const homeDir = process.env.HOME || process.env.USERPROFILE || '/tmp';
+          const rawSlug = process.env.GSTACK_SLUG || "unknown";
+          const slug = /^[a-z0-9_-]+$/.test(rawSlug) ? rawSlug : "unknown";
+          const homeDir = process.env.HOME || process.env.USERPROFILE || "/tmp";
           const projectWelcome = `${homeDir}/.gstack/projects/${slug}/designs/welcome-page-20260331/finalized.html`;
           if (fs.existsSync(projectWelcome)) return projectWelcome;
           // Fallback: built-in welcome page from gstack install.  Reject
           // SKILL_ROOT values containing '..' for the same defense-in-depth
           // reason as the GSTACK_SLUG regex above.  Not exploitable today
           // (env set at install time), but the gate is one check.
-          const rawSkillRoot = process.env.GSTACK_SKILL_ROOT || `${homeDir}/.claude/skills/gstack`;
-          if (rawSkillRoot.includes('..')) return null;
+          const rawSkillRoot =
+            process.env.GSTACK_SKILL_ROOT || `${homeDir}/.claude/skills/gstack`;
+          if (rawSkillRoot.includes("..")) return null;
           const builtinWelcome = `${rawSkillRoot}/browse/src/welcome.html`;
           if (fs.existsSync(builtinWelcome)) return builtinWelcome;
           return null;
         })();
         if (welcomePath) {
           try {
-            const html = require('fs').readFileSync(welcomePath, 'utf-8');
-            return new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+            const html = require("fs").readFileSync(welcomePath, "utf-8");
+            return new Response(html, {
+              headers: { "Content-Type": "text/html; charset=utf-8" },
+            });
           } catch (err: any) {
-            console.error('[browse] Failed to read welcome page:', welcomePath, err.message);
+            console.error(
+              "[browse] Failed to read welcome page:",
+              welcomePath,
+              err.message,
+            );
           }
         }
         // No welcome page found — serve a simple fallback (avoid ERR_UNSAFE_REDIRECT on Windows)
@@ -1765,45 +2162,52 @@ export function buildFetchHandler(cfg: ServerConfig): ServerHandle {
           <style>body{background:#111;color:#fff;font-family:system-ui;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;}
           .msg{text-align:center;opacity:.7;}.gold{color:#f5a623;font-size:2em;margin-bottom:12px;}</style></head>
           <body><div class="msg"><div class="gold">◈</div><p>GStack Browser ready.</p><p style="font-size:.85em">Waiting for commands from Claude Code.</p></div></body></html>`,
-          { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' } }
+          {
+            status: 200,
+            headers: { "Content-Type": "text/html; charset=utf-8" },
+          },
         );
       }
 
       // Health check — no auth required, does NOT reset idle timer
-      if (url.pathname === '/health') {
+      if (url.pathname === "/health") {
         const healthy = await browserManager.isHealthy();
-        return new Response(JSON.stringify({
-          status: healthy ? 'healthy' : 'unhealthy',
-          mode: browserManager.getConnectionMode(),
-          uptime: Math.floor((Date.now() - startTime) / 1000),
-          tabs: browserManager.getTabCount(),
-          // Auth token for extension bootstrap. Safe: /health is localhost-only.
-          // Previously served unconditionally, but that leaks the token if the
-          // server is tunneled to the internet (ngrok, SSH tunnel).
-          // In headed mode the server is always local, so return token unconditionally
-          // (fixes Playwright Chromium extensions that don't send Origin header).
-          ...(browserManager.getConnectionMode() === 'headed' ||
-              req.headers.get('origin')?.startsWith('chrome-extension://')
-              ? { token: authToken } : {}),
-          // The chat queue is gone — Terminal pane is the sole sidebar
-          // surface. Keep `chatEnabled: false` so any older extension
-          // build still treats the chat input as disabled.
-          chatEnabled: false,
-          // Security module status — drives the shield icon in the sidepanel.
-          // Returns {status: 'protected'|'degraded'|'inactive', layers: {...}}.
-          // The chat-path classifier no longer feeds this since
-          // sidebar-agent.ts was ripped; only the page-content side
-          // (canary, content-security) keeps reporting in.
-          security: getSecurityStatus(),
-          // Terminal-agent discovery. ONLY a port number — never a token.
-          // Tokens flow via the /pty-session HttpOnly cookie path. See
-          // `pty-session-cookie.ts` for the rationale (codex outside-voice
-          // finding #2: don't reuse this endpoint for shell auth).
-          terminalPort: readTerminalPort(),
-        }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
-        });
+        return new Response(
+          JSON.stringify({
+            status: healthy ? "healthy" : "unhealthy",
+            mode: browserManager.getConnectionMode(),
+            uptime: Math.floor((Date.now() - startTime) / 1000),
+            tabs: browserManager.getTabCount(),
+            // Auth token for extension bootstrap. Safe: /health is localhost-only.
+            // Previously served unconditionally, but that leaks the token if the
+            // server is tunneled to the internet (ngrok, SSH tunnel).
+            // In headed mode the server is always local, so return token unconditionally
+            // (fixes Playwright Chromium extensions that don't send Origin header).
+            ...(browserManager.getConnectionMode() === "headed" ||
+            req.headers.get("origin")?.startsWith("chrome-extension://")
+              ? { token: authToken }
+              : {}),
+            // The chat queue is gone — Terminal pane is the sole sidebar
+            // surface. Keep `chatEnabled: false` so any older extension
+            // build still treats the chat input as disabled.
+            chatEnabled: false,
+            // Security module status — drives the shield icon in the sidepanel.
+            // Returns {status: 'protected'|'degraded'|'inactive', layers: {...}}.
+            // The chat-path classifier no longer feeds this since
+            // sidebar-agent.ts was ripped; only the page-content side
+            // (canary, content-security) keeps reporting in.
+            security: getSecurityStatus(),
+            // Terminal-agent discovery. ONLY a port number — never a token.
+            // Tokens flow via the /pty-session HttpOnly cookie path. See
+            // `pty-session-cookie.ts` for the rationale (codex outside-voice
+            // finding #2: don't reuse this endpoint for shell auth).
+            terminalPort: readTerminalPort(),
+          }),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          },
+        );
       }
 
       // ─── /pty-session — mint sessionId + lease + attachToken ─────────
@@ -1825,17 +2229,21 @@ export function buildFetchHandler(cfg: ServerConfig): ServerHandle {
       //
       // NEVER added to TUNNEL_PATHS — the tunnel surface 404s any
       // /pty-session attempt by default-deny.
-      if (url.pathname === '/pty-session' && req.method === 'POST') {
+      if (url.pathname === "/pty-session" && req.method === "POST") {
         if (!validateAuth(req)) {
-          return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-            status: 401, headers: { 'Content-Type': 'application/json' },
+          return new Response(JSON.stringify({ error: "Unauthorized" }), {
+            status: 401,
+            headers: { "Content-Type": "application/json" },
           });
         }
         const port = readTerminalPort();
         if (!port) {
-          return new Response(JSON.stringify({
-            error: 'terminal-agent not ready',
-          }), { status: 503, headers: { 'Content-Type': 'application/json' } });
+          return new Response(
+            JSON.stringify({
+              error: "terminal-agent not ready",
+            }),
+            { status: 503, headers: { "Content-Type": "application/json" } },
+          );
         }
         const lease = mintLease();
         const minted = mintPtySessionToken();
@@ -1843,26 +2251,32 @@ export function buildFetchHandler(cfg: ServerConfig): ServerHandle {
         if (!granted) {
           revokePtySessionToken(minted.token);
           revokeLease(lease.sessionId);
-          return new Response(JSON.stringify({
-            error: 'failed to grant terminal session',
-          }), { status: 503, headers: { 'Content-Type': 'application/json' } });
+          return new Response(
+            JSON.stringify({
+              error: "failed to grant terminal session",
+            }),
+            { status: 503, headers: { "Content-Type": "application/json" } },
+          );
         }
-        return new Response(JSON.stringify({
-          terminalPort: port,
-          sessionId: lease.sessionId,
-          attachToken: minted.token,
-          leaseExpiresAt: lease.expiresAt,
-          // Legacy alias — extensions still on the v1.43 wire shape keep
-          // working. Drop after one minor release once dogfood confirms.
-          ptySessionToken: minted.token,
-          expiresAt: minted.expiresAt,
-        }), {
-          status: 200,
-          headers: {
-            'Content-Type': 'application/json',
-            'Set-Cookie': buildPtySetCookie(minted.token),
+        return new Response(
+          JSON.stringify({
+            terminalPort: port,
+            sessionId: lease.sessionId,
+            attachToken: minted.token,
+            leaseExpiresAt: lease.expiresAt,
+            // Legacy alias — extensions still on the v1.43 wire shape keep
+            // working. Drop after one minor release once dogfood confirms.
+            ptySessionToken: minted.token,
+            expiresAt: minted.expiresAt,
+          }),
+          {
+            status: 200,
+            headers: {
+              "Content-Type": "application/json",
+              "Set-Cookie": buildPtySetCookie(minted.token),
+            },
           },
-        });
+        );
       }
 
       // ─── /pty-session/reattach — mint fresh attachToken for existing sessionId
@@ -1874,44 +2288,65 @@ export function buildFetchHandler(cfg: ServerConfig): ServerHandle {
       // token; the agent matches the sessionId binding and re-attaches
       // to the existing PtySession (kept alive for the 60s detach
       // window — Commit 3 wires that side).
-      if (url.pathname === '/pty-session/reattach' && req.method === 'POST') {
+      if (url.pathname === "/pty-session/reattach" && req.method === "POST") {
         if (!validateAuth(req)) {
-          return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-            status: 401, headers: { 'Content-Type': 'application/json' },
+          return new Response(JSON.stringify({ error: "Unauthorized" }), {
+            status: 401,
+            headers: { "Content-Type": "application/json" },
           });
         }
         const port = readTerminalPort();
         if (!port) {
-          return new Response(JSON.stringify({ error: 'terminal-agent not ready' }), {
-            status: 503, headers: { 'Content-Type': 'application/json' },
-          });
+          return new Response(
+            JSON.stringify({ error: "terminal-agent not ready" }),
+            {
+              status: 503,
+              headers: { "Content-Type": "application/json" },
+            },
+          );
         }
         let body: any;
-        try { body = await req.json(); } catch { body = null; }
-        const sessionId = typeof body?.sessionId === 'string' ? body.sessionId : null;
+        try {
+          body = await req.json();
+        } catch {
+          body = null;
+        }
+        const sessionId =
+          typeof body?.sessionId === "string" ? body.sessionId : null;
         const v = sessionId ? validateLease(sessionId) : { ok: false };
         if (!v.ok) {
           // 410 Gone — session window has closed (lease expired or never
           // existed). Client must fall back to /pty-session for a brand-new
           // session.
-          return new Response(JSON.stringify({ error: 'lease expired or unknown' }), {
-            status: 410, headers: { 'Content-Type': 'application/json' },
-          });
+          return new Response(
+            JSON.stringify({ error: "lease expired or unknown" }),
+            {
+              status: 410,
+              headers: { "Content-Type": "application/json" },
+            },
+          );
         }
         const minted = mintPtySessionToken();
         const granted = await grantPtyToken(minted.token, sessionId!);
         if (!granted) {
           revokePtySessionToken(minted.token);
-          return new Response(JSON.stringify({ error: 'failed to grant attach token' }), {
-            status: 503, headers: { 'Content-Type': 'application/json' },
-          });
+          return new Response(
+            JSON.stringify({ error: "failed to grant attach token" }),
+            {
+              status: 503,
+              headers: { "Content-Type": "application/json" },
+            },
+          );
         }
-        return new Response(JSON.stringify({
-          terminalPort: port,
-          sessionId,
-          attachToken: minted.token,
-          leaseExpiresAt: v.ok ? v.expiresAt : 0,
-        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        return new Response(
+          JSON.stringify({
+            terminalPort: port,
+            sessionId,
+            attachToken: minted.token,
+            leaseExpiresAt: v.ok ? v.expiresAt : 0,
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
       }
 
       // ─── /pty-restart — one-transaction kill + fresh mint ────────────
@@ -1921,21 +2356,31 @@ export function buildFetchHandler(cfg: ServerConfig): ServerHandle {
       // sessionId + lease + attachToken, and returns the new 4-tuple in
       // one response. Zero race window between kill and mint (codex T2
       // + D8 of the eng review).
-      if (url.pathname === '/pty-restart' && req.method === 'POST') {
+      if (url.pathname === "/pty-restart" && req.method === "POST") {
         if (!validateAuth(req)) {
-          return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-            status: 401, headers: { 'Content-Type': 'application/json' },
+          return new Response(JSON.stringify({ error: "Unauthorized" }), {
+            status: 401,
+            headers: { "Content-Type": "application/json" },
           });
         }
         const port = readTerminalPort();
         if (!port) {
-          return new Response(JSON.stringify({ error: 'terminal-agent not ready' }), {
-            status: 503, headers: { 'Content-Type': 'application/json' },
-          });
+          return new Response(
+            JSON.stringify({ error: "terminal-agent not ready" }),
+            {
+              status: 503,
+              headers: { "Content-Type": "application/json" },
+            },
+          );
         }
         let body: any;
-        try { body = await req.json(); } catch { body = null; }
-        const oldSessionId = typeof body?.sessionId === 'string' ? body.sessionId : null;
+        try {
+          body = await req.json();
+        } catch {
+          body = null;
+        }
+        const oldSessionId =
+          typeof body?.sessionId === "string" ? body.sessionId : null;
         // Best-effort dispose. Missing/unknown sessionId is non-fatal —
         // the client may be doing a "restart from scratch" with no prior
         // session (e.g. ENDED state). The fresh mint always proceeds.
@@ -1949,16 +2394,23 @@ export function buildFetchHandler(cfg: ServerConfig): ServerHandle {
         if (!granted) {
           revokePtySessionToken(minted.token);
           revokeLease(lease.sessionId);
-          return new Response(JSON.stringify({ error: 'failed to grant terminal session' }), {
-            status: 503, headers: { 'Content-Type': 'application/json' },
-          });
+          return new Response(
+            JSON.stringify({ error: "failed to grant terminal session" }),
+            {
+              status: 503,
+              headers: { "Content-Type": "application/json" },
+            },
+          );
         }
-        return new Response(JSON.stringify({
-          terminalPort: port,
-          sessionId: lease.sessionId,
-          attachToken: minted.token,
-          leaseExpiresAt: lease.expiresAt,
-        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        return new Response(
+          JSON.stringify({
+            terminalPort: port,
+            sessionId: lease.sessionId,
+            attachToken: minted.token,
+            leaseExpiresAt: lease.expiresAt,
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
       }
 
       // ─── /pty-dispose — explicit teardown (pagehide / browser quit) ──
@@ -1968,27 +2420,37 @@ export function buildFetchHandler(cfg: ServerConfig): ServerHandle {
       // (sendBeacon doesn't support custom headers). Codex T3 fix —
       // without this, every browser quit + sidebar close leaves a zombie
       // PTY alive for the 60s detach window (Commit 3).
-      if (url.pathname === '/pty-dispose' && req.method === 'POST') {
+      if (url.pathname === "/pty-dispose" && req.method === "POST") {
         let body: any;
-        try { body = await req.json(); } catch { body = null; }
-        const authTokenFromBody = typeof body?.authToken === 'string' ? body.authToken : null;
+        try {
+          body = await req.json();
+        } catch {
+          body = null;
+        }
+        const authTokenFromBody =
+          typeof body?.authToken === "string" ? body.authToken : null;
         // Accept either header bearer OR body authToken. Both must match
         // the root auth token; otherwise reject.
         const headerToken = extractToken(req);
-        const authedByHeader = headerToken !== null && headerToken === authToken;
-        const authedByBody = authTokenFromBody !== null && authTokenFromBody === authToken;
+        const authedByHeader =
+          headerToken !== null && headerToken === authToken;
+        const authedByBody =
+          authTokenFromBody !== null && authTokenFromBody === authToken;
         if (!authedByHeader && !authedByBody) {
-          return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-            status: 401, headers: { 'Content-Type': 'application/json' },
+          return new Response(JSON.stringify({ error: "Unauthorized" }), {
+            status: 401,
+            headers: { "Content-Type": "application/json" },
           });
         }
-        const sessionId = typeof body?.sessionId === 'string' ? body.sessionId : null;
+        const sessionId =
+          typeof body?.sessionId === "string" ? body.sessionId : null;
         if (sessionId) {
           await restartPtySession(sessionId);
           revokeLease(sessionId);
         }
         return new Response(JSON.stringify({ ok: true }), {
-          status: 200, headers: { 'Content-Type': 'application/json' },
+          status: 200,
+          headers: { "Content-Type": "application/json" },
         });
       }
 
@@ -2004,26 +2466,40 @@ export function buildFetchHandler(cfg: ServerConfig): ServerHandle {
       //
       // INTERNAL endpoint — bound to the root authToken so an external
       // caller can't refresh another user's lease. Body: {sessionId}.
-      if (url.pathname === '/internal/lease-refresh' && req.method === 'POST') {
+      if (url.pathname === "/internal/lease-refresh" && req.method === "POST") {
         if (!validateAuth(req)) {
-          return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-            status: 401, headers: { 'Content-Type': 'application/json' },
+          return new Response(JSON.stringify({ error: "Unauthorized" }), {
+            status: 401,
+            headers: { "Content-Type": "application/json" },
           });
         }
         let body: any;
-        try { body = await req.json(); } catch { body = null; }
-        const sessionId = typeof body?.sessionId === 'string' ? body.sessionId : null;
+        try {
+          body = await req.json();
+        } catch {
+          body = null;
+        }
+        const sessionId =
+          typeof body?.sessionId === "string" ? body.sessionId : null;
         const r = sessionId ? refreshLease(sessionId) : { ok: false };
         if (!r.ok) {
-          return new Response(JSON.stringify({ error: 'lease expired or unknown' }), {
-            status: 410, headers: { 'Content-Type': 'application/json' },
-          });
+          return new Response(
+            JSON.stringify({ error: "lease expired or unknown" }),
+            {
+              status: 410,
+              headers: { "Content-Type": "application/json" },
+            },
+          );
         }
         // T6: PTY activity resets the daemon idle timer.
         resetIdleTimer();
-        return new Response(JSON.stringify({ ok: true, expiresAt: r.expiresAt }), {
-          status: 200, headers: { 'Content-Type': 'application/json' },
-        });
+        return new Response(
+          JSON.stringify({ ok: true, expiresAt: r.expiresAt }),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          },
+        );
       }
 
       // ─── /pty-inject-scan — pre-inject prompt-injection scan for the
@@ -2032,20 +2508,23 @@ export function buildFetchHandler(cfg: ServerConfig): ServerHandle {
       // the PTY (#1370). Local-only by intent: not added to the tunnel
       // allowlist; root-token auth required. Sidecar absence degrades to
       // L4 unavailable (extension shows WARN + user confirm per D7).
-      if (url.pathname === '/pty-inject-scan' && req.method === 'POST') {
+      if (url.pathname === "/pty-inject-scan" && req.method === "POST") {
         if (!validateAuth(req)) {
           return new Response(
-            JSON.stringify({ error: 'Unauthorized' }, sanitizeReplacer),
-            { status: 401, headers: { 'Content-Type': 'application/json' } },
+            JSON.stringify({ error: "Unauthorized" }, sanitizeReplacer),
+            { status: 401, headers: { "Content-Type": "application/json" } },
           );
         }
         // 64KB request cap. Defense against accidentally posting an
         // entire page DOM into the PTY path.
-        const contentLength = Number(req.headers.get('content-length') || '0');
+        const contentLength = Number(req.headers.get("content-length") || "0");
         if (contentLength > 64 * 1024) {
           return new Response(
-            JSON.stringify({ error: 'payload-too-large', limit: 65536 }, sanitizeReplacer),
-            { status: 413, headers: { 'Content-Type': 'application/json' } },
+            JSON.stringify(
+              { error: "payload-too-large", limit: 65536 },
+              sanitizeReplacer,
+            ),
+            { status: 413, headers: { "Content-Type": "application/json" } },
           );
         }
         let body: { text?: unknown; origin?: unknown } = {};
@@ -2053,16 +2532,17 @@ export function buildFetchHandler(cfg: ServerConfig): ServerHandle {
           body = (await req.json()) as { text?: unknown; origin?: unknown };
         } catch {
           return new Response(
-            JSON.stringify({ error: 'malformed-json' }, sanitizeReplacer),
-            { status: 400, headers: { 'Content-Type': 'application/json' } },
+            JSON.stringify({ error: "malformed-json" }, sanitizeReplacer),
+            { status: 400, headers: { "Content-Type": "application/json" } },
           );
         }
-        const text = typeof body.text === 'string' ? body.text : '';
-        const origin = typeof body.origin === 'string' ? body.origin : 'unknown';
+        const text = typeof body.text === "string" ? body.text : "";
+        const origin =
+          typeof body.origin === "string" ? body.origin : "unknown";
         if (text.length === 0) {
           return new Response(
-            JSON.stringify({ error: 'missing-text' }, sanitizeReplacer),
-            { status: 400, headers: { 'Content-Type': 'application/json' } },
+            JSON.stringify({ error: "missing-text" }, sanitizeReplacer),
+            { status: 400, headers: { "Content-Type": "application/json" } },
           );
         }
 
@@ -2075,15 +2555,15 @@ export function buildFetchHandler(cfg: ServerConfig): ServerHandle {
         //     verdict is driven by the URL blocklist + L4.
         // See CLAUDE.md "Sidebar security stack" + plan §"L1-L3 honest
         // accounting".
-        let verdict: 'PASS' | 'WARN' | 'BLOCK' = 'PASS';
+        let verdict: "PASS" | "WARN" | "BLOCK" = "PASS";
         const reasons: string[] = [];
 
         // Quick URL-blocklist check (re-uses the security module's
         // pure-string helpers — no @huggingface/transformers dep).
         // Pattern: text containing a known bad-actor domain → BLOCK.
         if (/(\bbit\.ly|\btinyurl\.com|\bdiscord\.gg)/i.test(text)) {
-          verdict = 'BLOCK';
-          reasons.push('url-blocklist');
+          verdict = "BLOCK";
+          reasons.push("url-blocklist");
         }
 
         // L4 sidecar scan if available.
@@ -2091,7 +2571,7 @@ export function buildFetchHandler(cfg: ServerConfig): ServerHandle {
         let l4: { available: boolean; verdict?: unknown; error?: string } = {
           available: sidecarAvail.available,
         };
-        if (sidecarAvail.available && verdict !== 'BLOCK') {
+        if (sidecarAvail.available && verdict !== "BLOCK") {
           try {
             const { verdict: layerVerdict } = await scanWithSidecar(text, {
               timeoutMs: 5000,
@@ -2099,12 +2579,12 @@ export function buildFetchHandler(cfg: ServerConfig): ServerHandle {
             l4 = { available: true, verdict: layerVerdict };
             // LayerSignal shape: { verdict: 'safe'|'suspicious'|'unsafe', ... }
             const lv = (layerVerdict as { verdict?: string })?.verdict;
-            if (lv === 'unsafe') {
-              verdict = 'BLOCK';
-              reasons.push('l4-unsafe');
-            } else if (lv === 'suspicious') {
-              verdict = 'WARN';
-              reasons.push('l4-suspicious');
+            if (lv === "unsafe") {
+              verdict = "BLOCK";
+              reasons.push("l4-unsafe");
+            } else if (lv === "suspicious") {
+              verdict = "WARN";
+              reasons.push("l4-suspicious");
             }
           } catch (err) {
             l4 = {
@@ -2112,14 +2592,14 @@ export function buildFetchHandler(cfg: ServerConfig): ServerHandle {
               error: err instanceof Error ? err.message : String(err),
             };
             // L4 failure during scan: degrade to WARN per D7.
-            if (verdict === 'PASS') {
-              verdict = 'WARN';
-              reasons.push('l4-unavailable');
+            if (verdict === "PASS") {
+              verdict = "WARN";
+              reasons.push("l4-unavailable");
             }
           }
-        } else if (!sidecarAvail.available && verdict === 'PASS') {
-          verdict = 'WARN';
-          reasons.push(`l4-unavailable:${sidecarAvail.reason ?? 'unknown'}`);
+        } else if (!sidecarAvail.available && verdict === "PASS") {
+          verdict = "WARN";
+          reasons.push(`l4-unavailable:${sidecarAvail.reason ?? "unknown"}`);
         }
 
         // BLOCK decisions are surfaced in the response shape; the
@@ -2131,59 +2611,82 @@ export function buildFetchHandler(cfg: ServerConfig): ServerHandle {
 
         return new Response(
           JSON.stringify(
-            { verdict, reasons, l4, datamark: '<untrusted-page-content>' },
+            { verdict, reasons, l4, datamark: "<untrusted-page-content>" },
             sanitizeReplacer,
           ),
-          { status: 200, headers: { 'Content-Type': 'application/json' } },
+          { status: 200, headers: { "Content-Type": "application/json" } },
         );
       }
 
       // ─── /connect — setup key exchange for /pair-agent ceremony ────
-      if (url.pathname === '/connect' && req.method === 'POST') {
+      if (url.pathname === "/connect" && req.method === "POST") {
         if (!checkConnectRateLimit()) {
-          return new Response(JSON.stringify({
-            error: 'Too many connection attempts. Wait 1 minute.',
-          }), { status: 429, headers: { 'Content-Type': 'application/json' } });
+          return new Response(
+            JSON.stringify({
+              error: "Too many connection attempts. Wait 1 minute.",
+            }),
+            { status: 429, headers: { "Content-Type": "application/json" } },
+          );
         }
         try {
-          const connectBody = await req.json() as { setup_key?: string };
+          const connectBody = (await req.json()) as { setup_key?: string };
           if (!connectBody.setup_key) {
-            return new Response(JSON.stringify({ error: 'Missing setup_key' }), {
-              status: 400, headers: { 'Content-Type': 'application/json' },
-            });
+            return new Response(
+              JSON.stringify({ error: "Missing setup_key" }),
+              {
+                status: 400,
+                headers: { "Content-Type": "application/json" },
+              },
+            );
           }
           const session = exchangeSetupKey(connectBody.setup_key);
           if (!session) {
-            return new Response(JSON.stringify({
-              error: 'Invalid, expired, or already-used setup key',
-            }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+            return new Response(
+              JSON.stringify({
+                error: "Invalid, expired, or already-used setup key",
+              }),
+              { status: 401, headers: { "Content-Type": "application/json" } },
+            );
           }
-          console.log(`[browse] Remote agent connected: ${session.clientId} (scopes: ${session.scopes.join(',')})`);
-          return new Response(JSON.stringify({
-            token: session.token,
-            expires: session.expiresAt,
-            scopes: session.scopes,
-            agent: session.clientId,
-          }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+          console.log(
+            `[browse] Remote agent connected: ${session.clientId} (scopes: ${session.scopes.join(",")})`,
+          );
+          return new Response(
+            JSON.stringify({
+              token: session.token,
+              expires: session.expiresAt,
+              scopes: session.scopes,
+              agent: session.clientId,
+            }),
+            { status: 200, headers: { "Content-Type": "application/json" } },
+          );
         } catch {
-          return new Response(JSON.stringify({ error: 'Invalid request body' }), {
-            status: 400, headers: { 'Content-Type': 'application/json' },
-          });
+          return new Response(
+            JSON.stringify({ error: "Invalid request body" }),
+            {
+              status: 400,
+              headers: { "Content-Type": "application/json" },
+            },
+          );
         }
       }
 
       // ─── /token — mint scoped tokens (root-only) ──────────────────
-      if (url.pathname === '/token' && req.method === 'POST') {
+      if (url.pathname === "/token" && req.method === "POST") {
         if (!isRootRequest(req)) {
-          return new Response(JSON.stringify({
-            error: 'Only the root token can mint sub-tokens',
-          }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+          return new Response(
+            JSON.stringify({
+              error: "Only the root token can mint sub-tokens",
+            }),
+            { status: 403, headers: { "Content-Type": "application/json" } },
+          );
         }
         try {
-          const tokenBody = await req.json() as any;
+          const tokenBody = (await req.json()) as any;
           if (!tokenBody.clientId) {
-            return new Response(JSON.stringify({ error: 'Missing clientId' }), {
-              status: 400, headers: { 'Content-Type': 'application/json' },
+            return new Response(JSON.stringify({ error: "Missing clientId" }), {
+              status: 400,
+              headers: { "Content-Type": "application/json" },
             });
           }
           const session = createToken({
@@ -2194,47 +2697,67 @@ export function buildFetchHandler(cfg: ServerConfig): ServerHandle {
             rateLimit: tokenBody.rateLimit,
             expiresSeconds: tokenBody.expiresSeconds,
           });
-          return new Response(JSON.stringify({
-            token: session.token,
-            expires: session.expiresAt,
-            scopes: session.scopes,
-            agent: session.clientId,
-          }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+          return new Response(
+            JSON.stringify({
+              token: session.token,
+              expires: session.expiresAt,
+              scopes: session.scopes,
+              agent: session.clientId,
+            }),
+            { status: 200, headers: { "Content-Type": "application/json" } },
+          );
         } catch {
-          return new Response(JSON.stringify({ error: 'Invalid request body' }), {
-            status: 400, headers: { 'Content-Type': 'application/json' },
-          });
+          return new Response(
+            JSON.stringify({ error: "Invalid request body" }),
+            {
+              status: 400,
+              headers: { "Content-Type": "application/json" },
+            },
+          );
         }
       }
 
       // ─── /token/:clientId — revoke a scoped token (root-only) ─────
-      if (url.pathname.startsWith('/token/') && req.method === 'DELETE') {
+      if (url.pathname.startsWith("/token/") && req.method === "DELETE") {
         if (!isRootRequest(req)) {
-          return new Response(JSON.stringify({ error: 'Root token required' }), {
-            status: 403, headers: { 'Content-Type': 'application/json' },
-          });
+          return new Response(
+            JSON.stringify({ error: "Root token required" }),
+            {
+              status: 403,
+              headers: { "Content-Type": "application/json" },
+            },
+          );
         }
-        const clientId = url.pathname.slice('/token/'.length);
+        const clientId = url.pathname.slice("/token/".length);
         const revoked = revokeToken(clientId);
         if (!revoked) {
-          return new Response(JSON.stringify({ error: `Agent "${clientId}" not found` }), {
-            status: 404, headers: { 'Content-Type': 'application/json' },
-          });
+          return new Response(
+            JSON.stringify({ error: `Agent "${clientId}" not found` }),
+            {
+              status: 404,
+              headers: { "Content-Type": "application/json" },
+            },
+          );
         }
         console.log(`[browse] Revoked token for: ${clientId}`);
         return new Response(JSON.stringify({ revoked: clientId }), {
-          status: 200, headers: { 'Content-Type': 'application/json' },
+          status: 200,
+          headers: { "Content-Type": "application/json" },
         });
       }
 
       // ─── /agents — list connected agents (root-only) ──────────────
-      if (url.pathname === '/agents' && req.method === 'GET') {
+      if (url.pathname === "/agents" && req.method === "GET") {
         if (!isRootRequest(req)) {
-          return new Response(JSON.stringify({ error: 'Root token required' }), {
-            status: 403, headers: { 'Content-Type': 'application/json' },
-          });
+          return new Response(
+            JSON.stringify({ error: "Root token required" }),
+            {
+              status: 403,
+              headers: { "Content-Type": "application/json" },
+            },
+          );
         }
-        const agents = listTokens().map(t => ({
+        const agents = listTokens().map((t) => ({
           clientId: t.clientId,
           scopes: t.scopes,
           domains: t.domains,
@@ -2243,25 +2766,36 @@ export function buildFetchHandler(cfg: ServerConfig): ServerHandle {
           createdAt: t.createdAt,
         }));
         return new Response(JSON.stringify({ agents }), {
-          status: 200, headers: { 'Content-Type': 'application/json' },
+          status: 200,
+          headers: { "Content-Type": "application/json" },
         });
       }
 
       // ─── /pair — create setup key for pair-agent ceremony (root-only) ───
-      if (url.pathname === '/pair' && req.method === 'POST') {
+      if (url.pathname === "/pair" && req.method === "POST") {
         if (!isRootRequest(req)) {
-          return new Response(JSON.stringify({ error: 'Root token required' }), {
-            status: 403, headers: { 'Content-Type': 'application/json' },
-          });
+          return new Response(
+            JSON.stringify({ error: "Root token required" }),
+            {
+              status: 403,
+              headers: { "Content-Type": "application/json" },
+            },
+          );
         }
         try {
-          const pairBody = await req.json() as any;
+          const pairBody = (await req.json()) as any;
           // Default: full access (read+write+admin+meta). The trust boundary is
           // the pairing ceremony itself, not the scope. --control adds browser-wide
           // destructive commands (stop, restart, disconnect). --restrict limits scope.
-          const scopes = pairBody.control || pairBody.admin
-            ? ['read', 'write', 'admin', 'meta', 'control'] as const
-            : (pairBody.scopes || ['read', 'write', 'admin', 'meta']) as const;
+          const scopes =
+            pairBody.control || pairBody.admin
+              ? (["read", "write", "admin", "meta", "control"] as const)
+              : ((pairBody.scopes || [
+                  "read",
+                  "write",
+                  "admin",
+                  "meta",
+                ]) as const);
           const setupKey = createSetupKey({
             clientId: pairBody.clientId,
             scopes: [...scopes],
@@ -2275,32 +2809,43 @@ export function buildFetchHandler(cfg: ServerConfig): ServerHandle {
           if (tunnelActive && tunnelUrl) {
             try {
               const probe = await fetch(`${tunnelUrl}/connect`, {
-                method: 'GET',
-                headers: { 'ngrok-skip-browser-warning': 'true' },
+                method: "GET",
+                headers: { "ngrok-skip-browser-warning": "true" },
                 signal: AbortSignal.timeout(5000),
               });
               if (probe.ok) {
                 verifiedTunnelUrl = tunnelUrl;
               } else {
-                console.warn(`[browse] Tunnel probe failed (HTTP ${probe.status}), marking tunnel as dead`);
+                console.warn(
+                  `[browse] Tunnel probe failed (HTTP ${probe.status}), marking tunnel as dead`,
+                );
                 await closeTunnel();
               }
             } catch {
-              console.warn('[browse] Tunnel probe timed out or unreachable, marking tunnel as dead');
+              console.warn(
+                "[browse] Tunnel probe timed out or unreachable, marking tunnel as dead",
+              );
               await closeTunnel();
             }
           }
-          return new Response(JSON.stringify({
-            setup_key: setupKey.token,
-            expires_at: setupKey.expiresAt,
-            scopes: setupKey.scopes,
-            tunnel_url: verifiedTunnelUrl,
-            server_url: `http://127.0.0.1:${browsePort}`,
-          }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+          return new Response(
+            JSON.stringify({
+              setup_key: setupKey.token,
+              expires_at: setupKey.expiresAt,
+              scopes: setupKey.scopes,
+              tunnel_url: verifiedTunnelUrl,
+              server_url: `http://127.0.0.1:${browsePort}`,
+            }),
+            { status: 200, headers: { "Content-Type": "application/json" } },
+          );
         } catch {
-          return new Response(JSON.stringify({ error: 'Invalid request body' }), {
-            status: 400, headers: { 'Content-Type': 'application/json' },
-          });
+          return new Response(
+            JSON.stringify({ error: "Invalid request body" }),
+            {
+              status: 400,
+              headers: { "Content-Type": "application/json" },
+            },
+          );
         }
       }
 
@@ -2315,11 +2860,15 @@ export function buildFetchHandler(cfg: ServerConfig): ServerHandle {
       // Hard fail if the tunnel listener bind fails — NEVER fall back to
       // the local port, which would silently defeat the whole security
       // property.
-      if (url.pathname === '/tunnel/start' && req.method === 'POST') {
+      if (url.pathname === "/tunnel/start" && req.method === "POST") {
         if (!isRootRequest(req)) {
-          return new Response(JSON.stringify({ error: 'Root token required' }), {
-            status: 403, headers: { 'Content-Type': 'application/json' },
-          });
+          return new Response(
+            JSON.stringify({ error: "Root token required" }),
+            {
+              status: 403,
+              headers: { "Content-Type": "application/json" },
+            },
+          );
         }
         if (tunnelActive && tunnelUrl && tunnelServer) {
           // Verify tunnel is still alive before returning cached URL.
@@ -2327,28 +2876,35 @@ export function buildFetchHandler(cfg: ServerConfig): ServerHandle {
           // surface); /health is NOT tunnel-reachable under dual-listener.
           try {
             const probe = await fetch(`${tunnelUrl}/connect`, {
-              method: 'GET',
-              headers: { 'ngrok-skip-browser-warning': 'true' },
+              method: "GET",
+              headers: { "ngrok-skip-browser-warning": "true" },
               signal: AbortSignal.timeout(5000),
             });
             if (probe.ok) {
-              return new Response(JSON.stringify({ url: tunnelUrl, already_active: true }), {
-                status: 200, headers: { 'Content-Type': 'application/json' },
-              });
+              return new Response(
+                JSON.stringify({ url: tunnelUrl, already_active: true }),
+                {
+                  status: 200,
+                  headers: { "Content-Type": "application/json" },
+                },
+              );
             }
           } catch {}
           // Tunnel is dead — tear down cleanly before restarting
-          console.warn('[browse] Cached tunnel is dead, restarting...');
+          console.warn("[browse] Cached tunnel is dead, restarting...");
           await closeTunnel();
         }
 
         // 1) Resolve ngrok authtoken from env / .gstack / native config
         const authtoken = resolveNgrokAuthtoken();
         if (!authtoken) {
-          return new Response(JSON.stringify({
-            error: 'No ngrok authtoken found',
-            hint: 'Run: ngrok config add-authtoken YOUR_TOKEN',
-          }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+          return new Response(
+            JSON.stringify({
+              error: "No ngrok authtoken found",
+              hint: "Run: ngrok config add-authtoken YOUR_TOKEN",
+            }),
+            { status: 400, headers: { "Content-Type": "application/json" } },
+          );
         }
 
         // 2) Bind the tunnel listener on an ephemeral port.  HARD FAIL if
@@ -2357,20 +2913,23 @@ export function buildFetchHandler(cfg: ServerConfig): ServerHandle {
         try {
           boundTunnel = Bun.serve({
             port: 0,
-            hostname: '127.0.0.1',
-            fetch: makeFetchHandler('tunnel'),
+            hostname: "127.0.0.1",
+            fetch: makeFetchHandler("tunnel"),
           });
         } catch (err: any) {
-          return new Response(JSON.stringify({
-            error: `Failed to bind tunnel listener: ${err.message}`,
-          }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+          return new Response(
+            JSON.stringify({
+              error: `Failed to bind tunnel listener: ${err.message}`,
+            }),
+            { status: 500, headers: { "Content-Type": "application/json" } },
+          );
         }
         const tunnelPort = boundTunnel.port;
 
         // 3) Point ngrok at the TUNNEL port (not the local port).  If this
         //    fails, tear the listener back down so we don't leak sockets.
         try {
-          const ngrok = await import('@ngrok/ngrok');
+          const ngrok = await import("@ngrok/ngrok");
           const domain = process.env.NGROK_DOMAIN;
           const forwardOpts: any = { addr: tunnelPort, authtoken };
           if (domain) forwardOpts.domain = domain;
@@ -2379,29 +2938,47 @@ export function buildFetchHandler(cfg: ServerConfig): ServerHandle {
           tunnelUrl = tunnelListener.url();
           tunnelServer = boundTunnel;
           tunnelActive = true;
-          console.log(`[browse] Tunnel listener bound on 127.0.0.1:${tunnelPort}, ngrok → ${tunnelUrl}`);
+          console.log(
+            `[browse] Tunnel listener bound on 127.0.0.1:${tunnelPort}, ngrok → ${tunnelUrl}`,
+          );
 
           // Update state file
-          const stateContent = JSON.parse(fs.readFileSync(config.stateFile, 'utf-8'));
-          stateContent.tunnel = { url: tunnelUrl, domain: domain || null, startedAt: new Date().toISOString() };
+          const stateContent = JSON.parse(
+            fs.readFileSync(config.stateFile, "utf-8"),
+          );
+          stateContent.tunnel = {
+            url: tunnelUrl,
+            domain: domain || null,
+            startedAt: new Date().toISOString(),
+          };
           const tmpState = tmpStatePath();
-          fs.writeFileSync(tmpState, JSON.stringify(stateContent, null, 2), { mode: 0o600 });
+          fs.writeFileSync(tmpState, JSON.stringify(stateContent, null, 2), {
+            mode: 0o600,
+          });
           fs.renameSync(tmpState, config.stateFile);
 
           return new Response(JSON.stringify({ url: tunnelUrl }), {
-            status: 200, headers: { 'Content-Type': 'application/json' },
+            status: 200,
+            headers: { "Content-Type": "application/json" },
           });
         } catch (err: any) {
           // Clean up BOTH ngrok and the Bun listener on failure.  If
           // ngrok.forward() succeeded but tunnelListener.url() or the
           // state-file write threw, we'd otherwise leak an active ngrok
           // session on the user's account.
-          try { if (tunnelListener) await tunnelListener.close(); } catch {}
-          try { boundTunnel.stop(true); } catch {}
+          try {
+            if (tunnelListener) await tunnelListener.close();
+          } catch {}
+          try {
+            boundTunnel.stop(true);
+          } catch {}
           tunnelListener = null;
-          return new Response(JSON.stringify({
-            error: `Failed to open ngrok tunnel: ${err.message}`,
-          }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+          return new Response(
+            JSON.stringify({
+              error: `Failed to open ngrok tunnel: ${err.message}`,
+            }),
+            { status: 500, headers: { "Content-Type": "application/json" } },
+          );
         }
       }
 
@@ -2416,47 +2993,53 @@ export function buildFetchHandler(cfg: ServerConfig): ServerHandle {
       // The extension calls this once at bootstrap with the root Bearer
       // header, then opens EventSource with `withCredentials: true` which
       // sends the cookie back automatically.
-      if (url.pathname === '/sse-session' && req.method === 'POST') {
+      if (url.pathname === "/sse-session" && req.method === "POST") {
         if (!validateAuth(req)) {
-          return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          return new Response(JSON.stringify({ error: "Unauthorized" }), {
             status: 401,
-            headers: { 'Content-Type': 'application/json' },
+            headers: { "Content-Type": "application/json" },
           });
         }
         const minted = mintSseSessionToken();
-        return new Response(JSON.stringify({
-          expiresAt: minted.expiresAt,
-          cookie: SSE_COOKIE_NAME,
-        }), {
-          status: 200,
-          headers: {
-            'Content-Type': 'application/json',
-            'Set-Cookie': buildSseSetCookie(minted.token),
+        return new Response(
+          JSON.stringify({
+            expiresAt: minted.expiresAt,
+            cookie: SSE_COOKIE_NAME,
+          }),
+          {
+            status: 200,
+            headers: {
+              "Content-Type": "application/json",
+              "Set-Cookie": buildSseSetCookie(minted.token),
+            },
           },
-        });
+        );
       }
 
       // Refs endpoint — auth required, does NOT reset idle timer
-      if (url.pathname === '/refs') {
+      if (url.pathname === "/refs") {
         if (!validateAuth(req)) {
-          return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          return new Response(JSON.stringify({ error: "Unauthorized" }), {
             status: 401,
-            headers: { 'Content-Type': 'application/json' },
+            headers: { "Content-Type": "application/json" },
           });
         }
         const refs = browserManager.getRefMap();
-        return new Response(JSON.stringify({
-          refs,
-          url: browserManager.getCurrentUrl(),
-          mode: browserManager.getConnectionMode(),
-        }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
-        });
+        return new Response(
+          JSON.stringify({
+            refs,
+            url: browserManager.getCurrentUrl(),
+            mode: browserManager.getConnectionMode(),
+          }),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          },
+        );
       }
 
       // Activity stream — SSE, auth required, does NOT reset idle timer
-      if (url.pathname === '/activity/stream') {
+      if (url.pathname === "/activity/stream") {
         // Auth: Bearer header OR view-only SSE session cookie (EventSource
         // can't send Authorization headers, so the extension fetches a cookie
         // via POST /sse-session first, then opens EventSource with
@@ -2465,12 +3048,12 @@ export function buildFetchHandler(cfg: ServerConfig): ServerHandle {
         // v1.6.0.0 security wave plan.
         const cookieToken = extractSseCookie(req);
         if (!validateAuth(req) && !validateSseSessionToken(cookieToken)) {
-          return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          return new Response(JSON.stringify({ error: "Unauthorized" }), {
             status: 401,
-            headers: { 'Content-Type': 'application/json' },
+            headers: { "Content-Type": "application/json" },
           });
         }
-        const afterId = parseInt(url.searchParams.get('after') || '0', 10);
+        const afterId = parseInt(url.searchParams.get("after") || "0", 10);
         // Cleanup contract (abort + enqueue-fail + heartbeat-fail, all
         // idempotent) lives in createSseEndpoint; sanitizeReplacer is
         // applied to every JSON.stringify inside the helper, so
@@ -2478,31 +3061,38 @@ export function buildFetchHandler(cfg: ServerConfig): ServerHandle {
         // stay surrogate-safe per CLAUDE.md egress invariant.
         return createSseEndpoint(req, {
           initialReplay: (send) => {
-            const { entries, gap, gapFrom, availableFrom } = getActivityAfter(afterId);
-            if (gap) send('gap', { gapFrom, availableFrom });
-            for (const entry of entries) send('activity', entry);
+            const { entries, gap, gapFrom, availableFrom } =
+              getActivityAfter(afterId);
+            if (gap) send("gap", { gapFrom, availableFrom });
+            for (const entry of entries) send("activity", entry);
           },
           subscribe,
-          liveEventName: 'activity',
+          liveEventName: "activity",
         });
       }
 
       // Activity history — REST, auth required, does NOT reset idle timer
-      if (url.pathname === '/activity/history') {
+      if (url.pathname === "/activity/history") {
         if (!validateAuth(req)) {
-          return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          return new Response(JSON.stringify({ error: "Unauthorized" }), {
             status: 401,
-            headers: { 'Content-Type': 'application/json' },
+            headers: { "Content-Type": "application/json" },
           });
         }
-        const limit = parseInt(url.searchParams.get('limit') || '50', 10);
+        const limit = parseInt(url.searchParams.get("limit") || "50", 10);
         const { entries, totalAdded } = getActivityHistory(limit);
-        return new Response(JSON.stringify({ entries, totalAdded, subscribers: getSubscriberCount() }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
-        });
+        return new Response(
+          JSON.stringify({
+            entries,
+            totalAdded,
+            subscribers: getSubscriberCount(),
+          }),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          },
+        );
       }
-
 
       // ─── Sidebar chat endpoints ripped ──────────────────────────────
       // /sidebar-tabs, /sidebar-tabs/switch, /sidebar-chat[/clear],
@@ -2512,17 +3102,16 @@ export function buildFetchHandler(cfg: ServerConfig): ServerHandle {
       // the interactive PTY in terminal-agent.ts; the queue + browser-tab
       // multiplexing are no longer needed.
 
-
       // ─── Batch endpoint — N commands, 1 HTTP round-trip ─────────────
       // Accepts both root AND scoped tokens (same as /command).
       // Executes commands sequentially through the full security pipeline.
       // Designed for remote agents where tunnel latency dominates.
-      if (url.pathname === '/batch' && req.method === 'POST') {
+      if (url.pathname === "/batch" && req.method === "POST") {
         const tokenInfo = getTokenInfo(req);
         if (!tokenInfo) {
-          return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          return new Response(JSON.stringify({ error: "Unauthorized" }), {
             status: 401,
-            headers: { 'Content-Type': 'application/json' },
+            headers: { "Content-Type": "application/json" },
           });
         }
         resetIdleTimer();
@@ -2530,22 +3119,28 @@ export function buildFetchHandler(cfg: ServerConfig): ServerHandle {
         const { commands } = body;
 
         if (!Array.isArray(commands) || commands.length === 0) {
-          return new Response(JSON.stringify({ error: '"commands" must be a non-empty array' }), {
-            status: 400,
-            headers: { 'Content-Type': 'application/json' },
-          });
+          return new Response(
+            JSON.stringify({ error: '"commands" must be a non-empty array' }),
+            {
+              status: 400,
+              headers: { "Content-Type": "application/json" },
+            },
+          );
         }
         if (commands.length > 50) {
-          return new Response(JSON.stringify({ error: 'Max 50 commands per batch' }), {
-            status: 400,
-            headers: { 'Content-Type': 'application/json' },
-          });
+          return new Response(
+            JSON.stringify({ error: "Max 50 commands per batch" }),
+            {
+              status: 400,
+              headers: { "Content-Type": "application/json" },
+            },
+          );
         }
 
         const startTime = Date.now();
         emitActivity({
-          type: 'command_start',
-          command: 'batch',
+          type: "command_start",
+          command: "batch",
           args: [`${commands.length} commands`],
           url: browserManager.getCurrentUrl(),
           tabs: browserManager.getTabCount(),
@@ -2553,16 +3148,34 @@ export function buildFetchHandler(cfg: ServerConfig): ServerHandle {
           clientId: tokenInfo?.clientId,
         });
 
-        const results: Array<{ index: number; status: number; result: string; command: string; tabId?: number }> = [];
+        const results: Array<{
+          index: number;
+          status: number;
+          result: string;
+          command: string;
+          tabId?: number;
+        }> = [];
         for (let i = 0; i < commands.length; i++) {
           const cmd = commands[i];
-          if (!cmd || typeof cmd.command !== 'string') {
-            results.push({ index: i, status: 400, result: JSON.stringify({ error: 'Missing "command" field' }), command: '' });
+          if (!cmd || typeof cmd.command !== "string") {
+            results.push({
+              index: i,
+              status: 400,
+              result: JSON.stringify({ error: 'Missing "command" field' }),
+              command: "",
+            });
             continue;
           }
           // Reject nested batches
-          if (cmd.command === 'batch') {
-            results.push({ index: i, status: 400, result: JSON.stringify({ error: 'Nested batch commands are not allowed' }), command: 'batch' });
+          if (cmd.command === "batch") {
+            results.push({
+              index: i,
+              status: 400,
+              result: JSON.stringify({
+                error: "Nested batch commands are not allowed",
+              }),
+              command: "batch",
+            });
             continue;
           }
           const cr = await handleCommandInternal(
@@ -2572,7 +3185,10 @@ export function buildFetchHandler(cfg: ServerConfig): ServerHandle {
           );
           // Sanitize lone surrogates per-result (#1440 — /batch bypasses the
           // handleCommand chokepoint, so it needs its own sanitization).
-          const safeResult = typeof cr.result === 'string' ? sanitizeBody(cr.result, !!cr.json) : cr.result;
+          const safeResult =
+            typeof cr.result === "string"
+              ? sanitizeBody(cr.result, !!cr.json)
+              : cr.result;
           results.push({
             index: i,
             status: cr.status,
@@ -2584,13 +3200,13 @@ export function buildFetchHandler(cfg: ServerConfig): ServerHandle {
 
         const duration = Date.now() - startTime;
         emitActivity({
-          type: 'command_end',
-          command: 'batch',
+          type: "command_end",
+          command: "batch",
           args: [`${commands.length} commands`],
           url: browserManager.getCurrentUrl(),
           duration,
-          status: 'ok',
-          result: `${results.filter(r => r.status === 200).length}/${commands.length} succeeded`,
+          status: "ok",
+          result: `${results.filter((r) => r.status === 200).length}/${commands.length} succeeded`,
           tabs: browserManager.getTabCount(),
           mode: browserManager.getConnectionMode(),
           clientId: tokenInfo?.clientId,
@@ -2599,69 +3215,93 @@ export function buildFetchHandler(cfg: ServerConfig): ServerHandle {
         // Sanitize the JSON envelope a second time (defense in depth) — catches
         // any \uXXXX escape sequences for lone surrogates that survived the
         // per-result pass.
-        const batchBody = stripLoneSurrogateEscapes(JSON.stringify({
-          results,
-          duration,
-          total: commands.length,
-          succeeded: results.filter(r => r.status === 200).length,
-          failed: results.filter(r => r.status !== 200).length,
-        }));
+        const batchBody = stripLoneSurrogateEscapes(
+          JSON.stringify({
+            results,
+            duration,
+            total: commands.length,
+            succeeded: results.filter((r) => r.status === 200).length,
+            failed: results.filter((r) => r.status !== 200).length,
+          }),
+        );
         return new Response(batchBody, {
           status: 200,
-          headers: { 'Content-Type': 'application/json' },
+          headers: { "Content-Type": "application/json" },
         });
       }
 
       // ─── File serving endpoint (for remote agents to retrieve downloaded files) ────
-      if (url.pathname === '/file' && req.method === 'GET') {
+      if (url.pathname === "/file" && req.method === "GET") {
         const tokenInfo = getTokenInfo(req);
         if (!tokenInfo) {
-          return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-            status: 401, headers: { 'Content-Type': 'application/json' },
+          return new Response(JSON.stringify({ error: "Unauthorized" }), {
+            status: 401,
+            headers: { "Content-Type": "application/json" },
           });
         }
-        const filePath = url.searchParams.get('path');
+        const filePath = url.searchParams.get("path");
         if (!filePath) {
-          return new Response(JSON.stringify({ error: 'Missing "path" query parameter' }), {
-            status: 400, headers: { 'Content-Type': 'application/json' },
-          });
+          return new Response(
+            JSON.stringify({ error: 'Missing "path" query parameter' }),
+            {
+              status: 400,
+              headers: { "Content-Type": "application/json" },
+            },
+          );
         }
         try {
           validateTempPath(filePath);
         } catch (err: any) {
           return new Response(JSON.stringify({ error: err.message }), {
-            status: 403, headers: { 'Content-Type': 'application/json' },
+            status: 403,
+            headers: { "Content-Type": "application/json" },
           });
         }
         if (!fs.existsSync(filePath)) {
-          return new Response(JSON.stringify({ error: 'File not found' }), {
-            status: 404, headers: { 'Content-Type': 'application/json' },
+          return new Response(JSON.stringify({ error: "File not found" }), {
+            status: 404,
+            headers: { "Content-Type": "application/json" },
           });
         }
         const stat = fs.statSync(filePath);
         if (stat.size > 200 * 1024 * 1024) {
-          return new Response(JSON.stringify({ error: 'File too large (max 200MB)' }), {
-            status: 413, headers: { 'Content-Type': 'application/json' },
-          });
+          return new Response(
+            JSON.stringify({ error: "File too large (max 200MB)" }),
+            {
+              status: 413,
+              headers: { "Content-Type": "application/json" },
+            },
+          );
         }
         const ext = path.extname(filePath).toLowerCase();
         const MIME_MAP: Record<string, string> = {
-          '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
-          '.gif': 'image/gif', '.webp': 'image/webp', '.svg': 'image/svg+xml',
-          '.avif': 'image/avif',
-          '.mp4': 'video/mp4', '.webm': 'video/webm', '.mov': 'video/quicktime',
-          '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.ogg': 'audio/ogg',
-          '.pdf': 'application/pdf', '.json': 'application/json',
-          '.html': 'text/html', '.txt': 'text/plain', '.mhtml': 'message/rfc822',
+          ".png": "image/png",
+          ".jpg": "image/jpeg",
+          ".jpeg": "image/jpeg",
+          ".gif": "image/gif",
+          ".webp": "image/webp",
+          ".svg": "image/svg+xml",
+          ".avif": "image/avif",
+          ".mp4": "video/mp4",
+          ".webm": "video/webm",
+          ".mov": "video/quicktime",
+          ".mp3": "audio/mpeg",
+          ".wav": "audio/wav",
+          ".ogg": "audio/ogg",
+          ".pdf": "application/pdf",
+          ".json": "application/json",
+          ".html": "text/html",
+          ".txt": "text/plain",
+          ".mhtml": "message/rfc822",
         };
-        const contentType = MIME_MAP[ext] || 'application/octet-stream';
+        const contentType = MIME_MAP[ext] || "application/octet-stream";
         resetIdleTimer();
         return new Response(Bun.file(filePath), {
           headers: {
-            'Content-Type': contentType,
-            'Content-Length': String(stat.size),
-            'Content-Disposition': `inline; filename="${path.basename(filePath)}"`,
-            'Cache-Control': 'no-cache',
+            "Content-Type": contentType,
+            "Content-Length": String(stat.size),
+            "Content-Disposition": `inline; filename="${path.basename(filePath)}"`,
+            "Cache-Control": "no-cache",
           },
         });
       }
@@ -2669,26 +3309,29 @@ export function buildFetchHandler(cfg: ServerConfig): ServerHandle {
       // ─── Command endpoint (accepts both root AND scoped tokens) ────
       // Must be checked BEFORE the blanket root-only auth gate below,
       // because scoped tokens from /connect are valid for /command.
-      if (url.pathname === '/command' && req.method === 'POST') {
+      if (url.pathname === "/command" && req.method === "POST") {
         const tokenInfo = getTokenInfo(req);
         if (!tokenInfo) {
-          return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          return new Response(JSON.stringify({ error: "Unauthorized" }), {
             status: 401,
-            headers: { 'Content-Type': 'application/json' },
+            headers: { "Content-Type": "application/json" },
           });
         }
         resetIdleTimer();
-        const body = await req.json() as any;
+        const body = (await req.json()) as any;
         // Tunnel surface: only commands in TUNNEL_COMMANDS are allowed.
         // Paired remote agents drive the browser but cannot configure the
         // daemon, launch new browsers, import cookies, or rotate tokens.
-        if (surface === 'tunnel') {
+        if (surface === "tunnel") {
           if (!canDispatchOverTunnel(body?.command, body?.args)) {
             logTunnelDenial(req, url, `disallowed_command:${body?.command}`);
-            return new Response(JSON.stringify({
-              error: `Command '${body?.command}' is not allowed over the tunnel surface`,
-              hint: `Tunnel commands: ${[...TUNNEL_COMMANDS].sort().join(', ')}. Note: --out (disk write) is never allowed over the tunnel.`,
-            }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+            return new Response(
+              JSON.stringify({
+                error: `Command '${body?.command}' is not allowed over the tunnel surface`,
+                hint: `Tunnel commands: ${[...TUNNEL_COMMANDS].sort().join(", ")}. Note: --out (disk write) is never allowed over the tunnel.`,
+              }),
+              { status: 403, headers: { "Content-Type": "application/json" } },
+            );
           }
         }
         return handleCommand(body, tokenInfo);
@@ -2697,21 +3340,22 @@ export function buildFetchHandler(cfg: ServerConfig): ServerHandle {
       // ─── Auth-required endpoints (root token only) ─────────────────
 
       if (!validateAuth(req)) {
-        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
           status: 401,
-          headers: { 'Content-Type': 'application/json' },
+          headers: { "Content-Type": "application/json" },
         });
       }
 
       // ─── Inspector endpoints ──────────────────────────────────────
 
       // POST /inspector/pick — receive element pick from extension, run CDP inspection
-      if (url.pathname === '/inspector/pick' && req.method === 'POST') {
+      if (url.pathname === "/inspector/pick" && req.method === "POST") {
         const body = await req.json();
         const { selector, activeTabUrl } = body;
         if (!selector) {
-          return new Response(JSON.stringify({ error: 'Missing selector' }), {
-            status: 400, headers: { 'Content-Type': 'application/json' },
+          return new Response(JSON.stringify({ error: "Missing selector" }), {
+            status: 400,
+            headers: { "Content-Type": "application/json" },
           });
         }
         try {
@@ -2722,74 +3366,106 @@ export function buildFetchHandler(cfg: ServerConfig): ServerHandle {
           // Also store on browserManager for CLI access
           (browserManager as any)._inspectorData = result;
           (browserManager as any)._inspectorTimestamp = inspectorTimestamp;
-          emitInspectorEvent({ type: 'pick', selector, timestamp: inspectorTimestamp });
+          emitInspectorEvent({
+            type: "pick",
+            selector,
+            timestamp: inspectorTimestamp,
+          });
           return new Response(JSON.stringify(result), {
-            status: 200, headers: { 'Content-Type': 'application/json' },
+            status: 200,
+            headers: { "Content-Type": "application/json" },
           });
         } catch (err: any) {
           return new Response(JSON.stringify({ error: err.message }), {
-            status: 500, headers: { 'Content-Type': 'application/json' },
+            status: 500,
+            headers: { "Content-Type": "application/json" },
           });
         }
       }
 
       // GET /inspector — return latest inspector data
-      if (url.pathname === '/inspector' && req.method === 'GET') {
+      if (url.pathname === "/inspector" && req.method === "GET") {
         if (!inspectorData) {
           return new Response(JSON.stringify({ data: null }), {
-            status: 200, headers: { 'Content-Type': 'application/json' },
+            status: 200,
+            headers: { "Content-Type": "application/json" },
           });
         }
-        const stale = inspectorTimestamp > 0 && (Date.now() - inspectorTimestamp > 60000);
-        return new Response(JSON.stringify({ data: inspectorData, timestamp: inspectorTimestamp, stale }), {
-          status: 200, headers: { 'Content-Type': 'application/json' },
-        });
+        const stale =
+          inspectorTimestamp > 0 && Date.now() - inspectorTimestamp > 60000;
+        return new Response(
+          JSON.stringify({
+            data: inspectorData,
+            timestamp: inspectorTimestamp,
+            stale,
+          }),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          },
+        );
       }
 
       // POST /inspector/apply — apply a CSS modification
-      if (url.pathname === '/inspector/apply' && req.method === 'POST') {
+      if (url.pathname === "/inspector/apply" && req.method === "POST") {
         const body = await req.json();
         const { selector, property, value } = body;
         if (!selector || !property || value === undefined) {
-          return new Response(JSON.stringify({ error: 'Missing selector, property, or value' }), {
-            status: 400, headers: { 'Content-Type': 'application/json' },
-          });
+          return new Response(
+            JSON.stringify({ error: "Missing selector, property, or value" }),
+            {
+              status: 400,
+              headers: { "Content-Type": "application/json" },
+            },
+          );
         }
         try {
           const page = browserManager.getPage();
           const mod = await modifyStyle(page, selector, property, value);
-          emitInspectorEvent({ type: 'apply', modification: mod, timestamp: Date.now() });
+          emitInspectorEvent({
+            type: "apply",
+            modification: mod,
+            timestamp: Date.now(),
+          });
           return new Response(JSON.stringify(mod), {
-            status: 200, headers: { 'Content-Type': 'application/json' },
+            status: 200,
+            headers: { "Content-Type": "application/json" },
           });
         } catch (err: any) {
           return new Response(JSON.stringify({ error: err.message }), {
-            status: 500, headers: { 'Content-Type': 'application/json' },
+            status: 500,
+            headers: { "Content-Type": "application/json" },
           });
         }
       }
 
       // POST /inspector/reset — clear all modifications
-      if (url.pathname === '/inspector/reset' && req.method === 'POST') {
+      if (url.pathname === "/inspector/reset" && req.method === "POST") {
         try {
           const page = browserManager.getPage();
           await resetModifications(page);
-          emitInspectorEvent({ type: 'reset', timestamp: Date.now() });
+          emitInspectorEvent({ type: "reset", timestamp: Date.now() });
           return new Response(JSON.stringify({ ok: true }), {
-            status: 200, headers: { 'Content-Type': 'application/json' },
+            status: 200,
+            headers: { "Content-Type": "application/json" },
           });
         } catch (err: any) {
           return new Response(JSON.stringify({ error: err.message }), {
-            status: 500, headers: { 'Content-Type': 'application/json' },
+            status: 500,
+            headers: { "Content-Type": "application/json" },
           });
         }
       }
 
       // GET /inspector/history — return modification list
-      if (url.pathname === '/inspector/history' && req.method === 'GET') {
-        return new Response(JSON.stringify({ history: getModificationHistory() }), {
-          status: 200, headers: { 'Content-Type': 'application/json' },
-        });
+      if (url.pathname === "/inspector/history" && req.method === "GET") {
+        return new Response(
+          JSON.stringify({ history: getModificationHistory() }),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          },
+        );
       }
 
       // GET /memory — diagnostic snapshot (auth required, does NOT reset idle).
@@ -2799,14 +3475,15 @@ export function buildFetchHandler(cfg: ServerConfig): ServerHandle {
       // "Audit /health token distribution"); a separate endpoint with the
       // standard SSE auth keeps the future /health fix from cascading into the
       // sidebar footer poll.
-      if (url.pathname === '/memory' && req.method === 'GET') {
+      if (url.pathname === "/memory" && req.method === "GET") {
         const cookieToken = extractSseCookie(req);
         if (!validateAuth(req) && !validateSseSessionToken(cookieToken)) {
-          return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-            status: 401, headers: { 'Content-Type': 'application/json' },
+          return new Response(JSON.stringify({ error: "Unauthorized" }), {
+            status: 401,
+            headers: { "Content-Type": "application/json" },
           });
         }
-        const { buildMemorySnapshotJson } = await import('./memory-command');
+        const { buildMemorySnapshotJson } = await import("./memory-command");
         const snapshot = await buildMemorySnapshotJson(cfgBrowserManager);
         // sanitizeReplacer is required at every SSE/JSON egress that ships
         // page-content-derived strings — tab.url and tab.title come from
@@ -2814,18 +3491,19 @@ export function buildFetchHandler(cfg: ServerConfig): ServerHandle {
         // mid-emoji splits could otherwise reach the sidebar / Claude API.
         return new Response(JSON.stringify(snapshot, sanitizeReplacer), {
           status: 200,
-          headers: { 'Content-Type': 'application/json' },
+          headers: { "Content-Type": "application/json" },
         });
       }
 
       // GET /inspector/events — SSE for inspector state changes (auth required)
-      if (url.pathname === '/inspector/events' && req.method === 'GET') {
+      if (url.pathname === "/inspector/events" && req.method === "GET") {
         // Same auth model as /activity/stream: Bearer OR view-only cookie.
         // ?token= query param dropped (see N1 in the v1.6.0.0 security plan).
         const cookieToken = extractSseCookie(req);
         if (!validateAuth(req) && !validateSseSessionToken(cookieToken)) {
-          return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-            status: 401, headers: { 'Content-Type': 'application/json' },
+          return new Response(JSON.stringify({ error: "Unauthorized" }), {
+            status: 401,
+            headers: { "Content-Type": "application/json" },
           });
         }
         // Cleanup contract (abort + enqueue-fail + heartbeat-fail,
@@ -2835,22 +3513,26 @@ export function buildFetchHandler(cfg: ServerConfig): ServerHandle {
         // to by emitInspectorEvent above.
         return createSseEndpoint(req, {
           initialReplay: inspectorData
-            ? (send) => send('state', { data: inspectorData, timestamp: inspectorTimestamp })
+            ? (send) =>
+                send("state", {
+                  data: inspectorData,
+                  timestamp: inspectorTimestamp,
+                })
             : undefined,
           subscribe: (notify) => {
             inspectorSubscribers.add(notify);
             return () => inspectorSubscribers.delete(notify);
           },
-          liveEventName: 'inspector',
+          liveEventName: "inspector",
         });
       }
 
-      return new Response('Not found', { status: 404 });
-  };
+      return new Response("Not found", { status: 404 });
+    };
 
   return {
-    fetchLocal: makeFetchHandler('local'),
-    fetchTunnel: makeFetchHandler('tunnel'),
+    fetchLocal: makeFetchHandler("local"),
+    fetchTunnel: makeFetchHandler("tunnel"),
     shutdown,
     stopListeners,
   };
@@ -2889,11 +3571,13 @@ export async function start() {
       throw err;
     }
 
-    if (parsed.scheme === 'socks5' && parsed.hasAuth) {
+    if (parsed.scheme === "socks5" && parsed.hasAuth) {
       // Pre-flight: verify upstream accepts our creds before launching
       // Chromium. 5s budget, 3 retries with 500ms backoff (D4: handles VPN
       // warm-up race). On failure, exit with redacted error.
-      console.log(`[browse] Testing SOCKS5 upstream ${redactProxyUrl(proxyUrl)}...`);
+      console.log(
+        `[browse] Testing SOCKS5 upstream ${redactProxyUrl(proxyUrl)}...`,
+      );
       try {
         const test = await testUpstream({
           upstream: toUpstreamConfig(parsed),
@@ -2901,16 +3585,26 @@ export async function start() {
           retries: 3,
           backoffMs: 500,
         });
-        console.log(`[browse] [proxy] upstream test ok in ${test.ms}ms (${test.attempts} attempt${test.attempts === 1 ? '' : 's'})`);
+        console.log(
+          `[browse] [proxy] upstream test ok in ${test.ms}ms (${test.attempts} attempt${test.attempts === 1 ? "" : "s"})`,
+        );
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        console.error(`[browse] [proxy] FAIL upstream ${redactProxyUrl(proxyUrl)}: ${msg}`);
+        console.error(
+          `[browse] [proxy] FAIL upstream ${redactProxyUrl(proxyUrl)}: ${msg}`,
+        );
         process.exit(1);
       }
 
-      proxyBridge = await startSocksBridge({ upstream: toUpstreamConfig(parsed) });
-      console.log(`[browse] [proxy] bridge listening on 127.0.0.1:${proxyBridge.port}`);
-      browserManager.setProxyConfig({ server: `socks5://127.0.0.1:${proxyBridge.port}` });
+      proxyBridge = await startSocksBridge({
+        upstream: toUpstreamConfig(parsed),
+      });
+      console.log(
+        `[browse] [proxy] bridge listening on 127.0.0.1:${proxyBridge.port}`,
+      );
+      browserManager.setProxyConfig({
+        server: `socks5://127.0.0.1:${proxyBridge.port}`,
+      });
     } else {
       // HTTP/HTTPS or unauth SOCKS5 — pass through to Chromium directly.
       browserManager.setProxyConfig({
@@ -2918,13 +3612,17 @@ export async function start() {
         ...(parsed.userId ? { username: parsed.userId } : {}),
         ...(parsed.password ? { password: parsed.password } : {}),
       });
-      console.log(`[browse] [proxy] using ${redactProxyUrl(proxyUrl)} (pass-through to Chromium)`);
+      console.log(
+        `[browse] [proxy] using ${redactProxyUrl(proxyUrl)} (pass-through to Chromium)`,
+      );
     }
 
     // Tear down bridge on shutdown.
-    process.on('exit', () => {
+    process.on("exit", () => {
       if (proxyBridge) {
-        proxyBridge.close().catch(() => { /* shutting down anyway */ });
+        proxyBridge.close().catch(() => {
+          /* shutting down anyway */
+        });
       }
     });
   }
@@ -2938,21 +3636,31 @@ export async function start() {
   if (xvfbDecision.spawn) {
     const displayNum = pickFreeDisplay();
     if (displayNum == null) {
-      console.error('[browse] no free X display in range :99-:120 — refusing to clobber existing X servers');
+      console.error(
+        "[browse] no free X display in range :99-:120 — refusing to clobber existing X servers",
+      );
       process.exit(1);
     }
     try {
       xvfb = await spawnXvfb(displayNum);
       process.env.DISPLAY = xvfb.display;
-      console.log(`[browse] [xvfb] spawned on ${xvfb.display} (pid ${xvfb.pid})`);
+      console.log(
+        `[browse] [xvfb] spawned on ${xvfb.display} (pid ${xvfb.pid})`,
+      );
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error(`[browse] [xvfb] FAILED: ${msg}`);
       console.error(`[browse] [xvfb] hint: ${xvfbInstallHint()}`);
       process.exit(1);
     }
-    process.on('exit', () => { try { xvfb?.close(); } catch { /* shutting down */ } });
-  } else if (process.env.BROWSE_HEADED === '1') {
+    process.on("exit", () => {
+      try {
+        xvfb?.close();
+      } catch {
+        /* shutting down */
+      }
+    });
+  } else if (process.env.BROWSE_HEADED === "1") {
     console.log(`[browse] [xvfb] skipped: ${xvfbDecision.reason}`);
   }
 
@@ -2964,9 +3672,9 @@ export async function start() {
 
   // Launch browser (headless or headed with extension)
   // BROWSE_HEADLESS_SKIP=1 skips browser launch entirely (for HTTP-only testing)
-  const skipBrowser = process.env.BROWSE_HEADLESS_SKIP === '1';
+  const skipBrowser = process.env.BROWSE_HEADLESS_SKIP === "1";
   if (!skipBrowser) {
-    const headed = process.env.BROWSE_HEADED === '1';
+    const headed = process.env.BROWSE_HEADED === "1";
     if (headed) {
       await browserManager.launchHeaded(envCfg.authToken);
       console.log(`[browse] Launched headed Chromium with extension`);
@@ -2982,8 +3690,8 @@ export async function start() {
   // the same factory with its own cfg + overlay hook.
   const handle = buildFetchHandler({
     ...envCfg,
-    browsePort: port,        // actual bound port (resolveConfigFromEnv default is 0)
-    browserManager,          // module-level instance, same as today
+    browsePort: port, // actual bound port (resolveConfigFromEnv default is 0)
+    browserManager, // module-level instance, same as today
     xvfb,
     proxyBridge,
     startTime,
@@ -2992,7 +3700,7 @@ export async function start() {
 
   const server = Bun.serve({
     port,
-    hostname: '127.0.0.1',
+    hostname: "127.0.0.1",
     fetch: handle.fetchLocal,
   });
 
@@ -3002,16 +3710,24 @@ export async function start() {
     port,
     token: envCfg.authToken,
     startedAt: new Date().toISOString(),
-    serverPath: path.resolve(import.meta.dir, 'server.ts'),
+    serverPath: path.resolve(import.meta.dir, "server.ts"),
     binaryVersion: readVersionHash() || undefined,
     mode: browserManager.getConnectionMode(),
     // D2 daemon-mismatch detection: CLI computes the same hash from its
     // resolved flags and refuses if it differs from this stored value.
-    ...(process.env.BROWSE_CONFIG_HASH ? { configHash: process.env.BROWSE_CONFIG_HASH } : {}),
+    ...(process.env.BROWSE_CONFIG_HASH
+      ? { configHash: process.env.BROWSE_CONFIG_HASH }
+      : {}),
     // Xvfb child PID + start-time + display so disconnect (or a future
     // daemon launch on this state file) can validate-then-cleanup orphans
     // without clobbering a recycled PID.
-    ...(xvfb ? { xvfbPid: xvfb.pid, xvfbStartTime: xvfb.startTime, xvfbDisplay: xvfb.display } : {}),
+    ...(xvfb
+      ? {
+          xvfbPid: xvfb.pid,
+          xvfbStartTime: xvfb.startTime,
+          xvfbDisplay: xvfb.display,
+        }
+      : {}),
   };
   const tmpFile = tmpStatePath();
   fs.writeFileSync(tmpFile, JSON.stringify(state, null, 2), { mode: 0o600 });
@@ -3020,23 +3736,31 @@ export async function start() {
   browserManager.serverPort = port;
 
   // Navigate to welcome page if in headed mode and still on about:blank
-  if (browserManager.getConnectionMode() === 'headed') {
+  if (browserManager.getConnectionMode() === "headed") {
     try {
       const currentUrl = browserManager.getCurrentUrl();
-      if (currentUrl === 'about:blank' || currentUrl === '') {
+      if (currentUrl === "about:blank" || currentUrl === "") {
         const page = browserManager.getPage();
-        page.goto(`http://127.0.0.1:${port}/welcome`, { timeout: 3000 }).catch((err: any) => {
-          console.warn('[browse] Failed to navigate to welcome page:', err.message);
-        });
+        page
+          .goto(`http://127.0.0.1:${port}/welcome`, { timeout: 3000 })
+          .catch((err: any) => {
+            console.warn(
+              "[browse] Failed to navigate to welcome page:",
+              err.message,
+            );
+          });
       }
     } catch (err: any) {
-      console.warn('[browse] Welcome page navigation setup failed:', err.message);
+      console.warn(
+        "[browse] Welcome page navigation setup failed:",
+        err.message,
+      );
     }
   }
 
   // Clean up stale state files (older than 7 days)
   try {
-    const stateDir = path.join(config.stateDir, 'browse-states');
+    const stateDir = path.join(config.stateDir, "browse-states");
     if (fs.existsSync(stateDir)) {
       const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
       for (const file of fs.readdirSync(stateDir)) {
@@ -3049,10 +3773,12 @@ export async function start() {
       }
     }
   } catch (err: any) {
-    console.warn('[browse] Failed to clean stale state files:', err.message);
+    console.warn("[browse] Failed to clean stale state files:", err.message);
   }
 
-  console.log(`[browse] Server running on http://127.0.0.1:${port} (PID: ${process.pid})`);
+  console.log(
+    `[browse] Server running on http://127.0.0.1:${port} (PID: ${process.pid})`,
+  );
   console.log(`[browse] State file: ${config.stateFile}`);
   console.log(`[browse] Idle timeout: ${IDLE_TIMEOUT_MS / 1000}s`);
 
@@ -3065,21 +3791,23 @@ export async function start() {
   // Start ngrok tunnel if BROWSE_TUNNEL=1 is set.  Uses the dual-listener
   // pattern: bind a dedicated tunnel listener on an ephemeral port and
   // point ngrok.forward() at IT, not the local daemon port.
-  if (process.env.BROWSE_TUNNEL === '1') {
+  if (process.env.BROWSE_TUNNEL === "1") {
     const authtoken = resolveNgrokAuthtoken();
     if (!authtoken) {
-      console.error('[browse] BROWSE_TUNNEL=1 but no NGROK_AUTHTOKEN found. Set it via env var or ~/.gstack/ngrok.env');
+      console.error(
+        "[browse] BROWSE_TUNNEL=1 but no NGROK_AUTHTOKEN found. Set it via env var or ~/.gstack/ngrok.env",
+      );
     } else {
       let boundTunnel: ReturnType<typeof Bun.serve> | null = null;
       try {
         boundTunnel = Bun.serve({
           port: 0,
-          hostname: '127.0.0.1',
+          hostname: "127.0.0.1",
           fetch: handle.fetchTunnel,
         });
         const tunnelPort = boundTunnel.port;
 
-        const ngrok = await import('@ngrok/ngrok');
+        const ngrok = await import("@ngrok/ngrok");
         const domain = process.env.NGROK_DOMAIN;
         const forwardOpts: any = { addr: tunnelPort, authtoken };
         if (domain) forwardOpts.domain = domain;
@@ -3089,25 +3817,39 @@ export async function start() {
         tunnelServer = boundTunnel;
         tunnelActive = true;
 
-        console.log(`[browse] Tunnel listener bound on 127.0.0.1:${tunnelPort}, ngrok → ${tunnelUrl}`);
+        console.log(
+          `[browse] Tunnel listener bound on 127.0.0.1:${tunnelPort}, ngrok → ${tunnelUrl}`,
+        );
 
         // Update state file with tunnel URL
-        const stateContent = JSON.parse(fs.readFileSync(config.stateFile, 'utf-8'));
-        stateContent.tunnel = { url: tunnelUrl, domain: domain || null, startedAt: new Date().toISOString() };
+        const stateContent = JSON.parse(
+          fs.readFileSync(config.stateFile, "utf-8"),
+        );
+        stateContent.tunnel = {
+          url: tunnelUrl,
+          domain: domain || null,
+          startedAt: new Date().toISOString(),
+        };
         const tmpState = tmpStatePath();
-        fs.writeFileSync(tmpState, JSON.stringify(stateContent, null, 2), { mode: 0o600 });
+        fs.writeFileSync(tmpState, JSON.stringify(stateContent, null, 2), {
+          mode: 0o600,
+        });
         fs.renameSync(tmpState, config.stateFile);
       } catch (err: any) {
         console.error(`[browse] Failed to start tunnel: ${err.message}`);
         // Same cleanup as /tunnel/start's error path: tear down BOTH
         // ngrok and the Bun listener so we don't leak an ngrok session
         // if the error happened after ngrok.forward() resolved.
-        try { if (tunnelListener) await tunnelListener.close(); } catch {}
-        try { if (boundTunnel) boundTunnel.stop(true); } catch {}
+        try {
+          if (tunnelListener) await tunnelListener.close();
+        } catch {}
+        try {
+          if (boundTunnel) boundTunnel.stop(true);
+        } catch {}
         tunnelListener = null;
       }
     }
-  } else if (process.env.BROWSE_TUNNEL_LOCAL_ONLY === '1') {
+  } else if (process.env.BROWSE_TUNNEL_LOCAL_ONLY === "1") {
     // Test-only: bind the dual-listener tunnel surface on 127.0.0.1 with NO
     // ngrok forwarding. Lets paid evals exercise the surface==='tunnel' gate
     // without an ngrok authtoken or live network. Production tunneling still
@@ -3115,20 +3857,28 @@ export async function start() {
     try {
       const boundTunnel = Bun.serve({
         port: 0,
-        hostname: '127.0.0.1',
+        hostname: "127.0.0.1",
         fetch: handle.fetchTunnel,
       });
       tunnelServer = boundTunnel;
       tunnelActive = true;
       const tunnelPort = boundTunnel.port;
-      console.log(`[browse] Tunnel listener bound (local-only test mode) on 127.0.0.1:${tunnelPort}`);
-      const stateContent = JSON.parse(fs.readFileSync(config.stateFile, 'utf-8'));
+      console.log(
+        `[browse] Tunnel listener bound (local-only test mode) on 127.0.0.1:${tunnelPort}`,
+      );
+      const stateContent = JSON.parse(
+        fs.readFileSync(config.stateFile, "utf-8"),
+      );
       stateContent.tunnelLocalPort = tunnelPort;
       const tmpState = tmpStatePath();
-      fs.writeFileSync(tmpState, JSON.stringify(stateContent, null, 2), { mode: 0o600 });
+      fs.writeFileSync(tmpState, JSON.stringify(stateContent, null, 2), {
+        mode: 0o600,
+      });
       fs.renameSync(tmpState, config.stateFile);
     } catch (err: any) {
-      console.error(`[browse] BROWSE_TUNNEL_LOCAL_ONLY=1 listener bind failed: ${err.message}`);
+      console.error(
+        `[browse] BROWSE_TUNNEL_LOCAL_ONLY=1 listener bind failed: ${err.message}`,
+      );
     }
   }
 }
@@ -3159,9 +3909,15 @@ if (import.meta.main) {
     // Write error to disk for the CLI to read — on Windows, the CLI can't capture
     // stderr because the server is launched with detached: true, stdio: 'ignore'.
     try {
-      const errorLogPath = path.join(config.stateDir, 'browse-startup-error.log');
+      const errorLogPath = path.join(
+        config.stateDir,
+        "browse-startup-error.log",
+      );
       mkdirSecure(config.stateDir);
-      writeSecureFile(errorLogPath, `${new Date().toISOString()} ${err.message}\n${err.stack || ''}\n`);
+      writeSecureFile(
+        errorLogPath,
+        `${new Date().toISOString()} ${err.message}\n${err.stack || ""}\n`,
+      );
     } catch {
       // stateDir may not exist — nothing more we can do
     }

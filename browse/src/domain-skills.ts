@@ -32,19 +32,19 @@
  *   - Punycode hostnames stored as-encoded
  */
 
-import { promises as fs } from 'fs';
-import { open as fsOpen, constants as fsConstants } from 'fs';
-import * as path from 'path';
-import * as os from 'os';
-import { createHash } from 'crypto';
-import type { Page } from 'playwright';
+import { promises as fs } from "fs";
+import { open as fsOpen, constants as fsConstants } from "fs";
+import * as path from "path";
+import * as os from "os";
+import { createHash } from "crypto";
+import type { Page } from "playwright";
 
-export type SkillState = 'quarantined' | 'active' | 'global';
-export type SkillScope = 'project' | 'global';
-export type SkillSource = 'agent' | 'human';
+export type SkillState = "quarantined" | "active" | "global";
+export type SkillScope = "project" | "global";
+export type SkillSource = "agent" | "human";
 
 export interface DomainSkillRow {
-  type: 'domain';
+  type: "domain";
   host: string;
   scope: SkillScope;
   state: SkillState;
@@ -63,15 +63,15 @@ export interface DomainSkillRow {
 const PROMOTE_THRESHOLD = 3;
 
 function gstackHome(): string {
-  return process.env.GSTACK_HOME || path.join(os.homedir(), '.gstack');
+  return process.env.GSTACK_HOME || path.join(os.homedir(), ".gstack");
 }
 
 function globalFile(): string {
-  return path.join(gstackHome(), 'global-domain-skills.jsonl');
+  return path.join(gstackHome(), "global-domain-skills.jsonl");
 }
 
 function projectFile(slug: string): string {
-  return path.join(gstackHome(), 'projects', slug, 'learnings.jsonl');
+  return path.join(gstackHome(), "projects", slug, "learnings.jsonl");
 }
 
 // ─── Hostname normalization (T3) ──────────────────────────────
@@ -79,13 +79,13 @@ function projectFile(slug: string): string {
 export function normalizeHost(input: string): string {
   let h = input.trim().toLowerCase();
   // strip protocol if present
-  h = h.replace(/^https?:\/\//, '');
+  h = h.replace(/^https?:\/\//, "");
   // strip path/query
-  h = h.split('/')[0]!.split('?')[0]!.split('#')[0]!;
+  h = h.split("/")[0]!.split("?")[0]!.split("#")[0]!;
   // strip port
-  h = h.split(':')[0]!;
+  h = h.split(":")[0]!;
   // strip www. prefix
-  h = h.replace(/^www\./, '');
+  h = h.replace(/^www\./, "");
   return h;
 }
 
@@ -96,11 +96,11 @@ export function normalizeHost(input: string): string {
  */
 export async function deriveHostFromActiveTab(page: Page): Promise<string> {
   const url = page.url();
-  if (!url || url === 'about:blank' || url.startsWith('chrome://')) {
+  if (!url || url === "about:blank" || url.startsWith("chrome://")) {
     throw new Error(
-      'Cannot save domain-skill: no top-level URL on active tab.\n' +
-        'Cause: tab is empty or on chrome:// page.\n' +
-        'Action: navigate to the target site first with $B goto <url>.'
+      "Cannot save domain-skill: no top-level URL on active tab.\n" +
+        "Cause: tab is empty or on chrome:// page.\n" +
+        "Action: navigate to the target site first with $B goto <url>.",
     );
   }
   return normalizeHost(url);
@@ -119,30 +119,35 @@ async function ensureDir(filePath: string): Promise<void> {
  */
 async function appendRow(filePath: string, row: DomainSkillRow): Promise<void> {
   await ensureDir(filePath);
-  const line = JSON.stringify(row) + '\n';
+  const line = JSON.stringify(row) + "\n";
   return new Promise((resolve, reject) => {
-    fsOpen(filePath, fsConstants.O_WRONLY | fsConstants.O_CREAT | fsConstants.O_APPEND, 0o644, (err, fd) => {
-      if (err) return reject(err);
-      const buf = Buffer.from(line, 'utf8');
-      const writeAndSync = () => {
-        // Use fs.writeSync via fd to ensure single write call (atomic with O_APPEND).
-        const fsSync = require('fs');
-        try {
-          fsSync.writeSync(fd, buf, 0, buf.length);
-          fsSync.fsyncSync(fd);
-          fsSync.closeSync(fd);
-          resolve();
-        } catch (e) {
+    fsOpen(
+      filePath,
+      fsConstants.O_WRONLY | fsConstants.O_CREAT | fsConstants.O_APPEND,
+      0o644,
+      (err, fd) => {
+        if (err) return reject(err);
+        const buf = Buffer.from(line, "utf8");
+        const writeAndSync = () => {
+          // Use fs.writeSync via fd to ensure single write call (atomic with O_APPEND).
+          const fsSync = require("fs");
           try {
+            fsSync.writeSync(fd, buf, 0, buf.length);
+            fsSync.fsyncSync(fd);
             fsSync.closeSync(fd);
-          } catch {
-            // Ignore close errors after a write failure — original error wins.
+            resolve();
+          } catch (e) {
+            try {
+              fsSync.closeSync(fd);
+            } catch {
+              // Ignore close errors after a write failure — original error wins.
+            }
+            reject(e);
           }
-          reject(e);
-        }
-      };
-      writeAndSync();
-    });
+        };
+        writeAndSync();
+      },
+    );
   });
 }
 
@@ -153,20 +158,21 @@ async function appendRow(filePath: string, row: DomainSkillRow): Promise<void> {
 async function readRows(filePath: string): Promise<DomainSkillRow[]> {
   let raw: string;
   try {
-    raw = await fs.readFile(filePath, 'utf8');
+    raw = await fs.readFile(filePath, "utf8");
   } catch (e) {
     const err = e as NodeJS.ErrnoException;
-    if (err.code === 'ENOENT') return [];
+    if (err.code === "ENOENT") return [];
     throw err;
   }
   const rows: DomainSkillRow[] = [];
-  const lines = raw.split('\n');
+  const lines = raw.split("\n");
   // Last line is empty (trailing newline) OR partial. Drop unconditionally if no parse.
   for (const line of lines) {
     if (!line) continue;
     try {
       const parsed = JSON.parse(line);
-      if (parsed && parsed.type === 'domain') rows.push(parsed as DomainSkillRow);
+      if (parsed && parsed.type === "domain")
+        rows.push(parsed as DomainSkillRow);
     } catch {
       // Partial-line corruption tolerated. Compactor will clean up.
     }
@@ -209,7 +215,7 @@ function resolveLatest(rows: DomainSkillRow[]): Map<string, DomainSkillRow> {
 
 export interface ReadSkillResult {
   row: DomainSkillRow;
-  source: 'project' | 'global';
+  source: "project" | "global";
 }
 
 /**
@@ -217,21 +223,24 @@ export interface ReadSkillResult {
  * Project-scoped active skills shadow global skills for the same host.
  * Quarantined skills are NEVER returned (they don't fire).
  */
-export async function readSkill(host: string, projectSlug: string): Promise<ReadSkillResult | null> {
+export async function readSkill(
+  host: string,
+  projectSlug: string,
+): Promise<ReadSkillResult | null> {
   const normalized = normalizeHost(host);
   // Project layer first
   const projectRows = await readRows(projectFile(projectSlug));
   const projectLatest = resolveLatest(projectRows);
   const projectHit = projectLatest.get(`project::${normalized}`);
-  if (projectHit && projectHit.state === 'active') {
-    return { row: projectHit, source: 'project' };
+  if (projectHit && projectHit.state === "active") {
+    return { row: projectHit, source: "project" };
   }
   // Global layer fallback
   const globalRows = await readRows(globalFile());
   const globalLatest = resolveLatest(globalRows);
   const globalHit = globalLatest.get(`global::${normalized}`);
-  if (globalHit && globalHit.state === 'global') {
-    return { row: globalHit, source: 'global' };
+  if (globalHit && globalHit.state === "global") {
+    return { row: globalHit, source: "global" };
   }
   return null;
 }
@@ -249,28 +258,30 @@ export interface WriteSkillInput {
  * Caller MUST run the classifier first and pass classifierScore.
  * Score >= 0.85 should fail-fast at caller, never reach here.
  */
-export async function writeSkill(input: WriteSkillInput): Promise<DomainSkillRow> {
+export async function writeSkill(
+  input: WriteSkillInput,
+): Promise<DomainSkillRow> {
   if (input.classifierScore >= 0.85) {
     throw new Error(
       `Save blocked: classifier flagged content as potential injection (score: ${input.classifierScore.toFixed(2)}).\n` +
-        'Cause: skill body contains patterns the L4 classifier marks as risky.\n' +
-        'Action: rewrite the skill content removing instruction-like prose, retry.'
+        "Cause: skill body contains patterns the L4 classifier marks as risky.\n" +
+        "Action: rewrite the skill content removing instruction-like prose, retry.",
     );
   }
   const normalized = normalizeHost(input.host);
   const body = input.body;
   const now = new Date().toISOString();
-  const sha = createHash('sha256').update(body, 'utf8').digest('hex');
+  const sha = createHash("sha256").update(body, "utf8").digest("hex");
   // Determine prior version for this (host, scope=project) so version counter increments.
   const projectRows = await readRows(projectFile(input.projectSlug));
   const projectLatest = resolveLatest(projectRows);
   const prior = projectLatest.get(`project::${normalized}`);
   const version = prior ? prior.version + 1 : 1;
   const row: DomainSkillRow = {
-    type: 'domain',
+    type: "domain",
     host: normalized,
-    scope: 'project',
-    state: 'quarantined',
+    scope: "project",
+    state: "quarantined",
     body,
     version,
     classifier_score: input.classifierScore,
@@ -306,7 +317,11 @@ export async function writeSkill(input: WriteSkillInput): Promise<DomainSkillRow
  * for every subsequent visit. The gate re-opens automatically the day L4 is
  * rewired and writeSkill / recordSkillUse start receiving non-zero scores.
  */
-export async function recordSkillUse(host: string, projectSlug: string, classifierFlagged: boolean): Promise<DomainSkillRow | null> {
+export async function recordSkillUse(
+  host: string,
+  projectSlug: string,
+  classifierFlagged: boolean,
+): Promise<DomainSkillRow | null> {
   const normalized = normalizeHost(host);
   const rows = await readRows(projectFile(projectSlug));
   const latest = resolveLatest(rows);
@@ -316,12 +331,12 @@ export async function recordSkillUse(host: string, projectSlug: string, classifi
   const flagCount = current.flag_count + (classifierFlagged ? 1 : 0);
   let state: SkillState = current.state;
   if (
-    state === 'quarantined' &&
+    state === "quarantined" &&
     useCount >= PROMOTE_THRESHOLD &&
     flagCount === 0 &&
     current.classifier_score > 0
   ) {
-    state = 'active';
+    state = "active";
   }
   const updated: DomainSkillRow = {
     ...current,
@@ -339,7 +354,10 @@ export async function recordSkillUse(host: string, projectSlug: string, classifi
  * Promote an active per-project skill to global. Explicit operator call only —
  * never auto-promoted across project boundaries (T4).
  */
-export async function promoteToGlobal(host: string, projectSlug: string): Promise<DomainSkillRow> {
+export async function promoteToGlobal(
+  host: string,
+  projectSlug: string,
+): Promise<DomainSkillRow> {
   const normalized = normalizeHost(host);
   const rows = await readRows(projectFile(projectSlug));
   const latest = resolveLatest(rows);
@@ -347,22 +365,22 @@ export async function promoteToGlobal(host: string, projectSlug: string): Promis
   if (!current) {
     throw new Error(
       `Cannot promote: no skill for ${normalized} in project ${projectSlug}.\n` +
-        'Cause: skill does not exist or is tombstoned.\n' +
-        'Action: $B domain-skill list to see what exists in this project.'
+        "Cause: skill does not exist or is tombstoned.\n" +
+        "Action: $B domain-skill list to see what exists in this project.",
     );
   }
-  if (current.state !== 'active') {
+  if (current.state !== "active") {
     throw new Error(
       `Cannot promote: skill for ${normalized} is in state "${current.state}", expected "active".\n` +
         `Cause: skill must be active in this project (used ${PROMOTE_THRESHOLD}+ times without flag) before global promotion.\n` +
-        'Action: use the skill in this project until it auto-promotes to active.'
+        "Action: use the skill in this project until it auto-promotes to active.",
     );
   }
   const now = new Date().toISOString();
   const globalRow: DomainSkillRow = {
     ...current,
-    scope: 'global',
-    state: 'global',
+    scope: "global",
+    state: "global",
     version: 1, // global file has its own version line
     use_count: 0,
     flag_count: 0,
@@ -376,16 +394,22 @@ export async function promoteToGlobal(host: string, projectSlug: string): Promis
  * Rollback to a prior version (by sha256 OR previous version number).
  * Re-emits the prior row as the latest, preserving the version counter monotonicity.
  */
-export async function rollbackSkill(host: string, projectSlug: string, scope: SkillScope = 'project'): Promise<DomainSkillRow> {
+export async function rollbackSkill(
+  host: string,
+  projectSlug: string,
+  scope: SkillScope = "project",
+): Promise<DomainSkillRow> {
   const normalized = normalizeHost(host);
-  const file = scope === 'project' ? projectFile(projectSlug) : globalFile();
+  const file = scope === "project" ? projectFile(projectSlug) : globalFile();
   const rows = await readRows(file);
-  const matching = rows.filter((r) => r.host === normalized && r.scope === scope && !r.tombstone);
+  const matching = rows.filter(
+    (r) => r.host === normalized && r.scope === scope && !r.tombstone,
+  );
   if (matching.length < 2) {
     throw new Error(
       `Cannot rollback: ${normalized} has fewer than 2 versions in ${scope} scope.\n` +
-        'Cause: no prior version to roll back to.\n' +
-        'Action: $B domain-skill rm to delete instead, or wait for a future revision to roll back from.'
+        "Cause: no prior version to roll back to.\n" +
+        "Action: $B domain-skill rm to delete instead, or wait for a future revision to roll back from.",
     );
   }
   // Sort by version desc; take second-latest as the rollback target.
@@ -404,28 +428,36 @@ export async function rollbackSkill(host: string, projectSlug: string, scope: Sk
 /**
  * List all non-tombstoned skills visible to a project (active project + active global).
  */
-export async function listSkills(projectSlug: string): Promise<{ project: DomainSkillRow[]; global: DomainSkillRow[] }> {
+export async function listSkills(
+  projectSlug: string,
+): Promise<{ project: DomainSkillRow[]; global: DomainSkillRow[] }> {
   const projectRows = await readRows(projectFile(projectSlug));
   const globalRows = await readRows(globalFile());
   const projectLatest = Array.from(resolveLatest(projectRows).values());
-  const globalLatest = Array.from(resolveLatest(globalRows).values()).filter((r) => r.state === 'global');
+  const globalLatest = Array.from(resolveLatest(globalRows).values()).filter(
+    (r) => r.state === "global",
+  );
   return { project: projectLatest, global: globalLatest };
 }
 
 /**
  * Tombstone a skill. Append a tombstone row; compactor cleans up later.
  */
-export async function deleteSkill(host: string, projectSlug: string, scope: SkillScope = 'project'): Promise<void> {
+export async function deleteSkill(
+  host: string,
+  projectSlug: string,
+  scope: SkillScope = "project",
+): Promise<void> {
   const normalized = normalizeHost(host);
-  const file = scope === 'project' ? projectFile(projectSlug) : globalFile();
+  const file = scope === "project" ? projectFile(projectSlug) : globalFile();
   const rows = await readRows(file);
   const latest = resolveLatest(rows);
   const current = latest.get(`${scope}::${normalized}`);
   if (!current) {
     throw new Error(
       `Cannot delete: no skill for ${normalized} in ${scope} scope.\n` +
-        'Cause: skill does not exist or is already tombstoned.\n' +
-        'Action: $B domain-skill list to see what exists.'
+        "Cause: skill does not exist or is already tombstoned.\n" +
+        "Action: $B domain-skill list to see what exists.",
     );
   }
   const tombstone: DomainSkillRow = {

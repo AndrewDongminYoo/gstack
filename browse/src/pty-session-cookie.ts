@@ -18,7 +18,7 @@
  * different (`gstack_sse` vs `gstack_pty`) and the token spaces must not
  * overlap — an SSE-read cookie must never grant PTY access, and vice versa.
  */
-import * as crypto from 'crypto';
+import * as crypto from "crypto";
 
 interface Session {
   createdAt: number;
@@ -29,11 +29,11 @@ const TTL_MS = 30 * 60 * 1000; // 30 minutes — matches SSE cookie
 const MAX_SESSIONS = 10_000;
 const sessions = new Map<string, Session>();
 
-export const PTY_COOKIE_NAME = 'gstack_pty';
+export const PTY_COOKIE_NAME = "gstack_pty";
 
 /** Mint a fresh PTY session token. */
 export function mintPtySessionToken(): { token: string; expiresAt: number } {
-  const token = crypto.randomBytes(32).toString('base64url');
+  const token = crypto.randomBytes(32).toString("base64url");
   const now = Date.now();
   const expiresAt = now + TTL_MS;
   sessions.set(token, { createdAt: now, expiresAt });
@@ -46,7 +46,9 @@ export function mintPtySessionToken(): { token: string; expiresAt: number } {
  * Lazily removes expired entries; opportunistically prunes a few more on
  * every call so the registry stays bounded under reconnect pressure.
  */
-export function validatePtySessionToken(token: string | null | undefined): boolean {
+export function validatePtySessionToken(
+  token: string | null | undefined,
+): boolean {
   if (!token) return false;
   const s = sessions.get(token);
   if (!s) {
@@ -72,12 +74,12 @@ export function revokePtySessionToken(token: string | null | undefined): void {
 
 /** Parse the PTY session token from a Cookie header. */
 export function extractPtyCookie(req: Request): string | null {
-  const cookieHeader = req.headers.get('cookie');
+  const cookieHeader = req.headers.get("cookie");
   if (!cookieHeader) return null;
-  for (const part of cookieHeader.split(';')) {
-    const [name, ...valueParts] = part.trim().split('=');
+  for (const part of cookieHeader.split(";")) {
+    const [name, ...valueParts] = part.trim().split("=");
     if (name === PTY_COOKIE_NAME) {
-      return valueParts.join('=') || null;
+      return valueParts.join("=") || null;
     }
   }
   return null;

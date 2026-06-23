@@ -5,9 +5,9 @@
  * unexpected errors. Empty catches would be flagged by slop-scan.
  */
 
-import * as fs from 'fs';
+import * as fs from "fs";
 
-const IS_WINDOWS = process.platform === 'win32';
+const IS_WINDOWS = process.platform === "win32";
 
 // ─── Filesystem ────────────────────────────────────────────────
 
@@ -16,13 +16,15 @@ export function safeUnlink(filePath: string): void {
   try {
     fs.unlinkSync(filePath);
   } catch (err: any) {
-    if (err?.code !== 'ENOENT') throw err;
+    if (err?.code !== "ENOENT") throw err;
   }
 }
 
 /** Remove a file, ignoring ALL errors. Use only in best-effort cleanup (shutdown, emergency). */
 export function safeUnlinkQuiet(filePath: string): void {
-  try { fs.unlinkSync(filePath); } catch {}
+  try {
+    fs.unlinkSync(filePath);
+  } catch {}
 }
 
 // ─── Process ───────────────────────────────────────────────────
@@ -32,7 +34,7 @@ export function safeKill(pid: number, signal: NodeJS.Signals | number): void {
   try {
     process.kill(pid, signal);
   } catch (err: any) {
-    if (err?.code !== 'ESRCH') throw err;
+    if (err?.code !== "ESRCH") throw err;
   }
 }
 
@@ -41,8 +43,8 @@ export function isProcessAlive(pid: number): boolean {
   if (IS_WINDOWS) {
     try {
       const result = Bun.spawnSync(
-        ['tasklist', '/FI', `PID eq ${pid}`, '/NH', '/FO', 'CSV'],
-        { stdout: 'pipe', stderr: 'pipe', timeout: 3000 }
+        ["tasklist", "/FI", `PID eq ${pid}`, "/NH", "/FO", "CSV"],
+        { stdout: "pipe", stderr: "pipe", timeout: 3000 },
       );
       return result.stdout.toString().includes(`"${pid}"`);
     } catch {

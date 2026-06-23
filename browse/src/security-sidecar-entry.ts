@@ -32,7 +32,11 @@
  */
 
 import * as readline from "readline";
-import { scanPageContent, getClassifierStatus, loadTestsavant } from "./security-classifier";
+import {
+  scanPageContent,
+  getClassifierStatus,
+  loadTestsavant,
+} from "./security-classifier";
 
 interface Request {
   id: string;
@@ -64,7 +68,11 @@ async function handle(req: Request): Promise<void> {
   }
   try {
     if (req.op === "ping") {
-      write({ id: req.id, ok: true, verdict: { layer: "ping", verdict: "alive", score: 0 } });
+      write({
+        id: req.id,
+        ok: true,
+        verdict: { layer: "ping", verdict: "alive", score: 0 },
+      });
       return;
     }
     if (req.op === "status") {
@@ -85,7 +93,11 @@ async function handle(req: Request): Promise<void> {
       write({ id: req.id, ok: true, verdict });
       return;
     }
-    write({ id: req.id, ok: false, error: `unknown-op:${(req as { op?: unknown }).op}` });
+    write({
+      id: req.id,
+      ok: false,
+      error: `unknown-op:${(req as { op?: unknown }).op}`,
+    });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     write({ id: req.id, ok: false, error: msg });

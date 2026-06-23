@@ -15,13 +15,13 @@
  * - Writes to ~/.gstack/security/attempts.jsonl, shared with the prompt-injection
  *   attempt log. File rotation is handled by the existing security pipeline.
  */
-import { promises as fsp } from 'fs';
-import * as path from 'path';
-import * as os from 'os';
-import { mkdirSecure } from './file-permissions';
+import { promises as fsp } from "fs";
+import * as path from "path";
+import * as os from "os";
+import { mkdirSecure } from "./file-permissions";
 
-const LOG_DIR = path.join(os.homedir(), '.gstack', 'security');
-const LOG_PATH = path.join(LOG_DIR, 'attempts.jsonl');
+const LOG_DIR = path.join(os.homedir(), ".gstack", "security");
+const LOG_PATH = path.join(LOG_DIR, "attempts.jsonl");
 const RATE_CAP = 60; // writes per minute
 const WINDOW_MS = 60_000;
 
@@ -63,11 +63,11 @@ export function logTunnelDenial(req: Request, url: URL, reason: string): void {
   writeTimestamps.push(now);
 
   const sourceIp =
-    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
 
   const entry: Record<string, unknown> = {
     ts: new Date(now).toISOString(),
-    kind: 'tunnel_auth_denial',
+    kind: "tunnel_auth_denial",
     reason,
     path: url.pathname,
     method: req.method,
@@ -82,7 +82,7 @@ export function logTunnelDenial(req: Request, url: URL, reason: string): void {
   void (async () => {
     try {
       await ensureDir();
-      await fsp.appendFile(LOG_PATH, JSON.stringify(entry) + '\n');
+      await fsp.appendFile(LOG_PATH, JSON.stringify(entry) + "\n");
     } catch {
       // Swallow — log writes are best-effort. If disk is full or ACLs block
       // us, we don't want to crash the server.

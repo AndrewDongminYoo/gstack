@@ -17,10 +17,10 @@
  *   - Every lock-holder uses try { ... } finally { release() } so errors don't leak locks.
  */
 
-import type { Page } from 'playwright';
-import type { BrowserManager } from './browser-manager';
-import { lookupCdpMethod, type CdpAllowEntry } from './cdp-allowlist';
-import { logTelemetry } from './telemetry';
+import type { Page } from "playwright";
+import type { BrowserManager } from "./browser-manager";
+import { lookupCdpMethod, type CdpAllowEntry } from "./cdp-allowlist";
+import { logTelemetry } from "./telemetry";
 
 const CDP_TIMEOUT_MS = 5000;
 const CDP_ACQUIRE_TIMEOUT_MS = 5000;
@@ -84,7 +84,7 @@ export async function getOrCreateCdpSession(
   if (session) return session;
   session = await page.context().newCDPSession(page);
   cache.set(page, session);
-  page.once('close', () => {
+  page.once("close", () => {
     cache.delete(page);
     session.detach().catch(() => {
       // Best-effort cleanup — see withCdpSession finally block.
@@ -125,36 +125,53 @@ export interface CdpDispatchResult {
  *  - CDPBridgeTimeout (CDP method itself didn't return in budget)
  *  - CDPSessionInvalidated (Playwright recreated context, session stale)
  */
-export async function dispatchCdpCall(input: CdpDispatchInput): Promise<CdpDispatchResult> {
+export async function dispatchCdpCall(
+  input: CdpDispatchInput,
+): Promise<CdpDispatchResult> {
   const qualified = `${input.domain}.${input.method}`;
   const entry = lookupCdpMethod(qualified);
   if (!entry) {
     // Surface the denial via telemetry — this is the data that drives the
     // next allow-list expansion (DX D9: cdp_method_denied counter).
-    logTelemetry({ event: 'cdp_method_denied', domain: input.domain, method: input.method });
+    logTelemetry({
+      event: "cdp_method_denied",
+      domain: input.domain,
+      method: input.method,
+    });
     throw new Error(
       `DENIED: ${qualified} is not on the CDP allowlist.\n` +
         `Cause: deny-default posture; method has not been audited and added to cdp-allowlist.ts.\n` +
-        `Action: if this method is genuinely needed, open a PR adding it to CDP_ALLOWLIST with a one-line justification + scope (tab|browser) + output (trusted|untrusted).`
+        `Action: if this method is genuinely needed, open a PR adding it to CDP_ALLOWLIST with a one-line justification + scope (tab|browser) + output (trusted|untrusted).`,
     );
   }
   // Acquire the right tier of lock.
   const acquireStart = Date.now();
   const release =
-    entry.scope === 'browser'
+    entry.scope === "browser"
       ? await input.bm.acquireGlobalCdpLock(CDP_ACQUIRE_TIMEOUT_MS)
       : await input.bm.acquireTabLock(input.tabId, CDP_ACQUIRE_TIMEOUT_MS);
   const acquireMs = Date.now() - acquireStart;
-  logTelemetry({ event: 'cdp_method_lock_acquire_ms', domain: input.domain, method: input.method, ms: acquireMs });
-  logTelemetry({ event: 'cdp_method_called', domain: input.domain, method: input.method, allowed: true, scope: entry.scope });
+  logTelemetry({
+    event: "cdp_method_lock_acquire_ms",
+    domain: input.domain,
+    method: input.method,
+    ms: acquireMs,
+  });
+  logTelemetry({
+    event: "cdp_method_called",
+    domain: input.domain,
+    method: input.method,
+    allowed: true,
+    scope: entry.scope,
+  });
 
   try {
     const page = input.bm.getPageForTab(input.tabId);
     if (!page) {
       throw new Error(
         `Cannot dispatch: tab ${input.tabId} not found.\n` +
-          'Cause: tab was closed between command queue and dispatch.\n' +
-          'Action: $B tabs to list current tabs.'
+          "Cause: tab was closed between command queue and dispatch.\n" +
+          "Action: $B tabs to list current tabs.",
       );
     }
     let session;
@@ -163,14 +180,22 @@ export async function dispatchCdpCall(input: CdpDispatchInput): Promise<CdpDispa
     } catch (e: any) {
       throw new Error(
         `CDPSessionInvalidated: ${e.message}\n` +
-          'Cause: Playwright context was recreated (e.g., viewport scale change) and the prior CDP session is stale.\n' +
-          'Action: retry the command; the bridge will create a fresh session.'
+          "Cause: Playwright context was recreated (e.g., viewport scale change) and the prior CDP session is stale.\n" +
+          "Action: retry the command; the bridge will create a fresh session.",
       );
     }
     // Race the call against a hard timeout.
     const callPromise = session.send(qualified, input.params);
     const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error(`CDPBridgeTimeout: ${qualified} did not return within ${CDP_TIMEOUT_MS}ms`)), CDP_TIMEOUT_MS),
+      setTimeout(
+        () =>
+          reject(
+            new Error(
+              `CDPBridgeTimeout: ${qualified} did not return within ${CDP_TIMEOUT_MS}ms`,
+            ),
+          ),
+        CDP_TIMEOUT_MS,
+      ),
     );
     const raw = await Promise.race([callPromise, timeoutPromise]);
     return { raw, entry };

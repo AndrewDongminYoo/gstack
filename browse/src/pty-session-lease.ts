@@ -32,7 +32,7 @@
  * Lease TTL is env-overridable so v1.44 e2e tests can compress detach
  * windows to 1 s instead of waiting 30 minutes per assertion.
  */
-import * as crypto from 'crypto';
+import * as crypto from "crypto";
 
 interface Lease {
   createdAt: number;
@@ -51,7 +51,7 @@ const leases = new Map<string, Lease>();
  * the expiry timestamp (caller surfaces both to the client). Never throws.
  */
 export function mintLease(): { sessionId: string; expiresAt: number } {
-  const sessionId = crypto.randomBytes(32).toString('base64url');
+  const sessionId = crypto.randomBytes(32).toString("base64url");
   const now = Date.now();
   const expiresAt = now + LEASE_TTL_MS;
   leases.set(sessionId, { createdAt: now, expiresAt });
@@ -64,7 +64,9 @@ export function mintLease(): { sessionId: string; expiresAt: number } {
  * the current expiresAt for valid leases; null otherwise. Lazily prunes
  * stale entries.
  */
-export function validateLease(sessionId: string | null | undefined): { ok: true; expiresAt: number } | { ok: false } {
+export function validateLease(
+  sessionId: string | null | undefined,
+): { ok: true; expiresAt: number } | { ok: false } {
   if (!sessionId) return { ok: false };
   const lease = leases.get(sessionId);
   if (!lease) {
@@ -91,7 +93,9 @@ export function validateLease(sessionId: string | null | undefined): { ok: true;
  * an expired lease — the 30-min TTL is what bounds blast radius for a
  * leaked attach token whose lease should have been GC'd.
  */
-export function refreshLease(sessionId: string | null | undefined): { ok: true; expiresAt: number } | { ok: false } {
+export function refreshLease(
+  sessionId: string | null | undefined,
+): { ok: true; expiresAt: number } | { ok: false } {
   if (!sessionId) return { ok: false };
   const lease = leases.get(sessionId);
   if (!lease) return { ok: false };

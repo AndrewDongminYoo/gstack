@@ -13,7 +13,7 @@
  * All writes are best-effort — audit failures never cause command failures.
  */
 
-import * as fs from 'fs';
+import * as fs from "fs";
 
 export interface AuditEntry {
   ts: string;
@@ -24,10 +24,10 @@ export interface AuditEntry {
   args: string;
   origin: string;
   durationMs: number;
-  status: 'ok' | 'error';
+  status: "ok" | "error";
   error?: string;
   hasCookies: boolean;
-  mode: 'launched' | 'headed';
+  mode: "launched" | "headed";
 }
 
 const MAX_ARGS_LENGTH = 200;
@@ -42,12 +42,14 @@ export function initAuditLog(logPath: string): void {
 export function writeAuditEntry(entry: AuditEntry): void {
   if (!auditPath) return;
   try {
-    const truncatedArgs = entry.args.length > MAX_ARGS_LENGTH
-      ? entry.args.slice(0, MAX_ARGS_LENGTH) + '…'
-      : entry.args;
-    const truncatedError = entry.error && entry.error.length > MAX_ERROR_LENGTH
-      ? entry.error.slice(0, MAX_ERROR_LENGTH) + '…'
-      : entry.error;
+    const truncatedArgs =
+      entry.args.length > MAX_ARGS_LENGTH
+        ? entry.args.slice(0, MAX_ARGS_LENGTH) + "…"
+        : entry.args;
+    const truncatedError =
+      entry.error && entry.error.length > MAX_ERROR_LENGTH
+        ? entry.error.slice(0, MAX_ERROR_LENGTH) + "…"
+        : entry.error;
 
     const record: Record<string, unknown> = {
       ts: entry.ts,
@@ -62,7 +64,7 @@ export function writeAuditEntry(entry: AuditEntry): void {
     if (entry.aliasOf) record.aliasOf = entry.aliasOf;
     if (truncatedError) record.error = truncatedError;
 
-    fs.appendFileSync(auditPath, JSON.stringify(record) + '\n');
+    fs.appendFileSync(auditPath, JSON.stringify(record) + "\n");
   } catch {
     // Audit write failures are silent — never block command execution
   }

@@ -31,18 +31,23 @@
  * Zero side effects on import. Safe to import from tests.
  */
 
-import * as crypto from 'crypto';
-import { createToken, revokeToken, type ScopeCategory, type TokenInfo } from './token-registry';
+import * as crypto from "crypto";
+import {
+  createToken,
+  revokeToken,
+  type ScopeCategory,
+  type TokenInfo,
+} from "./token-registry";
 
 /** Length of TTL slack (in seconds) past the spawn timeout. */
 const TOKEN_TTL_SLACK = 30;
 
 /** Default scopes for skill tokens. Excludes `admin` (eval/js) and `control`. */
-const DEFAULT_SKILL_SCOPES: ScopeCategory[] = ['read', 'write'];
+const DEFAULT_SKILL_SCOPES: ScopeCategory[] = ["read", "write"];
 
 /** Generate a fresh spawn id. Caller passes this to spawn AND revoke. */
 export function generateSpawnId(): string {
-  return crypto.randomBytes(8).toString('hex');
+  return crypto.randomBytes(8).toString("hex");
 }
 
 /** Build the canonical clientId for a skill spawn. */
@@ -76,8 +81,8 @@ export function mintSkillToken(opts: MintSkillTokenOptions): TokenInfo {
   return createToken({
     clientId,
     scopes: opts.scopes ?? DEFAULT_SKILL_SCOPES,
-    tabPolicy: 'shared',          // skill scripts may switch tabs as needed
-    rateLimit: 0,                  // skill scripts can run as fast as the daemon allows
+    tabPolicy: "shared", // skill scripts may switch tabs as needed
+    rateLimit: 0, // skill scripts can run as fast as the daemon allows
     expiresSeconds: opts.spawnTimeoutSeconds + TOKEN_TTL_SLACK,
   });
 }

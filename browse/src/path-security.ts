@@ -16,17 +16,25 @@
  *   4. TEMP_ONLY = [TEMP_DIR] for remote file serving (prevents project file exfil)
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
-import { TEMP_DIR, isPathWithin } from './platform';
+import * as fs from "fs";
+import * as path from "path";
+import { TEMP_DIR, isPathWithin } from "./platform";
 
 // Resolve safe directories through realpathSync to handle symlinks (e.g., macOS /tmp → /private/tmp)
-export const SAFE_DIRECTORIES = [TEMP_DIR, process.cwd()].map(d => {
-  try { return fs.realpathSync(d); } catch { return d; }
+export const SAFE_DIRECTORIES = [TEMP_DIR, process.cwd()].map((d) => {
+  try {
+    return fs.realpathSync(d);
+  } catch {
+    return d;
+  }
 });
 
-const TEMP_ONLY = [TEMP_DIR].map(d => {
-  try { return fs.realpathSync(d); } catch { return d; }
+const TEMP_ONLY = [TEMP_DIR].map((d) => {
+  try {
+    return fs.realpathSync(d);
+  } catch {
+    return d;
+  }
 });
 
 /** Validate a file path for writing (screenshot, pdf, download, scrape, archive). */
@@ -41,15 +49,17 @@ export function validateOutputPath(filePath: string): void {
     const stat = fs.lstatSync(resolved);
     if (stat.isSymbolicLink()) {
       const realTarget = fs.realpathSync(resolved);
-      const isSafe = SAFE_DIRECTORIES.some(dir => isPathWithin(realTarget, dir));
+      const isSafe = SAFE_DIRECTORIES.some((dir) =>
+        isPathWithin(realTarget, dir),
+      );
       if (!isSafe) {
-        throw new Error(`Path must be within: ${SAFE_DIRECTORIES.join(', ')}`);
+        throw new Error(`Path must be within: ${SAFE_DIRECTORIES.join(", ")}`);
       }
       return; // symlink target verified, no need to check parent
     }
   } catch (e: any) {
     // ENOENT = file doesn't exist yet, fall through to parent-dir check
-    if (e.code !== 'ENOENT') throw e;
+    if (e.code !== "ENOENT") throw e;
   }
 
   // For new files (no existing symlink), verify the parent directory.
@@ -63,14 +73,16 @@ export function validateOutputPath(filePath: string): void {
     try {
       realDir = fs.realpathSync(path.dirname(dir));
     } catch {
-      throw new Error(`Path must be within: ${SAFE_DIRECTORIES.join(', ')}`);
+      throw new Error(`Path must be within: ${SAFE_DIRECTORIES.join(", ")}`);
     }
   }
 
   const realResolved = path.join(realDir, path.basename(resolved));
-  const isSafe = SAFE_DIRECTORIES.some(dir => isPathWithin(realResolved, dir));
+  const isSafe = SAFE_DIRECTORIES.some((dir) =>
+    isPathWithin(realResolved, dir),
+  );
   if (!isSafe) {
-    throw new Error(`Path must be within: ${SAFE_DIRECTORIES.join(', ')}`);
+    throw new Error(`Path must be within: ${SAFE_DIRECTORIES.join(", ")}`);
   }
 }
 
@@ -81,7 +93,7 @@ export function validateReadPath(filePath: string): void {
   try {
     realPath = fs.realpathSync(resolved);
   } catch (err: any) {
-    if (err.code === 'ENOENT') {
+    if (err.code === "ENOENT") {
       try {
         const dir = fs.realpathSync(path.dirname(resolved));
         realPath = path.join(dir, path.basename(resolved));
@@ -92,9 +104,9 @@ export function validateReadPath(filePath: string): void {
       throw new Error(`Cannot resolve real path: ${filePath} (${err.code})`);
     }
   }
-  const isSafe = SAFE_DIRECTORIES.some(dir => isPathWithin(realPath, dir));
+  const isSafe = SAFE_DIRECTORIES.some((dir) => isPathWithin(realPath, dir));
   if (!isSafe) {
-    throw new Error(`Path must be within: ${SAFE_DIRECTORIES.join(', ')}`);
+    throw new Error(`Path must be within: ${SAFE_DIRECTORIES.join(", ")}`);
   }
 }
 
@@ -105,18 +117,20 @@ export function validateTempPath(filePath: string): void {
   try {
     realPath = fs.realpathSync(resolved);
   } catch (err: any) {
-    if (err.code === 'ENOENT') {
-      throw new Error('File not found');
+    if (err.code === "ENOENT") {
+      throw new Error("File not found");
     }
     throw new Error(`Cannot resolve path: ${filePath}`);
   }
-  const isSafe = TEMP_ONLY.some(dir => isPathWithin(realPath, dir));
+  const isSafe = TEMP_ONLY.some((dir) => isPathWithin(realPath, dir));
   if (!isSafe) {
-    throw new Error(`Path must be within: ${TEMP_ONLY.join(', ')} (remote file serving is restricted to temp directory)`);
+    throw new Error(
+      `Path must be within: ${TEMP_ONLY.join(", ")} (remote file serving is restricted to temp directory)`,
+    );
   }
 }
 
 /** Escape special regex metacharacters in a user-supplied string to prevent ReDoS. */
 export function escapeRegExp(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

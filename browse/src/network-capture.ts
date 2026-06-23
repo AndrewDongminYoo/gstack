@@ -13,8 +13,8 @@
  *   - Text responses stored as-is
  */
 
-import * as fs from 'fs';
-import type { Response as PlaywrightResponse } from 'playwright';
+import * as fs from "fs";
+import type { Response as PlaywrightResponse } from "playwright";
 
 export interface CapturedResponse {
   url: string;
@@ -28,7 +28,7 @@ export interface CapturedResponse {
 }
 
 const MAX_BUFFER_SIZE = 50 * 1024 * 1024; // 50MB total
-const MAX_ENTRY_SIZE = 5 * 1024 * 1024;   // 5MB per response body
+const MAX_ENTRY_SIZE = 5 * 1024 * 1024; // 5MB per response body
 
 export class SizeCappedBuffer {
   private entries: CapturedResponse[] = [];
@@ -41,7 +41,10 @@ export class SizeCappedBuffer {
 
   push(entry: CapturedResponse): void {
     // Evict oldest entries until we have room
-    while (this.entries.length > 0 && this.totalSize + entry.size > this.maxSize) {
+    while (
+      this.entries.length > 0 &&
+      this.totalSize + entry.size > this.maxSize
+    ) {
       const evicted = this.entries.shift()!;
       this.totalSize -= evicted.size;
     }
@@ -68,18 +71,19 @@ export class SizeCappedBuffer {
 
   /** Export to JSONL file. */
   exportToFile(filePath: string): number {
-    const lines = this.entries.map(e => JSON.stringify(e));
-    fs.writeFileSync(filePath, lines.join('\n') + '\n');
+    const lines = this.entries.map((e) => JSON.stringify(e));
+    fs.writeFileSync(filePath, lines.join("\n") + "\n");
     return this.entries.length;
   }
 
   /** Summary of captured responses (URL, status, size). */
   summary(): string {
-    if (this.entries.length === 0) return 'No captured responses.';
-    const lines = this.entries.map((e, i) =>
-      `  [${i + 1}] ${e.status} ${e.url.slice(0, 100)} (${Math.round(e.size / 1024)}KB${e.bodyTruncated ? ', truncated' : ''})`
+    if (this.entries.length === 0) return "No captured responses.";
+    const lines = this.entries.map(
+      (e, i) =>
+        `  [${i + 1}] ${e.status} ${e.url.slice(0, 100)} (${Math.round(e.size / 1024)}KB${e.bodyTruncated ? ", truncated" : ""})`,
     );
-    return `${this.entries.length} responses (${Math.round(this.totalSize / 1024)}KB total):\n${lines.join('\n')}`;
+    return `${this.entries.length} responses (${Math.round(this.totalSize / 1024)}KB total):\n${lines.join("\n")}`;
   }
 }
 
@@ -87,7 +91,8 @@ export class SizeCappedBuffer {
 let captureBuffer = new SizeCappedBuffer();
 let captureActive = false;
 let captureFilter: RegExp | null = null;
-let captureListener: ((response: PlaywrightResponse) => Promise<void>) | null = null;
+let captureListener: ((response: PlaywrightResponse) => Promise<void>) | null =
+  null;
 
 export function isCaptureActive(): boolean {
   return captureActive;
@@ -98,17 +103,20 @@ export function getCaptureBuffer(): SizeCappedBuffer {
 }
 
 /** Create the response listener function. */
-function createResponseListener(filter: RegExp | null): (response: PlaywrightResponse) => Promise<void> {
+function createResponseListener(
+  filter: RegExp | null,
+): (response: PlaywrightResponse) => Promise<void> {
   return async (response: PlaywrightResponse) => {
     const url = response.url();
     if (filter && !filter.test(url)) return;
 
     // Skip non-content responses (redirects, 204, etc.)
     const status = response.status();
-    if (status === 204 || status === 301 || status === 302 || status === 304) return;
+    if (status === 204 || status === 301 || status === 302 || status === 304)
+      return;
 
-    const contentType = response.headers()['content-type'] || '';
-    let body = '';
+    const contentType = response.headers()["content-type"] || "";
+    let body = "";
     let bodySize = 0;
     let truncated = false;
 
@@ -118,15 +126,20 @@ function createResponseListener(filter: RegExp | null): (response: PlaywrightRes
 
       if (bodySize > MAX_ENTRY_SIZE) {
         truncated = true;
-        body = '';
-      } else if (contentType.includes('json') || contentType.includes('text') || contentType.includes('xml') || contentType.includes('html')) {
-        body = rawBody.toString('utf-8');
+        body = "";
+      } else if (
+        contentType.includes("json") ||
+        contentType.includes("text") ||
+        contentType.includes("xml") ||
+        contentType.includes("html")
+      ) {
+        body = rawBody.toString("utf-8");
       } else {
-        body = rawBody.toString('base64');
+        body = rawBody.toString("base64");
       }
     } catch {
       // Response body may be unavailable (e.g., streaming, aborted)
-      body = '';
+      body = "";
       truncated = true;
     }
 
@@ -146,7 +159,9 @@ function createResponseListener(filter: RegExp | null): (response: PlaywrightRes
 }
 
 /** Start capturing response bodies. */
-export function startCapture(filterPattern?: string): { filter: string | null } {
+export function startCapture(filterPattern?: string): {
+  filter: string | null;
+} {
   captureFilter = filterPattern ? new RegExp(filterPattern) : null;
   captureActive = true;
   captureListener = createResponseListener(captureFilter);
@@ -154,7 +169,9 @@ export function startCapture(filterPattern?: string): { filter: string | null } 
 }
 
 /** Get the active listener (to attach to page). */
-export function getCaptureListener(): ((response: PlaywrightResponse) => Promise<void>) | null {
+export function getCaptureListener():
+  | ((response: PlaywrightResponse) => Promise<void>)
+  | null {
   return captureListener;
 }
 

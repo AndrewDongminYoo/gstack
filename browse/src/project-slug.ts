@@ -6,9 +6,9 @@
  * git remote (or env override) and doesn't change between commands.
  */
 
-import * as path from 'path';
-import * as os from 'os';
-import { execSync } from 'child_process';
+import * as path from "path";
+import * as os from "os";
+import { execSync } from "child_process";
 
 let cachedSlug: string | null = null;
 
@@ -20,12 +20,15 @@ export function getCurrentProjectSlug(): string {
     return explicit;
   }
   try {
-    const slugBin = path.join(os.homedir(), '.claude/skills/gstack/bin/gstack-slug');
-    const out = execSync(slugBin, { encoding: 'utf8', timeout: 2000 }).trim();
+    const slugBin = path.join(
+      os.homedir(),
+      ".claude/skills/gstack/bin/gstack-slug",
+    );
+    const out = execSync(slugBin, { encoding: "utf8", timeout: 2000 }).trim();
     const m = out.match(/SLUG="?([^"\n]+)"?/);
-    cachedSlug = m ? m[1]! : (out || 'unknown');
+    cachedSlug = m ? m[1]! : out || "unknown";
   } catch {
-    cachedSlug = 'unknown';
+    cachedSlug = "unknown";
   }
   return cachedSlug;
 }

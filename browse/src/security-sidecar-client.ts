@@ -86,7 +86,13 @@ function processBuffer(): void {
     s.buffer = s.buffer.slice(idx + 1);
     idx = s.buffer.indexOf("\n");
     if (!line) continue;
-    let parsed: { id?: string; ok?: boolean; verdict?: unknown; status?: unknown; error?: string };
+    let parsed: {
+      id?: string;
+      ok?: boolean;
+      verdict?: unknown;
+      status?: unknown;
+      error?: string;
+    };
     try {
       parsed = JSON.parse(line);
     } catch {
@@ -180,7 +186,10 @@ export function isSidecarAvailable(): SidecarAvailability {
   return { available: true };
 }
 
-export async function scanWithSidecar(text: string, opts?: { timeoutMs?: number }): Promise<{ verdict: unknown }> {
+export async function scanWithSidecar(
+  text: string,
+  opts?: { timeoutMs?: number },
+): Promise<{ verdict: unknown }> {
   const s = getState();
   if (s.brokenCircuit) {
     throw new Error("sidecar-circuit-broken");
@@ -212,7 +221,8 @@ export async function scanWithSidecar(text: string, opts?: { timeoutMs?: number 
       timer,
     });
 
-    const payload = JSON.stringify({ id, op: "scan-page-content", text }) + "\n";
+    const payload =
+      JSON.stringify({ id, op: "scan-page-content", text }) + "\n";
     try {
       s.child!.stdin.write(payload);
     } catch (err) {

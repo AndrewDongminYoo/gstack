@@ -8,14 +8,14 @@
  * Loaded via --require before the transpiled server bundle.
  */
 
-'use strict';
+"use strict";
 
-const http = require('http');
-const { spawnSync, spawn } = require('child_process');
+const http = require("http");
+const { spawnSync, spawn } = require("child_process");
 
 globalThis.Bun = {
   serve(options) {
-    const { port, hostname = '127.0.0.1', fetch } = options;
+    const { port, hostname = "127.0.0.1", fetch } = options;
 
     const server = http.createServer(async (nodeReq, nodeRes) => {
       try {
@@ -26,11 +26,11 @@ globalThis.Bun = {
         }
 
         let body = null;
-        if (nodeReq.method !== 'GET' && nodeReq.method !== 'HEAD') {
+        if (nodeReq.method !== "GET" && nodeReq.method !== "HEAD") {
           body = await new Promise((resolve) => {
             const chunks = [];
-            nodeReq.on('data', (chunk) => chunks.push(chunk));
-            nodeReq.on('end', () => resolve(Buffer.concat(chunks)));
+            nodeReq.on("data", (chunk) => chunks.push(chunk));
+            nodeReq.on("end", () => resolve(Buffer.concat(chunks)));
           });
         }
 
@@ -58,7 +58,9 @@ globalThis.Bun = {
     server.listen(port, hostname);
 
     return {
-      stop() { server.close(); },
+      stop() {
+        server.close();
+      },
       port,
       hostname,
     };
@@ -68,9 +70,9 @@ globalThis.Bun = {
     const [command, ...args] = cmd;
     const result = spawnSync(command, args, {
       stdio: [
-        options.stdin || 'pipe',
-        options.stdout === 'pipe' ? 'pipe' : 'ignore',
-        options.stderr === 'pipe' ? 'pipe' : 'ignore',
+        options.stdin || "pipe",
+        options.stdout === "pipe" ? "pipe" : "ignore",
+        options.stderr === "pipe" ? "pipe" : "ignore",
       ],
       timeout: options.timeout,
       env: options.env,
@@ -79,14 +81,14 @@ globalThis.Bun = {
 
     return {
       exitCode: result.status,
-      stdout: result.stdout || Buffer.from(''),
-      stderr: result.stderr || Buffer.from(''),
+      stdout: result.stdout || Buffer.from(""),
+      stderr: result.stderr || Buffer.from(""),
     };
   },
 
   spawn(cmd, options = {}) {
     const [command, ...args] = cmd;
-    const stdio = options.stdio || ['pipe', 'pipe', 'pipe'];
+    const stdio = options.stdio || ["pipe", "pipe", "pipe"];
     const proc = spawn(command, args, {
       stdio,
       env: options.env,
@@ -98,8 +100,12 @@ globalThis.Bun = {
       stdout: proc.stdout,
       stderr: proc.stderr,
       stdin: proc.stdin,
-      unref() { proc.unref(); },
-      kill(signal) { proc.kill(signal); },
+      unref() {
+        proc.unref();
+      },
+      kill(signal) {
+        proc.kill(signal);
+      },
     };
   },
 

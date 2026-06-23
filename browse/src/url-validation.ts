@@ -3,26 +3,26 @@
  * Localhost and private IPs are allowed (primary use case: QA testing local dev servers).
  */
 
-import { fileURLToPath, pathToFileURL } from 'node:url';
-import * as path from 'node:path';
-import * as os from 'node:os';
-import { validateReadPath } from './path-security';
+import { fileURLToPath, pathToFileURL } from "node:url";
+import * as path from "node:path";
+import * as os from "node:os";
+import { validateReadPath } from "./path-security";
 
 export const BLOCKED_METADATA_HOSTS = new Set([
-  '169.254.169.254',  // AWS/GCP/Azure instance metadata
-  'fe80::1',          // IPv6 link-local — common metadata endpoint alias
-  '::ffff:169.254.169.254', // IPv4-mapped IPv6 form of the metadata IP
-  '::ffff:a9fe:a9fe', // Hex-encoded IPv4-mapped form (URL constructor normalizes to this)
-  '::a9fe:a9fe',      // Deprecated IPv4-compatible hex form
-  'metadata.google.internal', // GCP metadata
-  'metadata.azure.internal',  // Azure IMDS
+  "169.254.169.254", // AWS/GCP/Azure instance metadata
+  "fe80::1", // IPv6 link-local — common metadata endpoint alias
+  "::ffff:169.254.169.254", // IPv4-mapped IPv6 form of the metadata IP
+  "::ffff:a9fe:a9fe", // Hex-encoded IPv4-mapped form (URL constructor normalizes to this)
+  "::a9fe:a9fe", // Deprecated IPv4-compatible hex form
+  "metadata.google.internal", // GCP metadata
+  "metadata.azure.internal", // Azure IMDS
 ]);
 
 /**
  * IPv6 prefixes to block (CIDR-style). ULA addresses cover fc00::/7 and
  * link-local addresses cover fe80::/10.
  */
-const BLOCKED_IPV6_PREFIXES = ['fc', 'fd', 'fe8', 'fe9', 'fea', 'feb'];
+const BLOCKED_IPV6_PREFIXES = ["fc", "fd", "fe8", "fe9", "fea", "feb"];
 
 /**
  * Check if an IPv6 address falls within a blocked prefix range.
@@ -32,11 +32,11 @@ const BLOCKED_IPV6_PREFIXES = ['fc', 'fd', 'fe8', 'fe9', 'fea', 'feb'];
  * like fd.example.com or fcustomer.com.
  */
 function isBlockedIpv6(addr: string): boolean {
-  const normalized = addr.toLowerCase().replace(/^\[|\]$/g, '');
+  const normalized = addr.toLowerCase().replace(/^\[|\]$/g, "");
   // Must contain a colon to be an IPv6 address — avoids false positives on
   // hostnames like fd.example.com or fcustomer.com
-  if (!normalized.includes(':')) return false;
-  return BLOCKED_IPV6_PREFIXES.some(prefix => normalized.startsWith(prefix));
+  if (!normalized.includes(":")) return false;
+  return BLOCKED_IPV6_PREFIXES.some((prefix) => normalized.startsWith(prefix));
 }
 
 /**
@@ -47,11 +47,12 @@ function isBlockedIpv6(addr: string): boolean {
  */
 function normalizeHostname(hostname: string): string {
   // Strip IPv6 brackets
-  let h = hostname.startsWith('[') && hostname.endsWith(']')
-    ? hostname.slice(1, -1)
-    : hostname;
+  let h =
+    hostname.startsWith("[") && hostname.endsWith("]")
+      ? hostname.slice(1, -1)
+      : hostname;
   // Strip trailing dot
-  if (h.endsWith('.')) h = h.slice(0, -1);
+  if (h.endsWith(".")) h = h.slice(0, -1);
   return h;
 }
 
@@ -64,9 +65,14 @@ function isMetadataIp(hostname: string): boolean {
   try {
     const probe = new URL(`http://${hostname}`);
     const normalized = probe.hostname;
-    if (BLOCKED_METADATA_HOSTS.has(normalized) || isBlockedIpv6(normalized)) return true;
+    if (BLOCKED_METADATA_HOSTS.has(normalized) || isBlockedIpv6(normalized))
+      return true;
     // Also check after stripping trailing dot
-    if (normalized.endsWith('.') && BLOCKED_METADATA_HOSTS.has(normalized.slice(0, -1))) return true;
+    if (
+      normalized.endsWith(".") &&
+      BLOCKED_METADATA_HOSTS.has(normalized.slice(0, -1))
+    )
+      return true;
   } catch {
     // Not a valid hostname — can't be a metadata IP
   }
@@ -83,21 +89,24 @@ function isMetadataIp(hostname: string): boolean {
  */
 async function resolvesToBlockedIp(hostname: string): Promise<boolean> {
   try {
-    const dns = await import('node:dns');
+    const dns = await import("node:dns");
     const { resolve4, resolve6 } = dns.promises;
 
     // Check IPv4 A records
     const v4Check = resolve4(hostname).then(
-      (addresses) => addresses.some(addr => BLOCKED_METADATA_HOSTS.has(addr)),
+      (addresses) => addresses.some((addr) => BLOCKED_METADATA_HOSTS.has(addr)),
       () => false, // ENODATA / ENOTFOUND — no A records, not a risk
     );
 
     // Check IPv6 AAAA records — the gap that issue #668 identified
     const v6Check = resolve6(hostname).then(
-      (addresses) => addresses.some(addr => {
-        const normalized = addr.toLowerCase();
-        return BLOCKED_METADATA_HOSTS.has(normalized) || isBlockedIpv6(normalized);
-      }),
+      (addresses) =>
+        addresses.some((addr) => {
+          const normalized = addr.toLowerCase();
+          return (
+            BLOCKED_METADATA_HOSTS.has(normalized) || isBlockedIpv6(normalized)
+          );
+        }),
       () => false, // ENODATA / ENOTFOUND — no AAAA records, not a risk
     );
 
@@ -125,7 +134,7 @@ async function resolvesToBlockedIp(hostname: string): Promise<boolean> {
  * trigger Chromium's directory listing, which is a different product surface.
  */
 export function normalizeFileUrl(url: string): string {
-  if (!url.toLowerCase().startsWith('file:')) return url;
+  if (!url.toLowerCase().startsWith("file:")) return url;
 
   // Split off query + fragment BEFORE touching the path — SPAs + fixture URLs rely
   // on these. path.resolve would URL-encode `?` and `#` as `%3F`/`%23` (and
@@ -135,76 +144,89 @@ export function normalizeFileUrl(url: string): string {
   // Parse order: `?` before `#` per RFC 3986 — '?' in a fragment is literal.
   // Find the FIRST `?` or `#`, whichever comes first, and take everything
   // after (including the delimiter) as the trailing segment.
-  const qIdx = url.indexOf('?');
-  const hIdx = url.indexOf('#');
+  const qIdx = url.indexOf("?");
+  const hIdx = url.indexOf("#");
   let delimIdx = -1;
   if (qIdx >= 0 && hIdx >= 0) delimIdx = Math.min(qIdx, hIdx);
   else if (qIdx >= 0) delimIdx = qIdx;
   else if (hIdx >= 0) delimIdx = hIdx;
 
   const pathPart = delimIdx >= 0 ? url.slice(0, delimIdx) : url;
-  const trailing = delimIdx >= 0 ? url.slice(delimIdx) : '';
+  const trailing = delimIdx >= 0 ? url.slice(delimIdx) : "";
 
-  const rest = pathPart.slice('file:'.length);
+  const rest = pathPart.slice("file:".length);
 
   // file:/// or longer → standard absolute; pass through unchanged (caller validates path).
-  if (rest.startsWith('///')) {
+  if (rest.startsWith("///")) {
     // Reject bare root-only (file:/// with nothing after)
-    if (rest === '///' || rest === '////') {
-      throw new Error('Invalid file URL: file:/// has no path. Use file:///<absolute-path>.');
+    if (rest === "///" || rest === "////") {
+      throw new Error(
+        "Invalid file URL: file:/// has no path. Use file:///<absolute-path>.",
+      );
     }
     return pathPart + trailing;
   }
 
   // Everything else: must start with // (we accept file://... only)
-  if (!rest.startsWith('//')) {
-    throw new Error(`Invalid file URL: ${url}. Use file:///<absolute-path> or file://./<rel> or file://~/<rel>.`);
+  if (!rest.startsWith("//")) {
+    throw new Error(
+      `Invalid file URL: ${url}. Use file:///<absolute-path> or file://./<rel> or file://~/<rel>.`,
+    );
   }
 
   const afterDoubleSlash = rest.slice(2);
 
   // Reject empty (file://) and trailing-slash-only (file://./ listing cwd).
-  if (afterDoubleSlash === '') {
-    throw new Error('Invalid file URL: file:// is empty. Use file:///<absolute-path>.');
+  if (afterDoubleSlash === "") {
+    throw new Error(
+      "Invalid file URL: file:// is empty. Use file:///<absolute-path>.",
+    );
   }
-  if (afterDoubleSlash === '.' || afterDoubleSlash === './') {
-    throw new Error('Invalid file URL: file://./ would list the current directory. Use file://./<filename> to render a specific file.');
+  if (afterDoubleSlash === "." || afterDoubleSlash === "./") {
+    throw new Error(
+      "Invalid file URL: file://./ would list the current directory. Use file://./<filename> to render a specific file.",
+    );
   }
-  if (afterDoubleSlash === '~' || afterDoubleSlash === '~/') {
-    throw new Error('Invalid file URL: file://~/ would list the home directory. Use file://~/<filename> to render a specific file.');
+  if (afterDoubleSlash === "~" || afterDoubleSlash === "~/") {
+    throw new Error(
+      "Invalid file URL: file://~/ would list the home directory. Use file://~/<filename> to render a specific file.",
+    );
   }
 
   // Home-relative: file://~/<rel>
-  if (afterDoubleSlash.startsWith('~/')) {
+  if (afterDoubleSlash.startsWith("~/")) {
     const rel = afterDoubleSlash.slice(2);
     const absPath = path.join(os.homedir(), rel);
     return pathToFileURL(absPath).href + trailing;
   }
 
   // cwd-relative with explicit ./ : file://./<rel>
-  if (afterDoubleSlash.startsWith('./')) {
+  if (afterDoubleSlash.startsWith("./")) {
     const rel = afterDoubleSlash.slice(2);
     const absPath = path.resolve(process.cwd(), rel);
     return pathToFileURL(absPath).href + trailing;
   }
 
   // localhost host explicitly allowed: file://localhost/<abs> (pass through to standard parser).
-  if (afterDoubleSlash.toLowerCase().startsWith('localhost/')) {
+  if (afterDoubleSlash.toLowerCase().startsWith("localhost/")) {
     return pathPart + trailing;
   }
 
   // Ambiguous: file://<segment>/<rest> — treat as cwd-relative ONLY if <segment> is a
   // simple path name (no dots, no colons, no backslashes, no percent-encoding, no
   // IPv6 brackets, no Windows drive letter pattern).
-  const firstSlash = afterDoubleSlash.indexOf('/');
-  const segment = firstSlash === -1 ? afterDoubleSlash : afterDoubleSlash.slice(0, firstSlash);
+  const firstSlash = afterDoubleSlash.indexOf("/");
+  const segment =
+    firstSlash === -1
+      ? afterDoubleSlash
+      : afterDoubleSlash.slice(0, firstSlash);
 
   // Reject host-like segments: dotted names (docs.v1), IPs (127.0.0.1), IPv6 ([::1]),
   // drive letters (C:), percent-encoded, or backslash paths.
-  const looksLikeHost = /[.:\\%]/.test(segment) || segment.startsWith('[');
+  const looksLikeHost = /[.:\\%]/.test(segment) || segment.startsWith("[");
   if (looksLikeHost) {
     throw new Error(
-      `Unsupported file URL host: ${segment}. Use file:///<absolute-path> for local files (network/UNC paths are not supported).`
+      `Unsupported file URL host: ${segment}. Use file:///<absolute-path> for local files (network/UNC paths are not supported).`,
     );
   }
 
@@ -228,7 +250,7 @@ export function normalizeFileUrl(url: string): string {
 export async function validateNavigationUrl(url: string): Promise<string> {
   // Normalize non-standard file:// shapes before the URL parser sees them.
   let normalized = url;
-  if (url.toLowerCase().startsWith('file:')) {
+  if (url.toLowerCase().startsWith("file:")) {
     normalized = normalizeFileUrl(url);
   }
 
@@ -240,11 +262,11 @@ export async function validateNavigationUrl(url: string): Promise<string> {
   }
 
   // file:// path: validate against safe-dirs and allow; otherwise defer to http(s) logic.
-  if (parsed.protocol === 'file:') {
+  if (parsed.protocol === "file:") {
     // Reject non-empty non-localhost hosts (UNC / network paths).
-    if (parsed.host !== '' && parsed.host.toLowerCase() !== 'localhost') {
+    if (parsed.host !== "" && parsed.host.toLowerCase() !== "localhost") {
       throw new Error(
-        `Unsupported file URL host: ${parsed.host}. Use file:///<absolute-path> for local files.`
+        `Unsupported file URL host: ${parsed.host}. Use file:///<absolute-path> for local files.`,
       );
     }
 
@@ -269,28 +291,35 @@ export async function validateNavigationUrl(url: string): Promise<string> {
     return pathToFileURL(fsPath).href + parsed.search + parsed.hash;
   }
 
-  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
     throw new Error(
-      `Blocked: scheme "${parsed.protocol}" is not allowed. Only http:, https:, and file: URLs are permitted.`
+      `Blocked: scheme "${parsed.protocol}" is not allowed. Only http:, https:, and file: URLs are permitted.`,
     );
   }
 
   const hostname = normalizeHostname(parsed.hostname.toLowerCase());
 
-  if (BLOCKED_METADATA_HOSTS.has(hostname) || isMetadataIp(hostname) || isBlockedIpv6(hostname)) {
+  if (
+    BLOCKED_METADATA_HOSTS.has(hostname) ||
+    isMetadataIp(hostname) ||
+    isBlockedIpv6(hostname)
+  ) {
     throw new Error(
-      `Blocked: ${parsed.hostname} is a cloud metadata endpoint. Access is denied for security.`
+      `Blocked: ${parsed.hostname} is a cloud metadata endpoint. Access is denied for security.`,
     );
   }
 
   // DNS rebinding protection: resolve hostname and check if it points to metadata IPs.
   // Skip for loopback/private IPs — they can't be DNS-rebinded and the async DNS
   // resolution adds latency that breaks concurrent E2E tests under load.
-  const isLoopback = hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
-  const isPrivateNet = /^(10\.|172\.(1[6-9]|2[0-9]|3[01])\.|192\.168\.)/.test(hostname);
-  if (!isLoopback && !isPrivateNet && await resolvesToBlockedIp(hostname)) {
+  const isLoopback =
+    hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
+  const isPrivateNet = /^(10\.|172\.(1[6-9]|2[0-9]|3[01])\.|192\.168\.)/.test(
+    hostname,
+  );
+  if (!isLoopback && !isPrivateNet && (await resolvesToBlockedIp(hostname))) {
     throw new Error(
-      `Blocked: ${parsed.hostname} resolves to a cloud metadata IP. Possible DNS rebinding attack.`
+      `Blocked: ${parsed.hostname} resolves to a cloud metadata IP. Possible DNS rebinding attack.`,
     );
   }
 

@@ -12,7 +12,7 @@
 // inherits the invariant — cleanup runs on abort, enqueue failure, AND
 // heartbeat failure, exactly once, regardless of which edge fires first.
 
-import { stripLoneSurrogates } from './sanitize';
+import { stripLoneSurrogates } from "./sanitize";
 
 /**
  * JSON.stringify replacer that strips lone UTF-16 surrogates from string
@@ -22,7 +22,7 @@ import { stripLoneSurrogates } from './sanitize';
  * fields — see CLAUDE.md "Unicode sanitization at server egress".
  */
 function sanitizeReplacer(_key: string, value: unknown): unknown {
-  return typeof value === 'string' ? stripLoneSurrogates(value) : value;
+  return typeof value === "string" ? stripLoneSurrogates(value) : value;
 }
 
 /** Send an SSE event. Handles JSON encoding + lone-surrogate sanitization. */
@@ -140,15 +140,15 @@ export function createSseEndpoint<T>(
         }
       }, heartbeatMs);
 
-      req.signal.addEventListener('abort', cleanup);
+      req.signal.addEventListener("abort", cleanup);
     },
   });
 
   return new Response(stream, {
     headers: {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive',
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
     },
   });
 }

@@ -12,8 +12,8 @@
  *   navigation/tab switch/shutdown → re-create transparently on next call
  */
 
-import type { Page } from 'playwright';
-import { getOrCreateCdpSession } from './cdp-bridge';
+import type { Page } from "playwright";
+import { getOrCreateCdpSession } from "./cdp-bridge";
 
 // ─── Types ──────────────────────────────────────────────────────
 
@@ -32,7 +32,12 @@ export interface InspectorResult {
   computedStyles: Record<string, string>;
   matchedRules: Array<{
     selector: string;
-    properties: Array<{ name: string; value: string; important: boolean; overridden: boolean }>;
+    properties: Array<{
+      name: string;
+      value: string;
+      important: boolean;
+      overridden: boolean;
+    }>;
     source: string;
     sourceLine: number;
     sourceColumn: number;
@@ -57,26 +62,69 @@ export interface StyleModification {
   source: string;
   sourceLine: number;
   timestamp: number;
-  method: 'setStyleTexts' | 'inline';
+  method: "setStyleTexts" | "inline";
 }
 
 // ─── Constants ──────────────────────────────────────────────────
 
 /** ~55 key CSS properties for computed style output */
 const KEY_CSS_PROPERTIES = [
-  'display', 'position', 'top', 'right', 'bottom', 'left',
-  'float', 'clear', 'z-index', 'overflow', 'overflow-x', 'overflow-y',
-  'width', 'height', 'min-width', 'max-width', 'min-height', 'max-height',
-  'margin-top', 'margin-right', 'margin-bottom', 'margin-left',
-  'padding-top', 'padding-right', 'padding-bottom', 'padding-left',
-  'border-top-width', 'border-right-width', 'border-bottom-width', 'border-left-width',
-  'border-style', 'border-color',
-  'font-family', 'font-size', 'font-weight', 'line-height',
-  'color', 'background-color', 'background-image', 'opacity',
-  'box-shadow', 'border-radius', 'transform', 'transition',
-  'flex-direction', 'flex-wrap', 'justify-content', 'align-items', 'gap',
-  'grid-template-columns', 'grid-template-rows',
-  'text-align', 'text-decoration', 'visibility', 'cursor', 'pointer-events',
+  "display",
+  "position",
+  "top",
+  "right",
+  "bottom",
+  "left",
+  "float",
+  "clear",
+  "z-index",
+  "overflow",
+  "overflow-x",
+  "overflow-y",
+  "width",
+  "height",
+  "min-width",
+  "max-width",
+  "min-height",
+  "max-height",
+  "margin-top",
+  "margin-right",
+  "margin-bottom",
+  "margin-left",
+  "padding-top",
+  "padding-right",
+  "padding-bottom",
+  "padding-left",
+  "border-top-width",
+  "border-right-width",
+  "border-bottom-width",
+  "border-left-width",
+  "border-style",
+  "border-color",
+  "font-family",
+  "font-size",
+  "font-weight",
+  "line-height",
+  "color",
+  "background-color",
+  "background-image",
+  "opacity",
+  "box-shadow",
+  "border-radius",
+  "transform",
+  "transition",
+  "flex-direction",
+  "flex-wrap",
+  "justify-content",
+  "align-items",
+  "gap",
+  "grid-template-columns",
+  "grid-template-rows",
+  "text-align",
+  "text-decoration",
+  "visibility",
+  "cursor",
+  "pointer-events",
 ];
 
 const KEY_CSS_SET = new Set(KEY_CSS_PROPERTIES);
@@ -97,11 +145,16 @@ async function getOrCreateSession(page: Page): Promise<any> {
   if (session) {
     // Verify session is still alive
     try {
-      await session.send('DOM.getDocument', { depth: 0 });
+      await session.send("DOM.getDocument", { depth: 0 });
       return session;
     } catch (err: any) {
       // Session is stale — recreate (CDP disconnects throw on closed/Target errors)
-      if (!err?.message?.includes('closed') && !err?.message?.includes('Target') && !err?.message?.includes('detached')) throw err;
+      if (
+        !err?.message?.includes("closed") &&
+        !err?.message?.includes("Target") &&
+        !err?.message?.includes("detached")
+      )
+        throw err;
       cdpSessions.delete(page);
       initializedPages.delete(page);
     }
@@ -114,21 +167,26 @@ async function getOrCreateSession(page: Page): Promise<any> {
   // initializedPages WeakSet is inspector-layer state that needs its
   // own close hook to stay in sync.
   if (!initializedPages.has(page)) {
-    await session.send('DOM.enable');
-    await session.send('CSS.enable');
+    await session.send("DOM.enable");
+    await session.send("CSS.enable");
     initializedPages.add(page);
-    page.once('close', () => initializedPages.delete(page));
+    page.once("close", () => initializedPages.delete(page));
   }
 
   // Auto-detach on navigation — DOM/CSS domain state is tied to the
   // document. Close-detach (from getOrCreateCdpSession) handles the
   // tab-close case; framenavigated catches in-tab navigation that
   // invalidates inspector state without closing the tab.
-  page.once('framenavigated', () => {
+  page.once("framenavigated", () => {
     try {
       session.detach().catch(() => {});
     } catch (err: any) {
-      if (!err?.message?.includes('closed') && !err?.message?.includes('Target') && !err?.message?.includes('detached')) throw err;
+      if (
+        !err?.message?.includes("closed") &&
+        !err?.message?.includes("Target") &&
+        !err?.message?.includes("detached")
+      )
+        throw err;
     }
     cdpSessions.delete(page);
     initializedPages.delete(page);
@@ -181,8 +239,14 @@ export const __testInternals = {
  * Parse a CSS selector and compute its specificity as {a, b, c}.
  * a = ID selectors, b = class/attr/pseudo-class, c = type/pseudo-element
  */
-function computeSpecificity(selector: string): { a: number; b: number; c: number } {
-  let a = 0, b = 0, c = 0;
+function computeSpecificity(selector: string): {
+  a: number;
+  b: number;
+  c: number;
+} {
+  let a = 0,
+    b = 0,
+    c = 0;
 
   // Remove :not() wrapper but count its contents
   let cleaned = selector;
@@ -214,7 +278,7 @@ function computeSpecificity(selector: string): { a: number; b: number; c: number
  */
 function compareSpecificity(
   s1: { a: number; b: number; c: number },
-  s2: { a: number; b: number; c: number }
+  s2: { a: number; b: number; c: number },
 ): number {
   if (s1.a !== s2.a) return s1.a - s2.a;
   if (s1.b !== s2.b) return s1.b - s2.b;
@@ -229,17 +293,17 @@ function compareSpecificity(
 export async function inspectElement(
   page: Page,
   selector: string,
-  options?: { includeUA?: boolean }
+  options?: { includeUA?: boolean },
 ): Promise<InspectorResult> {
   const session = await getOrCreateSession(page);
 
   // Get document root
-  const { root } = await session.send('DOM.getDocument', { depth: 0 });
+  const { root } = await session.send("DOM.getDocument", { depth: 0 });
 
   // Query for the element
   let nodeId: number;
   try {
-    const result = await session.send('DOM.querySelector', {
+    const result = await session.send("DOM.querySelector", {
       nodeId: root.nodeId,
       selector,
     });
@@ -250,15 +314,17 @@ export async function inspectElement(
   }
 
   // Get element attributes
-  const { node } = await session.send('DOM.describeNode', { nodeId, depth: 0 });
-  const tagName = (node.localName || node.nodeName || '').toLowerCase();
+  const { node } = await session.send("DOM.describeNode", { nodeId, depth: 0 });
+  const tagName = (node.localName || node.nodeName || "").toLowerCase();
   const attrPairs = node.attributes || [];
   const attributes: Record<string, string> = {};
   for (let i = 0; i < attrPairs.length; i += 2) {
     attributes[attrPairs[i]] = attrPairs[i + 1];
   }
   const id = attributes.id || null;
-  const classes = attributes.class ? attributes.class.split(/\s+/).filter(Boolean) : [];
+  const classes = attributes.class
+    ? attributes.class.split(/\s+/).filter(Boolean)
+    : [];
 
   // Get box model
   let boxModel = {
@@ -269,7 +335,7 @@ export async function inspectElement(
   };
 
   try {
-    const boxData = await session.send('DOM.getBoxModel', { nodeId });
+    const boxData = await session.send("DOM.getBoxModel", { nodeId });
     const model = boxData.model;
 
     // Content quad: [x1,y1, x2,y2, x3,y3, x4,y4]
@@ -284,7 +350,12 @@ export async function inspectElement(
     const contentHeight = content[5] - content[1];
 
     boxModel = {
-      content: { x: contentX, y: contentY, width: contentWidth, height: contentHeight },
+      content: {
+        x: contentX,
+        y: contentY,
+        width: contentWidth,
+        height: contentHeight,
+      },
       padding: {
         top: content[1] - padding[1],
         right: padding[2] - content[2],
@@ -306,14 +377,22 @@ export async function inspectElement(
     };
   } catch (err: any) {
     // Element may not have a box model (e.g., display:none) — CDP returns "Could not compute box model"
-    if (!err?.message?.includes('box model') && !err?.message?.includes('Could not compute')) throw err;
+    if (
+      !err?.message?.includes("box model") &&
+      !err?.message?.includes("Could not compute")
+    )
+      throw err;
   }
 
   // Get matched styles
-  const matchedData = await session.send('CSS.getMatchedStylesForNode', { nodeId });
+  const matchedData = await session.send("CSS.getMatchedStylesForNode", {
+    nodeId,
+  });
 
   // Get computed styles
-  const computedData = await session.send('CSS.getComputedStyleForNode', { nodeId });
+  const computedData = await session.send("CSS.getComputedStyleForNode", {
+    nodeId,
+  });
   const computedStyles: Record<string, string> = {};
   for (const entry of computedData.computedStyle) {
     if (KEY_CSS_SET.has(entry.name)) {
@@ -322,7 +401,9 @@ export async function inspectElement(
   }
 
   // Get inline styles
-  const inlineData = await session.send('CSS.getInlineStylesForNode', { nodeId });
+  const inlineData = await session.send("CSS.getInlineStylesForNode", {
+    nodeId,
+  });
   const inlineStyles: Record<string, string> = {};
   if (inlineData.inlineStyle?.cssProperties) {
     for (const prop of inlineData.inlineStyle.cssProperties) {
@@ -333,7 +414,7 @@ export async function inspectElement(
   }
 
   // Process matched rules
-  const matchedRules: InspectorResult['matchedRules'] = [];
+  const matchedRules: InspectorResult["matchedRules"] = [];
 
   // Track all property values to mark overridden ones
   const seenProperties = new Map<string, number>(); // property → index of highest-specificity rule
@@ -341,20 +422,23 @@ export async function inspectElement(
   if (matchedData.matchedCSSRules) {
     for (const match of matchedData.matchedCSSRules) {
       const rule = match.rule;
-      const isUA = rule.origin === 'user-agent';
+      const isUA = rule.origin === "user-agent";
 
       if (isUA && !options?.includeUA) continue;
 
       // Get the matching selector text
-      let selectorText = '';
+      let selectorText = "";
       if (rule.selectorList?.selectors) {
         // Use the specific matching selector
         const matchingIdx = match.matchingSelectors?.[0] ?? 0;
-        selectorText = rule.selectorList.selectors[matchingIdx]?.text || rule.selectorList.text || '';
+        selectorText =
+          rule.selectorList.selectors[matchingIdx]?.text ||
+          rule.selectorList.text ||
+          "";
       }
 
       // Get source info
-      let source = 'inline';
+      let source = "inline";
       let sourceLine = 0;
       let sourceColumn = 0;
       let styleSheetId: string | undefined;
@@ -363,7 +447,10 @@ export async function inspectElement(
       if (rule.styleSheetId) {
         styleSheetId = rule.styleSheetId;
         // Resolve stylesheet source name
-        source = rule.origin === 'regular' ? (rule.styleSheetId || 'stylesheet') : rule.origin;
+        source =
+          rule.origin === "regular"
+            ? rule.styleSheetId || "stylesheet"
+            : rule.origin;
       }
 
       if (rule.style?.range) {
@@ -380,24 +467,34 @@ export async function inspectElement(
       if (match.rule?.media) {
         const mediaList = match.rule.media;
         if (Array.isArray(mediaList) && mediaList.length > 0) {
-          media = mediaList.map((m: any) => m.text).filter(Boolean).join(', ');
+          media = mediaList
+            .map((m: any) => m.text)
+            .filter(Boolean)
+            .join(", ");
         }
       }
 
       const specificity = computeSpecificity(selectorText);
 
       // Process CSS properties
-      const properties: Array<{ name: string; value: string; important: boolean; overridden: boolean }> = [];
+      const properties: Array<{
+        name: string;
+        value: string;
+        important: boolean;
+        overridden: boolean;
+      }> = [];
       if (rule.style?.cssProperties) {
         for (const prop of rule.style.cssProperties) {
           if (!prop.name || prop.disabled) continue;
           // Skip internal/vendor properties unless they are in our key set
-          if (prop.name.startsWith('-') && !KEY_CSS_SET.has(prop.name)) continue;
+          if (prop.name.startsWith("-") && !KEY_CSS_SET.has(prop.name))
+            continue;
 
           properties.push({
             name: prop.name,
-            value: prop.value || '',
-            important: prop.important || (prop.value?.includes('!important') ?? false),
+            value: prop.value || "",
+            important:
+              prop.important || (prop.value?.includes("!important") ?? false),
             overridden: false, // will be set later
           });
         }
@@ -419,7 +516,9 @@ export async function inspectElement(
   }
 
   // Sort by specificity (highest first — these win)
-  matchedRules.sort((a, b) => -compareSpecificity(a.specificity, b.specificity));
+  matchedRules.sort(
+    (a, b) => -compareSpecificity(a.specificity, b.specificity),
+  );
 
   // Mark overridden properties: the first rule in the sorted list (highest specificity) wins
   for (let i = 0; i < matchedRules.length; i++) {
@@ -432,7 +531,7 @@ export async function inspectElement(
         // Unless this one is !important and the earlier one isn't
         const earlierIdx = seenProperties.get(key)!;
         const earlierRule = matchedRules[earlierIdx];
-        const earlierProp = earlierRule.properties.find(p => p.name === key);
+        const earlierProp = earlierRule.properties.find((p) => p.name === key);
         if (prop.important && earlierProp && !earlierProp.important) {
           // This !important overrides the earlier non-important
           if (earlierProp) earlierProp.overridden = true;
@@ -445,19 +544,19 @@ export async function inspectElement(
   }
 
   // Process pseudo-elements
-  const pseudoElements: InspectorResult['pseudoElements'] = [];
+  const pseudoElements: InspectorResult["pseudoElements"] = [];
   if (matchedData.pseudoElements) {
     for (const pseudo of matchedData.pseudoElements) {
-      const pseudoType = pseudo.pseudoType || 'unknown';
+      const pseudoType = pseudo.pseudoType || "unknown";
       const rules: Array<{ selector: string; properties: string }> = [];
       if (pseudo.matches) {
         for (const match of pseudo.matches) {
           const rule = match.rule;
-          const sel = rule.selectorList?.text || '';
+          const sel = rule.selectorList?.text || "";
           const props = (rule.style?.cssProperties || [])
             .filter((p: any) => p.name && !p.disabled)
             .map((p: any) => `${p.name}: ${p.value}`)
-            .join('; ');
+            .join("; ");
           if (props) {
             rules.push({ selector: sel, properties: props });
           }
@@ -496,35 +595,39 @@ export async function modifyStyle(
   page: Page,
   selector: string,
   property: string,
-  value: string
+  value: string,
 ): Promise<StyleModification> {
   // Validate CSS property name
   if (!/^[a-zA-Z-]+$/.test(property)) {
-    throw new Error(`Invalid CSS property name: ${property}. Only letters and hyphens allowed.`);
+    throw new Error(
+      `Invalid CSS property name: ${property}. Only letters and hyphens allowed.`,
+    );
   }
 
   // Validate CSS value — block data exfiltration patterns
   const DANGEROUS_CSS = /url\s*\(|expression\s*\(|@import|javascript:|data:/i;
   if (DANGEROUS_CSS.test(value)) {
-    throw new Error('CSS value rejected: contains potentially dangerous pattern.');
+    throw new Error(
+      "CSS value rejected: contains potentially dangerous pattern.",
+    );
   }
 
-  let oldValue = '';
-  let source = 'inline';
+  let oldValue = "";
+  let source = "inline";
   let sourceLine = 0;
-  let method: 'setStyleTexts' | 'inline' = 'inline';
+  let method: "setStyleTexts" | "inline" = "inline";
 
   try {
     // Try CDP approach first
     const session = await getOrCreateSession(page);
     const result = await inspectElement(page, selector);
-    oldValue = result.computedStyles[property] || '';
+    oldValue = result.computedStyles[property] || "";
 
     // Find the most-specific matching rule that has this property
-    let targetRule: InspectorResult['matchedRules'][0] | null = null;
+    let targetRule: InspectorResult["matchedRules"][0] | null = null;
     for (const rule of result.matchedRules) {
       if (rule.userAgent) continue;
-      const hasProp = rule.properties.some(p => p.name === property);
+      const hasProp = rule.properties.some((p) => p.name === property);
       if (hasProp && rule.styleSheetId && rule.range) {
         targetRule = rule;
         break;
@@ -536,39 +639,47 @@ export async function modifyStyle(
       const range = targetRule.range as any;
 
       // Get current style text
-      const styleText = await session.send('CSS.getStyleSheetText', {
+      const styleText = await session.send("CSS.getStyleSheetText", {
         styleSheetId: targetRule.styleSheetId,
       });
 
       // Build new style text by replacing the property value
       const currentProps = targetRule.properties;
       const newPropsText = currentProps
-        .map(p => {
+        .map((p) => {
           if (p.name === property) {
             return `${p.name}: ${value}`;
           }
           return `${p.name}: ${p.value}`;
         })
-        .join('; ');
+        .join("; ");
 
       try {
-        await session.send('CSS.setStyleTexts', {
-          edits: [{
-            styleSheetId: targetRule.styleSheetId,
-            range,
-            text: newPropsText,
-          }],
+        await session.send("CSS.setStyleTexts", {
+          edits: [
+            {
+              styleSheetId: targetRule.styleSheetId,
+              range,
+              text: newPropsText,
+            },
+          ],
         });
-        method = 'setStyleTexts';
+        method = "setStyleTexts";
         source = `${targetRule.source}:${targetRule.sourceLine}`;
         sourceLine = targetRule.sourceLine;
       } catch (err: any) {
         // Fall back to inline — setStyleTexts fails on immutable stylesheets or stale ranges
-        if (!err?.message?.includes('style') && !err?.message?.includes('range') && !err?.message?.includes('closed') && !err?.message?.includes('Target')) throw err;
+        if (
+          !err?.message?.includes("style") &&
+          !err?.message?.includes("range") &&
+          !err?.message?.includes("closed") &&
+          !err?.message?.includes("Target")
+        )
+          throw err;
       }
     }
 
-    if (method === 'inline') {
+    if (method === "inline") {
       // Fallback: modify via inline style
       await page.evaluate(
         ([sel, prop, val]) => {
@@ -576,7 +687,7 @@ export async function modifyStyle(
           if (!el) throw new Error(`Element not found: ${sel}`);
           (el as HTMLElement).style.setProperty(prop, val);
         },
-        [selector, property, value]
+        [selector, property, value],
       );
     }
   } catch (err: any) {
@@ -587,7 +698,7 @@ export async function modifyStyle(
         if (!el) throw new Error(`Element not found: ${sel}`);
         (el as HTMLElement).style.setProperty(prop, val);
       },
-      [selector, property, value]
+      [selector, property, value],
     );
   }
 
@@ -609,12 +720,16 @@ export async function modifyStyle(
 /**
  * Undo a modification by index (or last if no index given).
  */
-export async function undoModification(page: Page, index?: number): Promise<void> {
+export async function undoModification(
+  page: Page,
+  index?: number,
+): Promise<void> {
   const idx = index ?? modificationHistory.length - 1;
   if (idx < 0 || idx >= modificationHistory.length) {
-    const evictedNote = modHistoryTotalPushed > MOD_HISTORY_CAP
-      ? ` (most recent ${MOD_HISTORY_CAP} only — ${modHistoryTotalPushed - MOD_HISTORY_CAP} earlier entries evicted at the cap)`
-      : '';
+    const evictedNote =
+      modHistoryTotalPushed > MOD_HISTORY_CAP
+        ? ` (most recent ${MOD_HISTORY_CAP} only — ${modHistoryTotalPushed - MOD_HISTORY_CAP} earlier entries evicted at the cap)`
+        : "";
     throw new Error(
       `No modification at index ${idx}. History has ${modificationHistory.length} entries${evictedNote}.`,
     );
@@ -622,7 +737,7 @@ export async function undoModification(page: Page, index?: number): Promise<void
 
   const mod = modificationHistory[idx];
 
-  if (mod.method === 'setStyleTexts') {
+  if (mod.method === "setStyleTexts") {
     // Try to restore via CDP
     try {
       await modifyStyle(page, mod.selector, mod.property, mod.oldValue);
@@ -630,7 +745,14 @@ export async function undoModification(page: Page, index?: number): Promise<void
       modificationHistory.pop();
     } catch (err: any) {
       // Fall back to inline restore — CDP may have disconnected or stylesheet changed
-      if (!err?.message?.includes('closed') && !err?.message?.includes('Target') && !err?.message?.includes('style') && !err?.message?.includes('not found') && !err?.message?.includes('Element')) throw err;
+      if (
+        !err?.message?.includes("closed") &&
+        !err?.message?.includes("Target") &&
+        !err?.message?.includes("style") &&
+        !err?.message?.includes("not found") &&
+        !err?.message?.includes("Element")
+      )
+        throw err;
       await page.evaluate(
         ([sel, prop, val]) => {
           const el = document.querySelector(sel);
@@ -641,7 +763,7 @@ export async function undoModification(page: Page, index?: number): Promise<void
             (el as HTMLElement).style.removeProperty(prop);
           }
         },
-        [mod.selector, mod.property, mod.oldValue]
+        [mod.selector, mod.property, mod.oldValue],
       );
     }
   } else {
@@ -656,7 +778,7 @@ export async function undoModification(page: Page, index?: number): Promise<void
           (el as HTMLElement).style.removeProperty(prop);
         }
       },
-      [mod.selector, mod.property, mod.oldValue]
+      [mod.selector, mod.property, mod.oldValue],
     );
   }
 
@@ -705,11 +827,16 @@ export async function resetModifications(page: Page): Promise<void> {
             (el as HTMLElement).style.removeProperty(prop);
           }
         },
-        [mod.selector, mod.property, mod.oldValue]
+        [mod.selector, mod.property, mod.oldValue],
       );
     } catch (err: any) {
       // Best effort — page may have navigated or element may be gone
-      if (!err?.message?.includes('closed') && !err?.message?.includes('Target') && !err?.message?.includes('Execution context')) throw err;
+      if (
+        !err?.message?.includes("closed") &&
+        !err?.message?.includes("Target") &&
+        !err?.message?.includes("Execution context")
+      )
+        throw err;
     }
   }
   modificationHistory.length = 0;
@@ -721,65 +848,84 @@ export async function resetModifications(page: Page): Promise<void> {
  */
 export function formatInspectorResult(
   result: InspectorResult,
-  options?: { includeUA?: boolean }
+  options?: { includeUA?: boolean },
 ): string {
   const lines: string[] = [];
 
   // Element header
-  const classStr = result.classes.length > 0 ? ` class="${result.classes.join(' ')}"` : '';
-  const idStr = result.id ? ` id="${result.id}"` : '';
+  const classStr =
+    result.classes.length > 0 ? ` class="${result.classes.join(" ")}"` : "";
+  const idStr = result.id ? ` id="${result.id}"` : "";
   lines.push(`Element: <${result.tagName}${idStr}${classStr}>`);
   lines.push(`Selector: ${result.selector}`);
 
-  const w = Math.round(result.boxModel.content.width + result.boxModel.padding.left + result.boxModel.padding.right);
-  const h = Math.round(result.boxModel.content.height + result.boxModel.padding.top + result.boxModel.padding.bottom);
+  const w = Math.round(
+    result.boxModel.content.width +
+      result.boxModel.padding.left +
+      result.boxModel.padding.right,
+  );
+  const h = Math.round(
+    result.boxModel.content.height +
+      result.boxModel.padding.top +
+      result.boxModel.padding.bottom,
+  );
   lines.push(`Dimensions: ${w} x ${h}`);
-  lines.push('');
+  lines.push("");
 
   // Box model
-  lines.push('Box Model:');
+  lines.push("Box Model:");
   const bm = result.boxModel;
-  lines.push(`  margin:  ${Math.round(bm.margin.top)}px  ${Math.round(bm.margin.right)}px  ${Math.round(bm.margin.bottom)}px  ${Math.round(bm.margin.left)}px`);
-  lines.push(`  padding: ${Math.round(bm.padding.top)}px  ${Math.round(bm.padding.right)}px  ${Math.round(bm.padding.bottom)}px  ${Math.round(bm.padding.left)}px`);
-  lines.push(`  border:  ${Math.round(bm.border.top)}px  ${Math.round(bm.border.right)}px  ${Math.round(bm.border.bottom)}px  ${Math.round(bm.border.left)}px`);
-  lines.push(`  content: ${Math.round(bm.content.width)} x ${Math.round(bm.content.height)}`);
-  lines.push('');
+  lines.push(
+    `  margin:  ${Math.round(bm.margin.top)}px  ${Math.round(bm.margin.right)}px  ${Math.round(bm.margin.bottom)}px  ${Math.round(bm.margin.left)}px`,
+  );
+  lines.push(
+    `  padding: ${Math.round(bm.padding.top)}px  ${Math.round(bm.padding.right)}px  ${Math.round(bm.padding.bottom)}px  ${Math.round(bm.padding.left)}px`,
+  );
+  lines.push(
+    `  border:  ${Math.round(bm.border.top)}px  ${Math.round(bm.border.right)}px  ${Math.round(bm.border.bottom)}px  ${Math.round(bm.border.left)}px`,
+  );
+  lines.push(
+    `  content: ${Math.round(bm.content.width)} x ${Math.round(bm.content.height)}`,
+  );
+  lines.push("");
 
   // Matched rules
   const displayRules = options?.includeUA
     ? result.matchedRules
-    : result.matchedRules.filter(r => !r.userAgent);
+    : result.matchedRules.filter((r) => !r.userAgent);
 
   lines.push(`Matched Rules (${displayRules.length}):`);
   if (displayRules.length === 0) {
-    lines.push('  (none)');
+    lines.push("  (none)");
   } else {
     for (const rule of displayRules) {
       const propsStr = rule.properties
-        .filter(p => !p.overridden)
-        .map(p => `${p.name}: ${p.value}${p.important ? ' !important' : ''}`)
-        .join('; ');
+        .filter((p) => !p.overridden)
+        .map((p) => `${p.name}: ${p.value}${p.important ? " !important" : ""}`)
+        .join("; ");
       if (!propsStr) continue;
       const spec = `[${rule.specificity.a},${rule.specificity.b},${rule.specificity.c}]`;
       lines.push(`  ${rule.selector} { ${propsStr} }`);
-      lines.push(`    -> ${rule.source}:${rule.sourceLine} ${spec}${rule.media ? ` @media ${rule.media}` : ''}`);
+      lines.push(
+        `    -> ${rule.source}:${rule.sourceLine} ${spec}${rule.media ? ` @media ${rule.media}` : ""}`,
+      );
     }
   }
-  lines.push('');
+  lines.push("");
 
   // Inline styles
-  lines.push('Inline Styles:');
+  lines.push("Inline Styles:");
   const inlineEntries = Object.entries(result.inlineStyles);
   if (inlineEntries.length === 0) {
-    lines.push('  (none)');
+    lines.push("  (none)");
   } else {
-    const inlineStr = inlineEntries.map(([k, v]) => `${k}: ${v}`).join('; ');
+    const inlineStr = inlineEntries.map(([k, v]) => `${k}: ${v}`).join("; ");
     lines.push(`  ${inlineStr}`);
   }
-  lines.push('');
+  lines.push("");
 
   // Computed styles (key properties, compact format)
-  lines.push('Computed (key):');
+  lines.push("Computed (key):");
   const cs = result.computedStyles;
   const computedPairs: string[] = [];
   for (const prop of KEY_CSS_PROPERTIES) {
@@ -790,21 +936,23 @@ export function formatInspectorResult(
   // Group into lines of ~3 properties each
   for (let i = 0; i < computedPairs.length; i += 3) {
     const chunk = computedPairs.slice(i, i + 3);
-    lines.push(`  ${chunk.join(' | ')}`);
+    lines.push(`  ${chunk.join(" | ")}`);
   }
 
   // Pseudo-elements
   if (result.pseudoElements.length > 0) {
-    lines.push('');
-    lines.push('Pseudo-elements:');
+    lines.push("");
+    lines.push("Pseudo-elements:");
     for (const pseudo of result.pseudoElements) {
       for (const rule of pseudo.rules) {
-        lines.push(`  ${pseudo.pseudo} ${rule.selector} { ${rule.properties} }`);
+        lines.push(
+          `  ${pseudo.pseudo} ${rule.selector} { ${rule.properties} }`,
+        );
       }
     }
   }
 
-  return lines.join('\n');
+  return lines.join("\n");
 }
 
 /**
@@ -814,7 +962,16 @@ export function detachSession(page?: Page): void {
   if (page) {
     const session = cdpSessions.get(page);
     if (session) {
-      try { session.detach().catch(() => {}); } catch (err: any) { if (!err?.message?.includes('closed') && !err?.message?.includes('Target') && !err?.message?.includes('detached')) throw err; }
+      try {
+        session.detach().catch(() => {});
+      } catch (err: any) {
+        if (
+          !err?.message?.includes("closed") &&
+          !err?.message?.includes("Target") &&
+          !err?.message?.includes("detached")
+        )
+          throw err;
+      }
       cdpSessions.delete(page);
       initializedPages.delete(page);
     }
