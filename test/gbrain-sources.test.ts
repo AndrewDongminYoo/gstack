@@ -8,11 +8,23 @@
  */
 
 import { describe, it, expect } from "bun:test";
-import { mkdtempSync, writeFileSync, readFileSync, existsSync, mkdirSync, rmSync, chmodSync } from "fs";
+import {
+  mkdtempSync,
+  writeFileSync,
+  readFileSync,
+  existsSync,
+  mkdirSync,
+  rmSync,
+  chmodSync,
+} from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 
-import { ensureSourceRegistered, probeSource, sourcePageCount } from "../lib/gbrain-sources";
+import {
+  ensureSourceRegistered,
+  probeSource,
+  sourcePageCount,
+} from "../lib/gbrain-sources";
 
 interface FakeGbrainSetup {
   bindir: string;
@@ -36,7 +48,14 @@ interface FakeGbrainSetup {
  *   gbrain --version                                  → echo "gbrain 0.25.1"
  * Anything else exits 1.
  */
-function makeFakeGbrain(initialState: { sources: Array<{ id: string; local_path: string; federated?: boolean; page_count?: number }> }): FakeGbrainSetup {
+function makeFakeGbrain(initialState: {
+  sources: Array<{
+    id: string;
+    local_path: string;
+    federated?: boolean;
+    page_count?: number;
+  }>;
+}): FakeGbrainSetup {
   const tmp = mkdtempSync(join(tmpdir(), "gbrain-sources-test-"));
   const bindir = join(tmp, "bin");
   mkdirSync(bindir, { recursive: true });
@@ -90,7 +109,10 @@ exit 1
   // Build the env override we'll pass to helper calls. We do NOT mutate
   // process.env globally because Bun's execFileSync caches PATH at process
   // start; explicit env is the only reliable way to redirect spawn-time PATH.
-  const env: NodeJS.ProcessEnv = { ...process.env, PATH: `${bindir}:${process.env.PATH || ""}` };
+  const env: NodeJS.ProcessEnv = {
+    ...process.env,
+    PATH: `${bindir}:${process.env.PATH || ""}`,
+  };
 
   return {
     bindir,
@@ -105,7 +127,9 @@ exit 1
 
 describe("probeSource", () => {
   it("returns absent when source id is not in the list", () => {
-    const fake = makeFakeGbrain({ sources: [{ id: "other-source", local_path: "/x" }] });
+    const fake = makeFakeGbrain({
+      sources: [{ id: "other-source", local_path: "/x" }],
+    });
     const state = probeSource("gstack-code-foo", fake.env);
     expect(state.status).toBe("absent");
     expect(state.registered_path).toBeUndefined();
@@ -126,16 +150,22 @@ describe("probeSource", () => {
 describe("ensureSourceRegistered", () => {
   it("adds source when absent, returns changed=true", async () => {
     const fake = makeFakeGbrain({ sources: [] });
-    const result = await ensureSourceRegistered("gstack-code-foo", "/Users/me/repo", {
-      federated: true,
-      env: fake.env,
-    });
+    const result = await ensureSourceRegistered(
+      "gstack-code-foo",
+      "/Users/me/repo",
+      {
+        federated: true,
+        env: fake.env,
+      },
+    );
     expect(result.changed).toBe(true);
     expect(result.state.status).toBe("match");
     expect(result.state.registered_path).toBe("/Users/me/repo");
 
     const log = readFileSync(fake.logPath, "utf-8");
-    expect(log).toContain("sources add gstack-code-foo --path /Users/me/repo --federated");
+    expect(log).toContain(
+      "sources add gstack-code-foo --path /Users/me/repo --federated",
+    );
     expect(log).not.toContain("sources remove");
     fake.cleanup();
   });
@@ -144,7 +174,11 @@ describe("ensureSourceRegistered", () => {
     const fake = makeFakeGbrain({
       sources: [{ id: "gstack-code-foo", local_path: "/Users/me/repo" }],
     });
-    const result = await ensureSourceRegistered("gstack-code-foo", "/Users/me/repo", { env: fake.env });
+    const result = await ensureSourceRegistered(
+      "gstack-code-foo",
+      "/Users/me/repo",
+      { env: fake.env },
+    );
     expect(result.changed).toBe(false);
     expect(result.state.status).toBe("match");
 
@@ -159,17 +193,23 @@ describe("ensureSourceRegistered", () => {
     const fake = makeFakeGbrain({
       sources: [{ id: "gstack-code-foo", local_path: "/old/path" }],
     });
-    const result = await ensureSourceRegistered("gstack-code-foo", "/new/path", {
-      federated: true,
-      env: fake.env,
-    });
+    const result = await ensureSourceRegistered(
+      "gstack-code-foo",
+      "/new/path",
+      {
+        federated: true,
+        env: fake.env,
+      },
+    );
     expect(result.changed).toBe(true);
     expect(result.state.status).toBe("match");
     expect(result.state.registered_path).toBe("/new/path");
 
     const log = readFileSync(fake.logPath, "utf-8");
     expect(log).toContain("sources remove gstack-code-foo --yes");
-    expect(log).toContain("sources add gstack-code-foo --path /new/path --federated");
+    expect(log).toContain(
+      "sources add gstack-code-foo --path /new/path --federated",
+    );
     fake.cleanup();
   });
 
@@ -177,10 +217,14 @@ describe("ensureSourceRegistered", () => {
     const fake = makeFakeGbrain({
       sources: [{ id: "gstack-code-foo", local_path: "/old/path" }],
     });
-    const result = await ensureSourceRegistered("gstack-code-foo", "/new/path", {
-      reregister_on_drift: false,
-      env: fake.env,
-    });
+    const result = await ensureSourceRegistered(
+      "gstack-code-foo",
+      "/new/path",
+      {
+        reregister_on_drift: false,
+        env: fake.env,
+      },
+    );
     expect(result.changed).toBe(false);
     expect(result.state.status).toBe("drift");
     expect(result.state.registered_path).toBe("/old/path");
@@ -206,13 +250,22 @@ describe("sourcePageCount", () => {
   });
 
   it("returns null when the source is absent", () => {
-    const fake = makeFakeGbrain({ sources: [{ id: "other", local_path: "/x", page_count: 5 }] });
+    const fake = makeFakeGbrain({
+      sources: [{ id: "other", local_path: "/x", page_count: 5 }],
+    });
     expect(sourcePageCount("missing", fake.env)).toBeNull();
     fake.cleanup();
   });
 
   it("returns null when page_count is missing from the source object", () => {
-    const fake = makeFakeGbrain({ sources: [{ id: "no-count", local_path: "/x" } as { id: string; local_path: string }] });
+    const fake = makeFakeGbrain({
+      sources: [
+        { id: "no-count", local_path: "/x" } as {
+          id: string;
+          local_path: string;
+        },
+      ],
+    });
     expect(sourcePageCount("no-count", fake.env)).toBeNull();
     fake.cleanup();
   });

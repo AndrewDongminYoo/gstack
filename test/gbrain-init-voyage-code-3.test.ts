@@ -90,7 +90,10 @@ exit 0
  * If the template changes the flag set or the env-var name, this test
  * should fail until the shell here is updated too — by design.
  */
-function runInitWithVoyageGate(env: FakeEnv, voyageKey: string | undefined): string[] {
+function runInitWithVoyageGate(
+  env: FakeEnv,
+  voyageKey: string | undefined,
+): string[] {
   const script = `
 set -u
 GBRAIN_EMBED_FLAGS=""
@@ -165,7 +168,12 @@ describe("template alignment: the .tmpl actually contains the voyage gate", () =
   // Belt-and-suspenders: if someone edits the template and drops the
   // VOYAGE_API_KEY conditional without updating the test above, this catches
   // it. The shell snippet under test must literally appear in the .tmpl.
-  const TEMPLATE_PATH = join(import.meta.dir, "..", "setup-gbrain", "SKILL.md.tmpl");
+  const TEMPLATE_PATH = join(
+    import.meta.dir,
+    "..",
+    "setup-gbrain",
+    "SKILL.md.tmpl",
+  );
   const tmpl = readFileSync(TEMPLATE_PATH, "utf-8");
 
   it("setup-gbrain template gates the embedding-model flag on VOYAGE_API_KEY", () => {

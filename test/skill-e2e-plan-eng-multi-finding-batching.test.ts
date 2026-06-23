@@ -24,26 +24,26 @@
  * Tier: periodic (~25 min, ~$5/run). Sequential by default.
  */
 
-import { describe, test } from 'bun:test';
-import * as fs from 'node:fs';
+import { describe, test } from "bun:test";
+import * as fs from "node:fs";
 import {
   runPlanSkillCounting,
   engStep0Boundary,
-} from './helpers/claude-pty-runner';
-import { FORCING_BATCHING_ENG } from './fixtures/forcing-finding-seeds';
+} from "./helpers/claude-pty-runner";
+import { FORCING_BATCHING_ENG } from "./fixtures/forcing-finding-seeds";
 
-const shouldRun = !!process.env.EVALS && process.env.EVALS_TIER === 'periodic';
+const shouldRun = !!process.env.EVALS && process.env.EVALS_TIER === "periodic";
 const describeE2E = shouldRun ? describe : describe.skip;
 
 const N = 4;
 const FLOOR = N - 1; // 3 — agent must fire at least one AUQ per non-batched finding
 
-const PLAN_PATH = '/tmp/gstack-test-plan-eng-batching.md';
+const PLAN_PATH = "/tmp/gstack-test-plan-eng-batching.md";
 
-describeE2E('/plan-eng-review multi-finding batching regression (periodic)', () => {
-  test(
-    `4-finding plan emits >= ${FLOOR} review-phase AskUserQuestions (no batching)`,
-    async () => {
+describeE2E(
+  "/plan-eng-review multi-finding batching regression (periodic)",
+  () => {
+    test(`4-finding plan emits >= ${FLOOR} review-phase AskUserQuestions (no batching)`, async () => {
       try {
         fs.rmSync(PLAN_PATH, { force: true });
       } catch {
@@ -51,18 +51,22 @@ describeE2E('/plan-eng-review multi-finding batching regression (periodic)', () 
       }
 
       const obs = await runPlanSkillCounting({
-        skillName: 'plan-eng-review',
-        slashCommand: '/plan-eng-review',
+        skillName: "plan-eng-review",
+        slashCommand: "/plan-eng-review",
         followUpPrompt: FORCING_BATCHING_ENG,
         isLastStep0AUQ: engStep0Boundary,
         reviewCountCeiling: N + 3, // hard cap above floor + tolerance
         cwd: process.cwd(),
         timeoutMs: 1_500_000, // 25 min
-        env: { QUESTION_TUNING: 'false', EXPLAIN_LEVEL: 'default' },
+        env: { QUESTION_TUNING: "false", EXPLAIN_LEVEL: "default" },
       });
 
       try {
-        if (!['plan_ready', 'completion_summary', 'ceiling_reached'].includes(obs.outcome)) {
+        if (
+          !["plan_ready", "completion_summary", "ceiling_reached"].includes(
+            obs.outcome,
+          )
+        ) {
           throw new Error(
             `multi-finding batching test FAILED: outcome=${obs.outcome}\n` +
               `step0=${obs.step0Count} review=${obs.reviewCount} elapsed=${obs.elapsedMs}ms\n` +
@@ -79,7 +83,7 @@ describeE2E('/plan-eng-review multi-finding batching regression (periodic)', () 
               obs.fingerprints
                 .filter((f) => !f.preReview)
                 .map((f) => `  - "${f.promptSnippet.slice(0, 80)}"`)
-                .join('\n') +
+                .join("\n") +
               `\n--- evidence (last 3KB) ---\n${obs.evidence}`,
           );
         }
@@ -90,7 +94,6 @@ describeE2E('/plan-eng-review multi-finding batching regression (periodic)', () 
           /* best-effort */
         }
       }
-    },
-    1_700_000,
-  );
-});
+    }, 1_700_000);
+  },
+);

@@ -13,19 +13,19 @@
  * Phase 3 fallback path).
  */
 
-import { describe, test, expect } from 'bun:test';
-import * as fs from 'fs';
-import * as path from 'path';
+import { describe, test, expect } from "bun:test";
+import * as fs from "fs";
+import * as path from "path";
 
 const evalsEnabled = !!process.env.EVALS;
 const describeEval = evalsEnabled ? describe : describe.skip;
 
-const ROOT = path.resolve(import.meta.dir, '..');
+const ROOT = path.resolve(import.meta.dir, "..");
 
-describeEval('/spec LLM-judge eval (periodic)', () => {
-  test('spec body scores >= 8/10 against 14-standard rubric on fixture request', async () => {
+describeEval("/spec LLM-judge eval (periodic)", () => {
+  test("spec body scores >= 8/10 against 14-standard rubric on fixture request", async () => {
     // Sanity: required files exist for the eval.
-    expect(fs.existsSync(path.join(ROOT, 'spec', 'SKILL.md.tmpl'))).toBe(true);
+    expect(fs.existsSync(path.join(ROOT, "spec", "SKILL.md.tmpl"))).toBe(true);
 
     // Full LLM-judge run lives in a follow-up. This file registers the
     // periodic-tier surface so the diff-based selector picks it up when

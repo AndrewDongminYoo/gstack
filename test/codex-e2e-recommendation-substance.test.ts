@@ -20,22 +20,24 @@
  *
  * Periodic tier (Codex non-determinism, ~$2-3/run).
  */
-import { describe, test, expect } from 'bun:test';
-import * as path from 'node:path';
-import { runCodexSkill } from './helpers/codex-session-runner';
-import { judgeRecommendation } from './helpers/llm-judge';
+import { describe, test, expect } from "bun:test";
+import * as path from "node:path";
+import { runCodexSkill } from "./helpers/codex-session-runner";
+import { judgeRecommendation } from "./helpers/llm-judge";
 
-const ROOT = path.resolve(import.meta.dir, '..');
+const ROOT = path.resolve(import.meta.dir, "..");
 
 const CODEX_AVAILABLE = (() => {
   try {
-    return Bun.spawnSync(['which', 'codex']).exitCode === 0;
+    return Bun.spawnSync(["which", "codex"]).exitCode === 0;
   } catch {
     return false;
   }
 })();
 const shouldRun =
-  CODEX_AVAILABLE && !!process.env.EVALS && process.env.EVALS_TIER === 'periodic';
+  CODEX_AVAILABLE &&
+  !!process.env.EVALS &&
+  process.env.EVALS_TIER === "periodic";
 const describeCodex = shouldRun ? describe : describe.skip;
 
 // A small fixture with two real, comparable problems so a good recommendation
@@ -61,43 +63,39 @@ the alternative>."
  }
 `;
 
-describeCodex('/codex recommendation substance (live, periodic)', () => {
-  test(
-    'codex emits a committed, substance>=4 synthesis recommendation',
-    async () => {
-      const result = await runCodexSkill({
-        skillDir: path.join(ROOT, 'codex'),
-        skillName: 'codex',
-        prompt: FIXTURE_DIFF,
-        timeoutMs: 300_000,
-      });
+describeCodex("/codex recommendation substance (live, periodic)", () => {
+  test("codex emits a committed, substance>=4 synthesis recommendation", async () => {
+    const result = await runCodexSkill({
+      skillDir: path.join(ROOT, "codex"),
+      skillName: "codex",
+      prompt: FIXTURE_DIFF,
+      timeoutMs: 300_000,
+    });
 
-      if (result.output.startsWith('SKIP:')) {
-        // codex binary missing — describeCodex already guards, but double-safe.
-        return;
-      }
+    if (result.output.startsWith("SKIP:")) {
+      // codex binary missing — describeCodex already guards, but double-safe.
+      return;
+    }
 
-      const score = await judgeRecommendation(result.output);
-      // eslint-disable-next-line no-console
-      console.log(
-        `[codex-rec] present=${score.present} commits=${score.commits} ` +
-          `has_because=${score.has_because} substance=${score.reason_substance}\n` +
-          `  reason: ${score.reason_text}`,
+    const score = await judgeRecommendation(result.output);
+    // eslint-disable-next-line no-console
+    console.log(
+      `[codex-rec] present=${score.present} commits=${score.commits} ` +
+        `has_because=${score.has_because} substance=${score.reason_substance}\n` +
+        `  reason: ${score.reason_text}`,
+    );
+
+    expect(score.present).toBe(true);
+    expect(score.has_because).toBe(true);
+    expect(score.commits).toBe(true);
+    // The named weak spot: substance must clear the boilerplate bar.
+    if (score.reason_substance < 4) {
+      throw new Error(
+        `codex recommendation substance ${score.reason_substance} < 4 (boilerplate/weak):\n` +
+          `  reason: ${score.reason_text}\n` +
+          `  judge: ${score.reasoning}\n` +
+          `--- codex output (last 2KB) ---\n${result.output.slice(-2000)}`,
       );
-
-      expect(score.present).toBe(true);
-      expect(score.has_because).toBe(true);
-      expect(score.commits).toBe(true);
-      // The named weak spot: substance must clear the boilerplate bar.
-      if (score.reason_substance < 4) {
-        throw new Error(
-          `codex recommendation substance ${score.reason_substance} < 4 (boilerplate/weak):\n` +
-            `  reason: ${score.reason_text}\n` +
-            `  judge: ${score.reasoning}\n` +
-            `--- codex output (last 2KB) ---\n${result.output.slice(-2000)}`,
-        );
-      }
-    },
-    360_000,
-  );
+    }
+  }, 360_000);
 });

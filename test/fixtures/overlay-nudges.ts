@@ -11,14 +11,14 @@
  * cross-harness diagnostic.
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
+import * as fs from "fs";
+import * as path from "path";
 import {
   firstTurnParallelism,
   type AgentSdkResult,
-} from '../helpers/agent-sdk-runner';
+} from "../helpers/agent-sdk-runner";
 
-const REPO_ROOT = path.resolve(__dirname, '..', '..');
+const REPO_ROOT = path.resolve(__dirname, "..", "..");
 
 // ---------------------------------------------------------------------------
 // Types
@@ -49,7 +49,7 @@ export interface OverlayFixture {
    * `lower_is_better` = overlay should decrease it (e.g. Bash count, turn count).
    * Used only for cosmetic logging in the test output; `pass` is the actual gate.
    */
-  direction?: 'higher_is_better' | 'lower_is_better';
+  direction?: "higher_is_better" | "lower_is_better";
   /** Compute the per-trial metric from the typed SDK result. */
   metric: (r: AgentSdkResult) => number;
   /** Acceptance predicate across all arms' per-trial metrics. */
@@ -74,7 +74,9 @@ export function validateFixtures(fixtures: OverlayFixture[]): void {
     ids.add(f.id);
 
     if (!Number.isInteger(f.trials) || f.trials < 3) {
-      throw new Error(`${f.id}: trials must be an integer >= 3 (got ${f.trials})`);
+      throw new Error(
+        `${f.id}: trials must be an integer >= 3 (got ${f.trials})`,
+      );
     }
     if (
       f.concurrency !== undefined &&
@@ -88,7 +90,7 @@ export function validateFixtures(fixtures: OverlayFixture[]): void {
     if (!f.model) throw new Error(`${f.id}: model must be non-empty`);
     if (!f.userPrompt) throw new Error(`${f.id}: userPrompt must be non-empty`);
 
-    if (path.isAbsolute(f.overlayPath) || f.overlayPath.includes('..')) {
+    if (path.isAbsolute(f.overlayPath) || f.overlayPath.includes("..")) {
       throw new Error(
         `${f.id}: overlayPath must be relative and must not contain '..' (got ${f.overlayPath})`,
       );
@@ -98,8 +100,8 @@ export function validateFixtures(fixtures: OverlayFixture[]): void {
       throw new Error(`${f.id}: overlay file not found at ${f.overlayPath}`);
     }
 
-    for (const fn of ['setupWorkspace', 'metric', 'pass'] as const) {
-      if (typeof f[fn] !== 'function') {
+    for (const fn of ["setupWorkspace", "metric", "pass"] as const) {
+      if (typeof f[fn] !== "function") {
         throw new Error(`${f.id}: ${fn} must be a function`);
       }
     }
@@ -125,7 +127,10 @@ function mean(xs: number[]): number {
  * 0.5 lift with every trial still emitting 1 call would be suspicious;
  * this predicate rejects it.
  */
-export function fanoutPass(arms: { overlay: number[]; off: number[] }): boolean {
+export function fanoutPass(arms: {
+  overlay: number[];
+  off: number[];
+}): boolean {
   const lift = mean(arms.overlay) - mean(arms.off);
   const floorHits = arms.overlay.filter((n) => n >= 2).length;
   return lift >= 0.5 && floorHits >= 3;
@@ -136,7 +141,10 @@ export function fanoutPass(arms: { overlay: number[]; off: number[] }): boolean 
  * metric by at least 20% vs baseline. Used for nudges like "effort-match"
  * (fewer turns) and "dedicated tools vs Bash" (fewer Bash calls).
  */
-export function lowerIsBetter20Pct(arms: { overlay: number[]; off: number[] }): boolean {
+export function lowerIsBetter20Pct(arms: {
+  overlay: number[];
+  off: number[];
+}): boolean {
   const meanOff = mean(arms.off);
   if (meanOff === 0) return mean(arms.overlay) <= meanOff;
   return mean(arms.overlay) <= meanOff * 0.8;
@@ -147,7 +155,10 @@ export function lowerIsBetter20Pct(arms: { overlay: number[]; off: number[] }): 
  * metric by at least 20% vs baseline. Used for nudges like "literal
  * interpretation" (more files touched when scope is ambiguous).
  */
-export function higherIsBetter20Pct(arms: { overlay: number[]; off: number[] }): boolean {
+export function higherIsBetter20Pct(arms: {
+  overlay: number[];
+  off: number[];
+}): boolean {
   const meanOff = mean(arms.off);
   const meanOn = mean(arms.overlay);
   if (meanOff === 0) return meanOn > 0;
@@ -163,7 +174,7 @@ export function higherIsBetter20Pct(arms: { overlay: number[]; off: number[] }):
  * Signal for "dedicated tools over Bash" nudge in claude.md.
  */
 export function bashToolCallCount(r: AgentSdkResult): number {
-  return r.toolCalls.filter((c) => c.tool === 'Bash').length;
+  return r.toolCalls.filter((c) => c.tool === "Bash").length;
 }
 
 /**
@@ -182,7 +193,11 @@ export function turnsToCompletion(r: AgentSdkResult): number {
 export function uniqueFilesEdited(r: AgentSdkResult): number {
   const touched = new Set<string>();
   for (const call of r.toolCalls) {
-    if (call.tool === 'Edit' || call.tool === 'Write' || call.tool === 'MultiEdit') {
+    if (
+      call.tool === "Edit" ||
+      call.tool === "Write" ||
+      call.tool === "MultiEdit"
+    ) {
       const input = call.input as { file_path?: string } | null;
       if (input?.file_path) touched.add(input.file_path);
     }
@@ -196,49 +211,58 @@ export function uniqueFilesEdited(r: AgentSdkResult): number {
 
 export const OVERLAY_FIXTURES: OverlayFixture[] = [
   {
-    id: 'opus-4-7-fanout-toy',
-    overlayPath: 'model-overlays/opus-4-7.md',
-    model: 'claude-opus-4-7',
+    id: "opus-4-7-fanout-toy",
+    overlayPath: "model-overlays/opus-4-7.md",
+    model: "claude-opus-4-7",
     trials: 10,
     concurrency: 3,
     setupWorkspace: (dir) => {
-      fs.writeFileSync(path.join(dir, 'alpha.txt'), 'Alpha file: used in module A.\n');
-      fs.writeFileSync(path.join(dir, 'beta.txt'), 'Beta file: used in module B.\n');
-      fs.writeFileSync(path.join(dir, 'gamma.txt'), 'Gamma file: used in module C.\n');
+      fs.writeFileSync(
+        path.join(dir, "alpha.txt"),
+        "Alpha file: used in module A.\n",
+      );
+      fs.writeFileSync(
+        path.join(dir, "beta.txt"),
+        "Beta file: used in module B.\n",
+      );
+      fs.writeFileSync(
+        path.join(dir, "gamma.txt"),
+        "Gamma file: used in module C.\n",
+      );
     },
     userPrompt:
-      'Read alpha.txt, beta.txt, and gamma.txt and summarize each in one line.',
+      "Read alpha.txt, beta.txt, and gamma.txt and summarize each in one line.",
     metric: (r) => firstTurnParallelism(r.assistantTurns[0]),
     pass: fanoutPass,
   },
   {
-    id: 'opus-4-7-fanout-realistic',
-    overlayPath: 'model-overlays/opus-4-7.md',
-    model: 'claude-opus-4-7',
+    id: "opus-4-7-fanout-realistic",
+    overlayPath: "model-overlays/opus-4-7.md",
+    model: "claude-opus-4-7",
     trials: 10,
     concurrency: 3,
     setupWorkspace: (dir) => {
       fs.writeFileSync(
-        path.join(dir, 'app.ts'),
+        path.join(dir, "app.ts"),
         "import { config } from './config';\nimport { util } from './src/util';\n\nexport function main() { return config.name + ':' + util(); }\n",
       );
       fs.writeFileSync(
-        path.join(dir, 'config.ts'),
+        path.join(dir, "config.ts"),
         "export const config = { name: 'demo', version: 1 };\n",
       );
       fs.writeFileSync(
-        path.join(dir, 'README.md'),
-        '# demo project\n\nA small demo. Entry: `app.ts`. Config: `config.ts`.\n',
+        path.join(dir, "README.md"),
+        "# demo project\n\nA small demo. Entry: `app.ts`. Config: `config.ts`.\n",
       );
-      fs.mkdirSync(path.join(dir, 'src'), { recursive: true });
+      fs.mkdirSync(path.join(dir, "src"), { recursive: true });
       fs.writeFileSync(
-        path.join(dir, 'src', 'util.ts'),
+        path.join(dir, "src", "util.ts"),
         "export function util() { return 'util-result'; }\n",
       );
     },
     userPrompt:
-      'Audit this project: read app.ts, config.ts, and README.md, and glob for ' +
-      'every .ts file under src/. Summarize what you find in 3 bullet points.',
+      "Audit this project: read app.ts, config.ts, and README.md, and glob for " +
+      "every .ts file under src/. Summarize what you find in 3 bullet points.",
     metric: (r) => firstTurnParallelism(r.assistantTurns[0]),
     pass: fanoutPass,
   },
@@ -247,22 +271,37 @@ export const OVERLAY_FIXTURES: OverlayFixture[] = [
   // claude.md / "Dedicated tools over Bash"
   // -------------------------------------------------------------------------
   {
-    id: 'claude-dedicated-tools-vs-bash',
-    overlayPath: 'model-overlays/claude.md',
-    model: 'claude-opus-4-7',
+    id: "claude-dedicated-tools-vs-bash",
+    overlayPath: "model-overlays/claude.md",
+    model: "claude-opus-4-7",
     trials: 10,
     concurrency: 3,
-    direction: 'lower_is_better',
+    direction: "lower_is_better",
     // 5 files + summary = needs more than default 5 turns. SDK throws
     // instead of returning a result when it hits the cap.
     maxTurns: 15,
     setupWorkspace: (dir) => {
-      fs.mkdirSync(path.join(dir, 'src'), { recursive: true });
-      fs.writeFileSync(path.join(dir, 'src', 'index.ts'), "export const x = 1;\n");
-      fs.writeFileSync(path.join(dir, 'src', 'util.ts'), "export function util() { return 42; }\n");
-      fs.writeFileSync(path.join(dir, 'src', 'types.ts'), "export type Foo = { a: number };\n");
-      fs.writeFileSync(path.join(dir, 'src', 'config.ts'), "export const c = { n: 'demo' };\n");
-      fs.writeFileSync(path.join(dir, 'src', 'api.ts'), "export async function fetchFoo() { return null; }\n");
+      fs.mkdirSync(path.join(dir, "src"), { recursive: true });
+      fs.writeFileSync(
+        path.join(dir, "src", "index.ts"),
+        "export const x = 1;\n",
+      );
+      fs.writeFileSync(
+        path.join(dir, "src", "util.ts"),
+        "export function util() { return 42; }\n",
+      );
+      fs.writeFileSync(
+        path.join(dir, "src", "types.ts"),
+        "export type Foo = { a: number };\n",
+      );
+      fs.writeFileSync(
+        path.join(dir, "src", "config.ts"),
+        "export const c = { n: 'demo' };\n",
+      );
+      fs.writeFileSync(
+        path.join(dir, "src", "api.ts"),
+        "export async function fetchFoo() { return null; }\n",
+      );
     },
     userPrompt:
       "List every TypeScript file under src/ and tell me what each exports. " +
@@ -278,16 +317,16 @@ export const OVERLAY_FIXTURES: OverlayFixture[] = [
   // opus-4-7.md / "Effort-match the step"
   // -------------------------------------------------------------------------
   {
-    id: 'opus-4-7-effort-match-trivial',
-    overlayPath: 'model-overlays/opus-4-7.md',
-    model: 'claude-opus-4-7',
+    id: "opus-4-7-effort-match-trivial",
+    overlayPath: "model-overlays/opus-4-7.md",
+    model: "claude-opus-4-7",
     trials: 10,
     concurrency: 3,
-    direction: 'lower_is_better',
+    direction: "lower_is_better",
     maxTurns: 8,
     setupWorkspace: (dir) => {
       fs.writeFileSync(
-        path.join(dir, 'config.json'),
+        path.join(dir, "config.json"),
         '{"name": "demo", "version": "1.0.0"}\n',
       );
     },
@@ -304,35 +343,35 @@ export const OVERLAY_FIXTURES: OverlayFixture[] = [
   // opus-4-7.md / "Literal interpretation awareness"
   // -------------------------------------------------------------------------
   {
-    id: 'opus-4-7-literal-interpretation',
-    overlayPath: 'model-overlays/opus-4-7.md',
-    model: 'claude-opus-4-7',
+    id: "opus-4-7-literal-interpretation",
+    overlayPath: "model-overlays/opus-4-7.md",
+    model: "claude-opus-4-7",
     trials: 10,
     concurrency: 3,
-    direction: 'higher_is_better',
+    direction: "higher_is_better",
     // Allow Edit and Write so the model can fix the tests.
-    allowedTools: ['Read', 'Glob', 'Grep', 'Bash', 'Edit', 'Write'],
+    allowedTools: ["Read", "Glob", "Grep", "Bash", "Edit", "Write"],
     maxTurns: 15,
     setupWorkspace: (dir) => {
       // Three failing test files. The "obvious" one is named first; the
       // other two require the model to enumerate to notice them.
       fs.writeFileSync(
-        path.join(dir, 'auth.test.ts'),
+        path.join(dir, "auth.test.ts"),
         "import { test, expect } from 'bun:test';\n" +
           "test('auth returns true', () => { expect(1).toBe(2); });\n",
       );
       fs.writeFileSync(
-        path.join(dir, 'billing.test.ts'),
+        path.join(dir, "billing.test.ts"),
         "import { test, expect } from 'bun:test';\n" +
           "test('billing computes total', () => { expect('ten').toBe('10'); });\n",
       );
       fs.writeFileSync(
-        path.join(dir, 'notifications.test.ts'),
+        path.join(dir, "notifications.test.ts"),
         "import { test, expect } from 'bun:test';\n" +
           "test('notifications fire on save', () => { expect([1,2]).toEqual([1,2,3]); });\n",
       );
       fs.writeFileSync(
-        path.join(dir, 'README.md'),
+        path.join(dir, "README.md"),
         "# demo\n\nSmall project with three failing test files.\n",
       );
     },
@@ -356,69 +395,93 @@ export const OVERLAY_FIXTURES: OverlayFixture[] = [
   // =========================================================================
 
   {
-    id: 'opus-4-7-fanout-toy-sonnet',
-    overlayPath: 'model-overlays/opus-4-7.md',
-    model: 'claude-sonnet-4-6',
+    id: "opus-4-7-fanout-toy-sonnet",
+    overlayPath: "model-overlays/opus-4-7.md",
+    model: "claude-sonnet-4-6",
     trials: 10,
     concurrency: 3,
     setupWorkspace: (dir) => {
-      fs.writeFileSync(path.join(dir, 'alpha.txt'), 'Alpha file: used in module A.\n');
-      fs.writeFileSync(path.join(dir, 'beta.txt'), 'Beta file: used in module B.\n');
-      fs.writeFileSync(path.join(dir, 'gamma.txt'), 'Gamma file: used in module C.\n');
+      fs.writeFileSync(
+        path.join(dir, "alpha.txt"),
+        "Alpha file: used in module A.\n",
+      );
+      fs.writeFileSync(
+        path.join(dir, "beta.txt"),
+        "Beta file: used in module B.\n",
+      );
+      fs.writeFileSync(
+        path.join(dir, "gamma.txt"),
+        "Gamma file: used in module C.\n",
+      );
     },
     userPrompt:
-      'Read alpha.txt, beta.txt, and gamma.txt and summarize each in one line.',
+      "Read alpha.txt, beta.txt, and gamma.txt and summarize each in one line.",
     metric: (r) => firstTurnParallelism(r.assistantTurns[0]),
     pass: fanoutPass,
   },
 
   {
-    id: 'opus-4-7-fanout-realistic-sonnet',
-    overlayPath: 'model-overlays/opus-4-7.md',
-    model: 'claude-sonnet-4-6',
+    id: "opus-4-7-fanout-realistic-sonnet",
+    overlayPath: "model-overlays/opus-4-7.md",
+    model: "claude-sonnet-4-6",
     trials: 10,
     concurrency: 3,
     setupWorkspace: (dir) => {
       fs.writeFileSync(
-        path.join(dir, 'app.ts'),
+        path.join(dir, "app.ts"),
         "import { config } from './config';\nimport { util } from './src/util';\n\nexport function main() { return config.name + ':' + util(); }\n",
       );
       fs.writeFileSync(
-        path.join(dir, 'config.ts'),
+        path.join(dir, "config.ts"),
         "export const config = { name: 'demo', version: 1 };\n",
       );
       fs.writeFileSync(
-        path.join(dir, 'README.md'),
-        '# demo project\n\nA small demo. Entry: `app.ts`. Config: `config.ts`.\n',
+        path.join(dir, "README.md"),
+        "# demo project\n\nA small demo. Entry: `app.ts`. Config: `config.ts`.\n",
       );
-      fs.mkdirSync(path.join(dir, 'src'), { recursive: true });
+      fs.mkdirSync(path.join(dir, "src"), { recursive: true });
       fs.writeFileSync(
-        path.join(dir, 'src', 'util.ts'),
+        path.join(dir, "src", "util.ts"),
         "export function util() { return 'util-result'; }\n",
       );
     },
     userPrompt:
-      'Audit this project: read app.ts, config.ts, and README.md, and glob for ' +
-      'every .ts file under src/. Summarize what you find in 3 bullet points.',
+      "Audit this project: read app.ts, config.ts, and README.md, and glob for " +
+      "every .ts file under src/. Summarize what you find in 3 bullet points.",
     metric: (r) => firstTurnParallelism(r.assistantTurns[0]),
     pass: fanoutPass,
   },
 
   {
-    id: 'claude-dedicated-tools-vs-bash-sonnet',
-    overlayPath: 'model-overlays/claude.md',
-    model: 'claude-sonnet-4-6',
+    id: "claude-dedicated-tools-vs-bash-sonnet",
+    overlayPath: "model-overlays/claude.md",
+    model: "claude-sonnet-4-6",
     trials: 10,
     concurrency: 3,
-    direction: 'lower_is_better',
+    direction: "lower_is_better",
     maxTurns: 15,
     setupWorkspace: (dir) => {
-      fs.mkdirSync(path.join(dir, 'src'), { recursive: true });
-      fs.writeFileSync(path.join(dir, 'src', 'index.ts'), "export const x = 1;\n");
-      fs.writeFileSync(path.join(dir, 'src', 'util.ts'), "export function util() { return 42; }\n");
-      fs.writeFileSync(path.join(dir, 'src', 'types.ts'), "export type Foo = { a: number };\n");
-      fs.writeFileSync(path.join(dir, 'src', 'config.ts'), "export const c = { n: 'demo' };\n");
-      fs.writeFileSync(path.join(dir, 'src', 'api.ts'), "export async function fetchFoo() { return null; }\n");
+      fs.mkdirSync(path.join(dir, "src"), { recursive: true });
+      fs.writeFileSync(
+        path.join(dir, "src", "index.ts"),
+        "export const x = 1;\n",
+      );
+      fs.writeFileSync(
+        path.join(dir, "src", "util.ts"),
+        "export function util() { return 42; }\n",
+      );
+      fs.writeFileSync(
+        path.join(dir, "src", "types.ts"),
+        "export type Foo = { a: number };\n",
+      );
+      fs.writeFileSync(
+        path.join(dir, "src", "config.ts"),
+        "export const c = { n: 'demo' };\n",
+      );
+      fs.writeFileSync(
+        path.join(dir, "src", "api.ts"),
+        "export async function fetchFoo() { return null; }\n",
+      );
     },
     userPrompt:
       "List every TypeScript file under src/ and tell me what each exports. " +
@@ -428,16 +491,16 @@ export const OVERLAY_FIXTURES: OverlayFixture[] = [
   },
 
   {
-    id: 'opus-4-7-effort-match-trivial-sonnet',
-    overlayPath: 'model-overlays/opus-4-7.md',
-    model: 'claude-sonnet-4-6',
+    id: "opus-4-7-effort-match-trivial-sonnet",
+    overlayPath: "model-overlays/opus-4-7.md",
+    model: "claude-sonnet-4-6",
     trials: 10,
     concurrency: 3,
-    direction: 'lower_is_better',
+    direction: "lower_is_better",
     maxTurns: 8,
     setupWorkspace: (dir) => {
       fs.writeFileSync(
-        path.join(dir, 'config.json'),
+        path.join(dir, "config.json"),
         '{"name": "demo", "version": "1.0.0"}\n',
       );
     },
@@ -447,32 +510,32 @@ export const OVERLAY_FIXTURES: OverlayFixture[] = [
   },
 
   {
-    id: 'opus-4-7-literal-interpretation-sonnet',
-    overlayPath: 'model-overlays/opus-4-7.md',
-    model: 'claude-sonnet-4-6',
+    id: "opus-4-7-literal-interpretation-sonnet",
+    overlayPath: "model-overlays/opus-4-7.md",
+    model: "claude-sonnet-4-6",
     trials: 10,
     concurrency: 3,
-    direction: 'higher_is_better',
-    allowedTools: ['Read', 'Glob', 'Grep', 'Bash', 'Edit', 'Write'],
+    direction: "higher_is_better",
+    allowedTools: ["Read", "Glob", "Grep", "Bash", "Edit", "Write"],
     maxTurns: 15,
     setupWorkspace: (dir) => {
       fs.writeFileSync(
-        path.join(dir, 'auth.test.ts'),
+        path.join(dir, "auth.test.ts"),
         "import { test, expect } from 'bun:test';\n" +
           "test('auth returns true', () => { expect(1).toBe(2); });\n",
       );
       fs.writeFileSync(
-        path.join(dir, 'billing.test.ts'),
+        path.join(dir, "billing.test.ts"),
         "import { test, expect } from 'bun:test';\n" +
           "test('billing computes total', () => { expect('ten').toBe('10'); });\n",
       );
       fs.writeFileSync(
-        path.join(dir, 'notifications.test.ts'),
+        path.join(dir, "notifications.test.ts"),
         "import { test, expect } from 'bun:test';\n" +
           "test('notifications fire on save', () => { expect([1,2]).toEqual([1,2,3]); });\n",
       );
       fs.writeFileSync(
-        path.join(dir, 'README.md'),
+        path.join(dir, "README.md"),
         "# demo\n\nSmall project with three failing test files.\n",
       );
     },

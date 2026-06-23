@@ -8,7 +8,13 @@
 
 import { test, expect, beforeEach, afterEach } from "bun:test";
 import { execSync } from "node:child_process";
-import { mkdtempSync, writeFileSync, readFileSync, rmSync, existsSync } from "node:fs";
+import {
+  mkdtempSync,
+  writeFileSync,
+  readFileSync,
+  rmSync,
+  existsSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -28,7 +34,9 @@ const writeFiles = (files: Record<string, string>) => {
 
 const pkgJson = (version: string | null, extra: Record<string, unknown> = {}) =>
   JSON.stringify(
-    version === null ? { name: "x", ...extra } : { name: "x", version, ...extra },
+    version === null
+      ? { name: "x", ...extra }
+      : { name: "x", version, ...extra },
     null,
     2,
   ) + "\n";
@@ -128,17 +136,26 @@ test("FRESH: VERSION == base, no package.json", () => {
 
 test("ALREADY_BUMPED: VERSION ahead, pkg synced", () => {
   writeFiles({ VERSION: "0.1.0.0\n", "package.json": pkgJson("0.1.0.0") });
-  expect(idempotency("0.0.0.0")).toEqual({ stdout: "STATE: ALREADY_BUMPED", code: 0 });
+  expect(idempotency("0.0.0.0")).toEqual({
+    stdout: "STATE: ALREADY_BUMPED",
+    code: 0,
+  });
 });
 
 test("ALREADY_BUMPED: VERSION ahead, no package.json", () => {
   writeFiles({ VERSION: "0.1.0.0\n" });
-  expect(idempotency("0.0.0.0")).toEqual({ stdout: "STATE: ALREADY_BUMPED", code: 0 });
+  expect(idempotency("0.0.0.0")).toEqual({
+    stdout: "STATE: ALREADY_BUMPED",
+    code: 0,
+  });
 });
 
 test("DRIFT_STALE_PKG: VERSION ahead, pkg stale", () => {
   writeFiles({ VERSION: "0.1.0.0\n", "package.json": pkgJson("0.0.0.0") });
-  expect(idempotency("0.0.0.0")).toEqual({ stdout: "STATE: DRIFT_STALE_PKG", code: 0 });
+  expect(idempotency("0.0.0.0")).toEqual({
+    stdout: "STATE: DRIFT_STALE_PKG",
+    code: 0,
+  });
 });
 
 test("DRIFT_UNEXPECTED: VERSION == base, pkg edited (exits non-zero)", () => {
@@ -160,7 +177,10 @@ test("idempotency: invalid JSON exits non-zero with clear error", () => {
 test("idempotency: package.json with no version field treated as <none>", () => {
   writeFiles({ VERSION: "0.1.0.0\n", "package.json": pkgJson(null) });
   // PKG_VERSION is empty → drift check skipped → ALREADY_BUMPED
-  expect(idempotency("0.0.0.0")).toEqual({ stdout: "STATE: ALREADY_BUMPED", code: 0 });
+  expect(idempotency("0.0.0.0")).toEqual({
+    stdout: "STATE: ALREADY_BUMPED",
+    code: 0,
+  });
 });
 
 // --- Bump: 3 cases ---
@@ -195,7 +215,10 @@ test("trailing CR in VERSION does not cause false DRIFT_STALE_PKG", () => {
   // write garbage \r into package.json. Now CURRENT_VERSION is stripped.
   writeFileSync(join(dir, "VERSION"), "0.1.0.0\r\n");
   writeFileSync(join(dir, "package.json"), pkgJson("0.1.0.0"));
-  expect(idempotency("0.0.0.0")).toEqual({ stdout: "STATE: ALREADY_BUMPED", code: 0 });
+  expect(idempotency("0.0.0.0")).toEqual({
+    stdout: "STATE: ALREADY_BUMPED",
+    code: 0,
+  });
 });
 
 test("DRIFT REPAIR rejects invalid VERSION semver instead of propagating", () => {

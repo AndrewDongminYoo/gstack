@@ -35,10 +35,19 @@ const GUARDED_FILES = [
 // Patterns that would bypass lib/gbrain-exec.ts. Match the literal `"gbrain"`
 // as the first argument since these helpers are the failure mode.
 const BANNED_PATTERNS: Array<{ name: string; regex: RegExp }> = [
-  { name: 'spawnSync("gbrain", ...)', regex: /spawnSync\s*\(\s*["']gbrain["']/g },
+  {
+    name: 'spawnSync("gbrain", ...)',
+    regex: /spawnSync\s*\(\s*["']gbrain["']/g,
+  },
   { name: 'spawn("gbrain", ...)', regex: /\bspawn\s*\(\s*["']gbrain["']/g },
-  { name: 'execFileSync("gbrain", ...)', regex: /execFileSync\s*\(\s*["']gbrain["']/g },
-  { name: 'execSync("...gbrain...")', regex: /execSync\s*\(\s*["'`][^"'`]*\bgbrain\b/g },
+  {
+    name: 'execFileSync("gbrain", ...)',
+    regex: /execFileSync\s*\(\s*["']gbrain["']/g,
+  },
+  {
+    name: 'execSync("...gbrain...")',
+    regex: /execSync\s*\(\s*["'`][^"'`]*\bgbrain\b/g,
+  },
 ];
 
 describe("gbrain-exec invariant", () => {
@@ -66,9 +75,9 @@ describe("gbrain-exec invariant", () => {
             }
           }
           throw new Error(
-            `Found ${matches.length} direct gbrain invocation(s) in ${relpath} matching \`${name}\`:\n${hits.join("\n")}\n\n`
-            + `Route every gbrain spawn through \`spawnGbrain\`/\`execGbrainJson\`/\`execGbrainText\` `
-            + `in lib/gbrain-exec.ts so DATABASE_URL is seeded from gbrain's config.`,
+            `Found ${matches.length} direct gbrain invocation(s) in ${relpath} matching \`${name}\`:\n${hits.join("\n")}\n\n` +
+              `Route every gbrain spawn through \`spawnGbrain\`/\`execGbrainJson\`/\`execGbrainText\` ` +
+              `in lib/gbrain-exec.ts so DATABASE_URL is seeded from gbrain's config.`,
           );
         }
       }

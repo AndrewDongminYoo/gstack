@@ -24,18 +24,18 @@
  * is free — no LLM cost.
  */
 
-import { describe, test } from 'bun:test';
-import { spawnSync } from 'child_process';
-import * as fs from 'fs';
-import * as path from 'path';
+import { describe, test } from "bun:test";
+import { spawnSync } from "child_process";
+import * as fs from "fs";
+import * as path from "path";
 import {
   getProjectEvalDir,
   findPreviousRun,
   compareEvalResults,
   assertNoBudgetRegression,
   type EvalResult,
-} from './helpers/eval-store';
-import { logBudgetOverride } from './helpers/budget-override';
+} from "./helpers/eval-store";
+import { logBudgetOverride } from "./helpers/budget-override";
 
 /**
  * v1.45.0.0 T5 — hard eval cost cap.
@@ -56,19 +56,24 @@ import { logBudgetOverride } from './helpers/budget-override';
  * historical worst-case eval run.
  */
 const DEFAULT_HARD_CAP_USD = Number(process.env.EVALS_BUDGET_HARD_CAP) || 300;
-const TIER_CAPS: Record<'e2e' | 'llm-judge', number> = {
-  e2e: Number(process.env.EVALS_BUDGET_HARD_CAP_GATE) || Math.min(200, DEFAULT_HARD_CAP_USD),
-  'llm-judge': Number(process.env.EVALS_BUDGET_HARD_CAP_PERIODIC) || Math.max(500, DEFAULT_HARD_CAP_USD),
+const TIER_CAPS: Record<"e2e" | "llm-judge", number> = {
+  e2e:
+    Number(process.env.EVALS_BUDGET_HARD_CAP_GATE) ||
+    Math.min(200, DEFAULT_HARD_CAP_USD),
+  "llm-judge":
+    Number(process.env.EVALS_BUDGET_HARD_CAP_PERIODIC) ||
+    Math.max(500, DEFAULT_HARD_CAP_USD),
 };
 
 function currentGitBranch(): string {
   try {
-    const result = spawnSync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], {
-      stdio: 'pipe', timeout: 3000,
+    const result = spawnSync("git", ["rev-parse", "--abbrev-ref", "HEAD"], {
+      stdio: "pipe",
+      timeout: 3000,
     });
-    return result.stdout?.toString().trim() || 'unknown';
+    return result.stdout?.toString().trim() || "unknown";
   } catch {
-    return 'unknown';
+    return "unknown";
   }
 }
 
@@ -78,7 +83,10 @@ interface LatestRun {
 }
 
 /** Find the most recent finalized (non-_partial) eval file for a tier. */
-function findLatestRun(evalDir: string, tier: 'e2e' | 'llm-judge'): LatestRun | null {
+function findLatestRun(
+  evalDir: string,
+  tier: "e2e" | "llm-judge",
+): LatestRun | null {
   let entries: string[];
   try {
     entries = fs.readdirSync(evalDir);
@@ -87,30 +95,34 @@ function findLatestRun(evalDir: string, tier: 'e2e' | 'llm-judge'): LatestRun | 
   }
   const candidates: Array<{ filepath: string; timestamp: string }> = [];
   for (const f of entries) {
-    if (!f.endsWith('.json')) continue;
-    if (f.startsWith('_partial')) continue;
+    if (!f.endsWith(".json")) continue;
+    if (f.startsWith("_partial")) continue;
     const fullPath = path.join(evalDir, f);
     try {
-      const data = JSON.parse(fs.readFileSync(fullPath, 'utf-8')) as EvalResult;
+      const data = JSON.parse(fs.readFileSync(fullPath, "utf-8")) as EvalResult;
       if (data.tier !== tier) continue;
-      candidates.push({ filepath: fullPath, timestamp: data.timestamp ?? '' });
-    } catch { /* ignore corrupt */ }
+      candidates.push({ filepath: fullPath, timestamp: data.timestamp ?? "" });
+    } catch {
+      /* ignore corrupt */
+    }
   }
   if (candidates.length === 0) return null;
   candidates.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
   const top = candidates[0]!;
   return {
     filepath: top.filepath,
-    result: JSON.parse(fs.readFileSync(top.filepath, 'utf-8')) as EvalResult,
+    result: JSON.parse(fs.readFileSync(top.filepath, "utf-8")) as EvalResult,
   };
 }
 
-function checkTier(tier: 'e2e' | 'llm-judge'): void {
+function checkTier(tier: "e2e" | "llm-judge"): void {
   const evalDir = getProjectEvalDir();
   const latest = findLatestRun(evalDir, tier);
   if (!latest) {
     // eslint-disable-next-line no-console
-    console.log(`[budget-regression:${tier}] no current run in ${evalDir} — skipping`);
+    console.log(
+      `[budget-regression:${tier}] no current run in ${evalDir} — skipping`,
+    );
     return;
   }
   // Branch alignment: only assert when the latest eval was actually
@@ -122,7 +134,7 @@ function checkTier(tier: 'e2e' | 'llm-judge'): void {
     // eslint-disable-next-line no-console
     console.log(
       `[budget-regression:${tier}] latest eval is from "${latest.result.branch}" ` +
-      `but current branch is "${myBranch}" — skipping (run evals on this branch first)`,
+        `but current branch is "${myBranch}" — skipping (run evals on this branch first)`,
     );
     return;
   }
@@ -130,15 +142,19 @@ function checkTier(tier: 'e2e' | 'llm-judge'): void {
   const priorPath = findPreviousRun(evalDir, tier, branch, latest.filepath);
   if (!priorPath) {
     // eslint-disable-next-line no-console
-    console.log(`[budget-regression:${tier}] no prior run found — first-run grace`);
+    console.log(
+      `[budget-regression:${tier}] no prior run found — first-run grace`,
+    );
     return;
   }
   let prior: EvalResult;
   try {
-    prior = JSON.parse(fs.readFileSync(priorPath, 'utf-8')) as EvalResult;
+    prior = JSON.parse(fs.readFileSync(priorPath, "utf-8")) as EvalResult;
   } catch (err) {
     // eslint-disable-next-line no-console
-    console.warn(`[budget-regression:${tier}] could not read prior ${priorPath}: ${(err as Error).message}`);
+    console.warn(
+      `[budget-regression:${tier}] could not read prior ${priorPath}: ${(err as Error).message}`,
+    );
     return;
   }
   // Branch-scoped: only compare same-branch history. Cross-branch
@@ -151,19 +167,24 @@ function checkTier(tier: 'e2e' | 'llm-judge'): void {
     );
     return;
   }
-  const comparison = compareEvalResults(prior, latest.result, priorPath, latest.filepath);
+  const comparison = compareEvalResults(
+    prior,
+    latest.result,
+    priorPath,
+    latest.filepath,
+  );
   // Throws on regression.
   assertNoBudgetRegression(comparison);
   // eslint-disable-next-line no-console
   console.log(
     `[budget-regression:${tier}] OK — ${comparison.deltas.length} test(s) compared, ` +
-    `${comparison.tool_count_before}→${comparison.tool_count_after} tools, ` +
-    `cost Δ $${comparison.total_cost_delta.toFixed(2)}`,
+      `${comparison.tool_count_before}→${comparison.tool_count_after} tools, ` +
+      `cost Δ $${comparison.total_cost_delta.toFixed(2)}`,
   );
 }
 
 /** Enforce a hard dollar cap on per-run eval cost. */
-function checkHardCap(tier: 'e2e' | 'llm-judge'): void {
+function checkHardCap(tier: "e2e" | "llm-judge"): void {
   const evalDir = getProjectEvalDir();
   const latest = findLatestRun(evalDir, tier);
   if (!latest) return;
@@ -171,7 +192,9 @@ function checkHardCap(tier: 'e2e' | 'llm-judge'): void {
   const cost = latest.result.total_cost_usd;
   if (cost <= cap) {
     // eslint-disable-next-line no-console
-    console.log(`[budget-hard-cap:${tier}] OK — $${cost.toFixed(2)} ≤ $${cap.toFixed(2)} cap`);
+    console.log(
+      `[budget-hard-cap:${tier}] OK — $${cost.toFixed(2)} ≤ $${cap.toFixed(2)} cap`,
+    );
     return;
   }
   const overrideReason = process.env.EVALS_BUDGET_OVERRIDE_REASON?.trim();
@@ -179,7 +202,12 @@ function checkHardCap(tier: 'e2e' | 'llm-judge'): void {
     logBudgetOverride({
       scope: `evals-cost-cap-${tier}`,
       reason: overrideReason,
-      details: { tier, cap, observed_cost_usd: cost, run_file: latest.filepath },
+      details: {
+        tier,
+        cap,
+        observed_cost_usd: cost,
+        run_file: latest.filepath,
+      },
     });
     // eslint-disable-next-line no-console
     console.warn(
@@ -189,28 +217,28 @@ function checkHardCap(tier: 'e2e' | 'llm-judge'): void {
   }
   throw new Error(
     `Eval cost exceeded hard cap for tier ${tier}: ` +
-    `$${cost.toFixed(2)} > $${cap.toFixed(2)}. ` +
-    `Set EVALS_BUDGET_OVERRIDE_REASON="why this is OK" to allow + audit. ` +
-    `Per-tier override: EVALS_BUDGET_HARD_CAP_${tier === 'e2e' ? 'GATE' : 'PERIODIC'}=<dollars>. ` +
-    `Run: ${latest.filepath}`,
+      `$${cost.toFixed(2)} > $${cap.toFixed(2)}. ` +
+      `Set EVALS_BUDGET_OVERRIDE_REASON="why this is OK" to allow + audit. ` +
+      `Per-tier override: EVALS_BUDGET_HARD_CAP_${tier === "e2e" ? "GATE" : "PERIODIC"}=<dollars>. ` +
+      `Run: ${latest.filepath}`,
   );
 }
 
-describe('tool budget regression (gate, free)', () => {
-  test('no e2e test exceeds 2× prior tool calls or turns', () => {
-    checkTier('e2e');
+describe("tool budget regression (gate, free)", () => {
+  test("no e2e test exceeds 2× prior tool calls or turns", () => {
+    checkTier("e2e");
   });
 
-  test('no llm-judge test exceeds 2× prior tool calls or turns', () => {
-    checkTier('llm-judge');
+  test("no llm-judge test exceeds 2× prior tool calls or turns", () => {
+    checkTier("llm-judge");
   });
 
   // T5: hard dollar cap on per-run cost (different from regression ratio above)
-  test('e2e run cost ≤ EVALS_BUDGET_HARD_CAP_GATE', () => {
-    checkHardCap('e2e');
+  test("e2e run cost ≤ EVALS_BUDGET_HARD_CAP_GATE", () => {
+    checkHardCap("e2e");
   });
 
-  test('llm-judge run cost ≤ EVALS_BUDGET_HARD_CAP_PERIODIC', () => {
-    checkHardCap('llm-judge');
+  test("llm-judge run cost ≤ EVALS_BUDGET_HARD_CAP_PERIODIC", () => {
+    checkHardCap("llm-judge");
   });
 });

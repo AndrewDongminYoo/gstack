@@ -32,77 +32,77 @@
  * Sequential by default.
  */
 
-import { describe, test } from 'bun:test';
-import * as fs from 'node:fs';
+import { describe, test } from "bun:test";
+import * as fs from "node:fs";
 import {
   runPlanSkillCounting,
   ceoStep0Boundary,
-} from './helpers/claude-pty-runner';
-import { FORCING_SPLIT_OVERFLOW_CEO } from './fixtures/forcing-finding-seeds';
+} from "./helpers/claude-pty-runner";
+import { FORCING_SPLIT_OVERFLOW_CEO } from "./fixtures/forcing-finding-seeds";
 
-const shouldRun = !!process.env.EVALS && process.env.EVALS_TIER === 'periodic';
+const shouldRun = !!process.env.EVALS && process.env.EVALS_TIER === "periodic";
 const describeE2E = shouldRun ? describe : describe.skip;
 
 const N = 5;
 const FLOOR = N - 1; // 4 — must fire at least one AUQ per non-dropped option
 
-const PLAN_PATH = '/tmp/gstack-test-plan-ceo-split-overflow.md';
+const PLAN_PATH = "/tmp/gstack-test-plan-ceo-split-overflow.md";
 
-describeE2E('/plan-ceo-review split-overflow regression (periodic)', () => {
-  test(
-    `5-option scope decision emits >= ${FLOOR} review-phase AskUserQuestions (no dropping)`,
-    async () => {
+describeE2E("/plan-ceo-review split-overflow regression (periodic)", () => {
+  test(`5-option scope decision emits >= ${FLOOR} review-phase AskUserQuestions (no dropping)`, async () => {
+    try {
+      fs.rmSync(PLAN_PATH, { force: true });
+    } catch {
+      /* best-effort */
+    }
+
+    const obs = await runPlanSkillCounting({
+      skillName: "plan-ceo-review",
+      slashCommand: "/plan-ceo-review",
+      followUpPrompt: FORCING_SPLIT_OVERFLOW_CEO,
+      isLastStep0AUQ: ceoStep0Boundary,
+      reviewCountCeiling: N + 3, // hard cap above floor + tolerance
+      cwd: process.cwd(),
+      timeoutMs: 1_500_000, // 25 min
+      env: { QUESTION_TUNING: "false", EXPLAIN_LEVEL: "default" },
+    });
+
+    try {
+      if (
+        !["plan_ready", "completion_summary", "ceiling_reached"].includes(
+          obs.outcome,
+        )
+      ) {
+        throw new Error(
+          `split-overflow test FAILED: outcome=${obs.outcome}\n` +
+            `step0=${obs.step0Count} review=${obs.reviewCount} elapsed=${obs.elapsedMs}ms\n` +
+            `--- evidence (last 3KB) ---\n${obs.evidence}`,
+        );
+      }
+      if (obs.reviewCount < FLOOR) {
+        throw new Error(
+          `SPLIT-OVERFLOW REGRESSION: reviewCount=${obs.reviewCount} < FLOOR=${FLOOR}.\n` +
+            `Agent surfaced fewer review-phase AUQs than independent scope options.\n` +
+            `This is the original drop-to-fit-4-options failure mode:\n` +
+            `  expected: ${N} per-option calls (or compliant ≤4-group batching with follow-up)\n` +
+            `  got:      ${obs.reviewCount} call(s)\n` +
+            `Most likely the agent dropped one option to fit Conductor's 4-option\n` +
+            `cap, the exact bug scripts/resolvers/preamble/generate-ask-user-format.ts\n` +
+            `"Handling 5+ options — split, never drop" exists to prevent.\n` +
+            `Review-phase fingerprints:\n` +
+            obs.fingerprints
+              .filter((f) => !f.preReview)
+              .map((f) => `  - "${f.promptSnippet.slice(0, 80)}"`)
+              .join("\n") +
+            `\n--- evidence (last 3KB) ---\n${obs.evidence}`,
+        );
+      }
+    } finally {
       try {
         fs.rmSync(PLAN_PATH, { force: true });
       } catch {
         /* best-effort */
       }
-
-      const obs = await runPlanSkillCounting({
-        skillName: 'plan-ceo-review',
-        slashCommand: '/plan-ceo-review',
-        followUpPrompt: FORCING_SPLIT_OVERFLOW_CEO,
-        isLastStep0AUQ: ceoStep0Boundary,
-        reviewCountCeiling: N + 3, // hard cap above floor + tolerance
-        cwd: process.cwd(),
-        timeoutMs: 1_500_000, // 25 min
-        env: { QUESTION_TUNING: 'false', EXPLAIN_LEVEL: 'default' },
-      });
-
-      try {
-        if (!['plan_ready', 'completion_summary', 'ceiling_reached'].includes(obs.outcome)) {
-          throw new Error(
-            `split-overflow test FAILED: outcome=${obs.outcome}\n` +
-              `step0=${obs.step0Count} review=${obs.reviewCount} elapsed=${obs.elapsedMs}ms\n` +
-              `--- evidence (last 3KB) ---\n${obs.evidence}`,
-          );
-        }
-        if (obs.reviewCount < FLOOR) {
-          throw new Error(
-            `SPLIT-OVERFLOW REGRESSION: reviewCount=${obs.reviewCount} < FLOOR=${FLOOR}.\n` +
-              `Agent surfaced fewer review-phase AUQs than independent scope options.\n` +
-              `This is the original drop-to-fit-4-options failure mode:\n` +
-              `  expected: ${N} per-option calls (or compliant ≤4-group batching with follow-up)\n` +
-              `  got:      ${obs.reviewCount} call(s)\n` +
-              `Most likely the agent dropped one option to fit Conductor's 4-option\n` +
-              `cap, the exact bug scripts/resolvers/preamble/generate-ask-user-format.ts\n` +
-              `"Handling 5+ options — split, never drop" exists to prevent.\n` +
-              `Review-phase fingerprints:\n` +
-              obs.fingerprints
-                .filter((f) => !f.preReview)
-                .map((f) => `  - "${f.promptSnippet.slice(0, 80)}"`)
-                .join('\n') +
-              `\n--- evidence (last 3KB) ---\n${obs.evidence}`,
-          );
-        }
-      } finally {
-        try {
-          fs.rmSync(PLAN_PATH, { force: true });
-        } catch {
-          /* best-effort */
-        }
-      }
-    },
-    1_700_000,
-  );
+    }
+  }, 1_700_000);
 });

@@ -30,7 +30,10 @@ function ids(text: string, vis: RepoVisibility = "private"): string[] {
 describe("HIGH credential patterns", () => {
   const cases: Array<[string, string]> = [
     ["aws.access_key", "key = AKIA1234567890ABCDEF"],
-    ["aws.secret_key", "aws_secret_access_key = AbCdEfGhIjKlMnOpQrStUvWxYz0123456789AbCd"],
+    [
+      "aws.secret_key",
+      "aws_secret_access_key = AbCdEfGhIjKlMnOpQrStUvWxYz0123456789AbCd",
+    ],
     ["github.pat", "token ghp_" + "1234567890abcdefghijklmnopqrstuvwxyz"],
     ["github.oauth", "gho_" + "1234567890abcdefghijklmnopqrstuvwxyz"],
     ["github.server", "ghs_1234567890abcdefghijklmnopqrstuvwxyz"],
@@ -40,8 +43,14 @@ describe("HIGH credential patterns", () => {
     ["sendgrid.key", "SG." + "a".repeat(22) + "." + "b".repeat(43)],
     ["stripe.secret", "sk_live_" + "a".repeat(30)],
     ["slack.token", "xox" + "b-1234567890-abcdefghijklmnop"],
-    ["slack.webhook", "https://hooks.slack.com/services/T00000000/B11111111/" + "a".repeat(24)],
-    ["discord.webhook", "https://discord.com/api/webhooks/123456789012345678/" + "a".repeat(60)],
+    [
+      "slack.webhook",
+      "https://hooks.slack.com/services/T00000000/B11111111/" + "a".repeat(24),
+    ],
+    [
+      "discord.webhook",
+      "https://discord.com/api/webhooks/123456789012345678/" + "a".repeat(60),
+    ],
     ["pem.private_key", "-----BEGIN RSA PRIVATE KEY-----"],
     // #1946 coverage-gap additions
     ["gitlab.token", "remote: glpat-" + "Ab12Cd34Ef56Gh78Ij90"],
@@ -100,8 +109,12 @@ describe("HIGH credential patterns", () => {
   });
 
   test("db.url_with_password flags real password, skips placeholder/env-var", () => {
-    expect(ids("postgres://user:s3cretP@ss@db.example.com/app")).toContain("db.url_with_password");
-    expect(ids("postgres://user:${DB_PASSWORD}@host/app")).not.toContain("db.url_with_password");
+    expect(ids("postgres://user:s3cretP@ss@db.example.com/app")).toContain(
+      "db.url_with_password",
+    );
+    expect(ids("postgres://user:${DB_PASSWORD}@host/app")).not.toContain(
+      "db.url_with_password",
+    );
   });
 
   test("all HIGH patterns block (exit 3)", () => {
@@ -112,24 +125,28 @@ describe("HIGH credential patterns", () => {
 
 describe("MEDIUM demoted credential-shaped patterns (TENSION-1)", () => {
   test("stripe.publishable is MEDIUM not HIGH", () => {
-    const f = scan("pk_live_" + "a".repeat(30), { repoVisibility: "private" }).findings.find(
-      (x) => x.id === "stripe.publishable",
-    );
+    const f = scan("pk_live_" + "a".repeat(30), {
+      repoVisibility: "private",
+    }).findings.find((x) => x.id === "stripe.publishable");
     expect(f?.tier).toBe("MEDIUM");
   });
   test("google.api_key is MEDIUM", () => {
-    const f = scan("AIza" + "a".repeat(35), { repoVisibility: "private" }).findings.find(
-      (x) => x.id === "google.api_key",
-    );
+    const f = scan("AIza" + "a".repeat(35), {
+      repoVisibility: "private",
+    }).findings.find((x) => x.id === "google.api_key");
     expect(f?.tier).toBe("MEDIUM");
   });
   test("jwt is MEDIUM", () => {
     const jwt = "eyJhbGciOiJ.eyJzdWIiOiI." + "x".repeat(20);
-    const f = scan(jwt, { repoVisibility: "private" }).findings.find((x) => x.id === "jwt");
+    const f = scan(jwt, { repoVisibility: "private" }).findings.find(
+      (x) => x.id === "jwt",
+    );
     expect(f?.tier).toBe("MEDIUM");
   });
   test("env.kv fires on high-entropy, skips placeholder", () => {
-    expect(ids("API_TOKEN=8Fk2pQ9vXz4wL7mN3rT6yB1cD5eG0hJ")).toContain("env.kv");
+    expect(ids("API_TOKEN=8Fk2pQ9vXz4wL7mN3rT6yB1cD5eG0hJ")).toContain(
+      "env.kv",
+    );
     expect(ids("API_KEY=changeme")).not.toContain("env.kv");
     expect(ids("API_KEY=${MY_VAR}")).not.toContain("env.kv");
   });
@@ -138,7 +155,8 @@ describe("MEDIUM demoted credential-shaped patterns (TENSION-1)", () => {
   // are full of "Authorization: Bearer <token>". MEDIUM + header proximity +
   // the env.kv entropy recipe keep it calibrated.
   test("auth.bearer fires on a high-entropy token in header context", () => {
-    const text = "curl -H 'Authorization: Bearer 8Fk2pQ9vXz4wL7mN3rT6yB1cD5eG0hJq'";
+    const text =
+      "curl -H 'Authorization: Bearer 8Fk2pQ9vXz4wL7mN3rT6yB1cD5eG0hJq'";
     const f = scan(text, { repoVisibility: "private" }).findings.find(
       (x) => x.id === "auth.bearer",
     );
@@ -146,13 +164,17 @@ describe("MEDIUM demoted credential-shaped patterns (TENSION-1)", () => {
     expect(f?.tier).toBe("MEDIUM");
   });
   test("auth.bearer skips placeholders and env interpolations", () => {
-    expect(ids("Authorization: Bearer YOUR_TOKEN_HERE_PLACEHOLDER")).not.toContain("auth.bearer");
-    expect(ids("Authorization: Bearer ${ACCESS_TOKEN_FROM_ENV}")).not.toContain("auth.bearer");
-  });
-  test("auth.bearer requires header context (bare 'Bearer x' prose doesn't fire)", () => {
-    expect(ids("the Bearer 8Fk2pQ9vXz4wL7mN3rT6yB1cD5eG0hJq walked in")).not.toContain(
+    expect(
+      ids("Authorization: Bearer YOUR_TOKEN_HERE_PLACEHOLDER"),
+    ).not.toContain("auth.bearer");
+    expect(ids("Authorization: Bearer ${ACCESS_TOKEN_FROM_ENV}")).not.toContain(
       "auth.bearer",
     );
+  });
+  test("auth.bearer requires header context (bare 'Bearer x' prose doesn't fire)", () => {
+    expect(
+      ids("the Bearer 8Fk2pQ9vXz4wL7mN3rT6yB1cD5eG0hJq walked in"),
+    ).not.toContain("auth.bearer");
   });
 });
 
@@ -163,15 +185,17 @@ describe("#1946 pattern negatives (placeholders never fire)", () => {
     expect(ids("npm_install")).not.toContain("npm.token");
     expect(ids("dop_v1_short")).not.toContain("digitalocean.token");
     // pem header WITHOUT the GCP JSON shape stays pem.private_key only.
-    expect(ids("-----BEGIN PRIVATE KEY-----")).not.toContain("gcp.service_account");
+    expect(ids("-----BEGIN PRIVATE KEY-----")).not.toContain(
+      "gcp.service_account",
+    );
   });
 });
 
 describe("PII patterns", () => {
   test("email flags + is autoRedactable", () => {
-    const f = scan("ping alice@corp.io please", { repoVisibility: "private" }).findings.find(
-      (x) => x.id === "pii.email",
-    );
+    const f = scan("ping alice@corp.io please", {
+      repoVisibility: "private",
+    }).findings.find((x) => x.id === "pii.email");
     expect(f).toBeTruthy();
     expect(f?.autoRedactable).toBe(true);
   });
@@ -179,10 +203,16 @@ describe("PII patterns", () => {
     expect(ids("see user@example.com")).not.toContain("pii.email");
     expect(ids("from noreply@github.com")).not.toContain("pii.email");
     expect(
-      scan("me@garry.dev", { repoVisibility: "private", selfEmail: "me@garry.dev" }).findings,
+      scan("me@garry.dev", {
+        repoVisibility: "private",
+        selfEmail: "me@garry.dev",
+      }).findings,
     ).toHaveLength(0);
     expect(
-      scan("bob@acme.co", { repoVisibility: "private", repoPublicEmails: ["bob@acme.co"] }).findings,
+      scan("bob@acme.co", {
+        repoVisibility: "private",
+        repoPublicEmails: ["bob@acme.co"],
+      }).findings,
     ).toHaveLength(0);
   });
   test("phone E.164", () => {
@@ -208,30 +238,34 @@ describe("internal + legal patterns", () => {
     expect(ids("db1.corp internal host")).toContain("internal.hostname");
   });
   test("localhost url with path", () => {
-    expect(ids("hit http://localhost:8080/admin/secrets")).toContain("internal.url_private");
+    expect(ids("hit http://localhost:8080/admin/secrets")).toContain(
+      "internal.url_private",
+    );
   });
   test("NDA marker", () => {
     expect(ids("This is CONFIDENTIAL material")).toContain("legal.nda_marker");
   });
   test("named criticism needs a capitalized full name nearby", () => {
-    expect(ids("John Smith is incompetent at this")).toContain("legal.named_criticism");
-    expect(ids("the build is incompet019ently configured".replace("019", ""))).not.toContain(
+    expect(ids("John Smith is incompetent at this")).toContain(
       "legal.named_criticism",
     );
+    expect(
+      ids("the build is incompet019ently configured".replace("019", "")),
+    ).not.toContain("legal.named_criticism");
   });
 });
 
 describe("LOW patterns surface only", () => {
   test("user path is LOW", () => {
-    const f = scan("/Users/bob/secret/config", { repoVisibility: "private" }).findings.find(
-      (x) => x.id === "internal.user_path",
-    );
+    const f = scan("/Users/bob/secret/config", {
+      repoVisibility: "private",
+    }).findings.find((x) => x.id === "internal.user_path");
     expect(f?.tier).toBe("LOW");
   });
   test("TODO marker is LOW", () => {
-    const f = scan("TODO(alice) fix later", { repoVisibility: "private" }).findings.find(
-      (x) => x.id === "hygiene.todo",
-    );
+    const f = scan("TODO(alice) fix later", {
+      repoVisibility: "private",
+    }).findings.find((x) => x.id === "hygiene.todo");
     expect(f?.tier).toBe("LOW");
   });
 });
@@ -245,7 +279,9 @@ describe("placeholder suppression (per-span)", () => {
   });
   test("a real secret on a line that ALSO contains EXAMPLE still flags", () => {
     // line-based suppression would wrongly skip this; per-span must catch it.
-    expect(ids("# EXAMPLE usage\nkey AKIA1234567890ABCDEF")).toContain("aws.access_key");
+    expect(ids("# EXAMPLE usage\nkey AKIA1234567890ABCDEF")).toContain(
+      "aws.access_key",
+    );
   });
 });
 
@@ -259,7 +295,8 @@ describe("no visibility-based tier promotion (TENSION-2-followup)", () => {
     expect(pub.repoVisibility).toBe("public"); // recorded for sterner wording
   });
   test("demoted credential patterns stay MEDIUM on public", () => {
-    const pub = scan("pk_live_" + "a".repeat(30), { repoVisibility: "public" }).findings[0];
+    const pub = scan("pk_live_" + "a".repeat(30), { repoVisibility: "public" })
+      .findings[0];
     expect(pub.severity).toBe("MEDIUM");
   });
   test("unknown visibility treated as public for wording, still no promotion", () => {
@@ -270,7 +307,8 @@ describe("no visibility-based tier promotion (TENSION-2-followup)", () => {
 
 describe("tool-attributed fence WARN-degrade (TENSION-3)", () => {
   test("placeholder-shaped credential in tool fence → WARN", () => {
-    const text = "```codex-review\nfound your_aws_key AKIAIOSFODNN7EXAMPLE in code\n```";
+    const text =
+      "```codex-review\nfound your_aws_key AKIAIOSFODNN7EXAMPLE in code\n```";
     const r = scan(text, { repoVisibility: "private" });
     // the EXAMPLE key is suppressed as placeholder; verify a non-credential note doesn't block
     expect(r.counts.HIGH).toBe(0);
@@ -359,8 +397,12 @@ describe("masking + purity", () => {
     expect(maskPreview("abc")).toBe("abc");
   });
   test("scan is pure — same input twice yields identical findings", () => {
-    const a = scan("AKIA1234567890ABCDEF x@corp.io", { repoVisibility: "public" });
-    const b = scan("AKIA1234567890ABCDEF x@corp.io", { repoVisibility: "public" });
+    const a = scan("AKIA1234567890ABCDEF x@corp.io", {
+      repoVisibility: "public",
+    });
+    const b = scan("AKIA1234567890ABCDEF x@corp.io", {
+      repoVisibility: "public",
+    });
     expect(a).toEqual(b);
   });
 });
@@ -373,7 +415,9 @@ describe("redactFindingSpans — machine-egress masking (#1947)", () => {
 
   test("a single finding's span becomes <REDACTED-{id}>, context survives", () => {
     const token = "ghp_" + "1234567890abcdefghijklmnopqrstuvwxyz";
-    const out = redactFindingSpans(`auth ${token} rejected`, { repoVisibility: "private" });
+    const out = redactFindingSpans(`auth ${token} rejected`, {
+      repoVisibility: "private",
+    });
     expect(out).toBe("auth <REDACTED-github.pat> rejected");
   });
 
@@ -383,7 +427,9 @@ describe("redactFindingSpans — machine-egress masking (#1947)", () => {
     const out = redactFindingSpans(`first ${aws} then ${pat} end`, {
       repoVisibility: "private",
     });
-    expect(out).toBe("first <REDACTED-aws.access_key> then <REDACTED-github.pat> end");
+    expect(out).toBe(
+      "first <REDACTED-aws.access_key> then <REDACTED-github.pat> end",
+    );
   });
 
   test("fails closed (null) when a span cannot be relocated — never raw passthrough", () => {
@@ -392,7 +438,9 @@ describe("redactFindingSpans — machine-egress masking (#1947)", () => {
     // null → caller drops the whole payload. The one thing that must never
     // happen is the secret surviving in the output.
     const secret = "8Fk2pQ9vXz4wL7mN3rT6yB1cD5eG0hJq";
-    const out = redactFindingSpans(`API_KEY=${secret}`, { repoVisibility: "private" });
+    const out = redactFindingSpans(`API_KEY=${secret}`, {
+      repoVisibility: "private",
+    });
     if (out !== null) {
       // If locateSpan ever learns to find context-prefixed spans, masking
       // must actually mask.
@@ -404,10 +452,15 @@ describe("redactFindingSpans — machine-egress masking (#1947)", () => {
 
   test("multiline input redacts a finding past the first line (locateSpan line/col path)", () => {
     const token = "ghp_" + "1234567890abcdefghijklmnopqrstuvwxyz";
-    const out = redactFindingSpans(`line one\nline two has ${token}\nline three`, {
-      repoVisibility: "private",
-    });
-    expect(out).toBe("line one\nline two has <REDACTED-github.pat>\nline three");
+    const out = redactFindingSpans(
+      `line one\nline two has ${token}\nline three`,
+      {
+        repoVisibility: "private",
+      },
+    );
+    expect(out).toBe(
+      "line one\nline two has <REDACTED-github.pat>\nline three",
+    );
   });
 
   // Pre-landing review CRITICAL: pem.private_key and gcp.service_account
@@ -430,8 +483,11 @@ describe("redactFindingSpans — machine-egress masking (#1947)", () => {
   // JWT) must coalesce — independent splices apply stale offsets and can
   // leave trailing secret bytes or mangled markers.
   test("overlapping spans (Bearer JWT fires auth.bearer + jwt) never leak and produce clean markers", () => {
-    const jwt = "eyJ" + "a".repeat(20) + ".eyJ" + "b".repeat(20) + "." + "c".repeat(20);
-    const out = redactFindingSpans(`Authorization: Bearer ${jwt}`, { repoVisibility: "private" });
+    const jwt =
+      "eyJ" + "a".repeat(20) + ".eyJ" + "b".repeat(20) + "." + "c".repeat(20);
+    const out = redactFindingSpans(`Authorization: Bearer ${jwt}`, {
+      repoVisibility: "private",
+    });
     expect(out).not.toBeNull();
     expect(out!).not.toContain("eyJ");
     expect(out!).not.toContain("aaaa");

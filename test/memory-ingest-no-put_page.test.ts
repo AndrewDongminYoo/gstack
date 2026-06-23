@@ -14,7 +14,12 @@ import { describe, it, expect } from "bun:test";
 import { readFileSync } from "fs";
 import { join } from "path";
 
-const SOURCE_PATH = join(import.meta.dir, "..", "bin", "gstack-memory-ingest.ts");
+const SOURCE_PATH = join(
+  import.meta.dir,
+  "..",
+  "bin",
+  "gstack-memory-ingest.ts",
+);
 
 /**
  * Strip line comments (`// ...`) and block comments (`/* ... *​/`) from TS
@@ -47,7 +52,8 @@ describe("gstack-memory-ingest — no put_page in active code (regression for #1
     // the negative test above pass for the wrong reason.
     const src = readFileSync(SOURCE_PATH, "utf-8");
     const stripped = stripComments(src);
-    const callsPut = /\bgbrain\s+put\b/.test(stripped) || /["']put["']/.test(stripped);
+    const callsPut =
+      /\bgbrain\s+put\b/.test(stripped) || /["']put["']/.test(stripped);
     const callsImport = /\bimport\b/.test(stripped); // `gbrain import` runner
     expect(callsPut || callsImport).toBe(true);
   });

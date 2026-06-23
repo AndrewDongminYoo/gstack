@@ -33,31 +33,31 @@
  * See test/helpers/claude-pty-runner.ts for runner internals.
  */
 
-import { describe, test } from 'bun:test';
+import { describe, test } from "bun:test";
 import {
   runPlanSkillObservation,
   assertReportAtBottomIfPlanWritten,
-} from './helpers/claude-pty-runner';
+} from "./helpers/claude-pty-runner";
 
-const shouldRun = !!process.env.EVALS && process.env.EVALS_TIER === 'gate';
+const shouldRun = !!process.env.EVALS && process.env.EVALS_TIER === "gate";
 const describeE2E = shouldRun ? describe : describe.skip;
 
-describeE2E('plan-ceo-review plan-mode smoke (gate)', () => {
-  test('first terminal outcome is asked (Step 0 fires before any plan write)', async () => {
+describeE2E("plan-ceo-review plan-mode smoke (gate)", () => {
+  test("first terminal outcome is asked (Step 0 fires before any plan write)", async () => {
     const obs = await runPlanSkillObservation({
-      skillName: 'plan-ceo-review',
+      skillName: "plan-ceo-review",
       inPlanMode: true,
       timeoutMs: 300_000,
-      env: { QUESTION_TUNING: 'false', EXPLAIN_LEVEL: 'default' },
+      env: { QUESTION_TUNING: "false", EXPLAIN_LEVEL: "default" },
     });
 
-    if (obs.outcome !== 'asked') {
+    if (obs.outcome !== "asked") {
       const diagnosis =
-        obs.outcome === 'plan_ready'
+        obs.outcome === "plan_ready"
           ? `'plan_ready' first means the agent skipped Step 0 entirely and went straight to ExitPlanMode without asking.`
-          : obs.outcome === 'timeout'
+          : obs.outcome === "timeout"
             ? `Timeout means the agent neither asked nor completed within the budget — likely hung mid-question or stuck on a permission dialog.`
-            : obs.outcome === 'silent_write'
+            : obs.outcome === "silent_write"
               ? `Silent Write/Edit fired to an unsanctioned path before any AskUserQuestion — also a Step 0 skip.`
               : `Outcome '${obs.outcome}' is unexpected; investigate the evidence below.`;
       throw new Error(

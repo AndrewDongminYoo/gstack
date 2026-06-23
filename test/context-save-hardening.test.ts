@@ -12,13 +12,13 @@
  *   - Empty-set "NO_CHECKPOINTS" fallback
  */
 
-import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
-import { spawnSync } from 'child_process';
-import * as fs from 'fs';
-import * as path from 'path';
-import * as os from 'os';
+import { describe, test, expect, beforeEach, afterEach } from "bun:test";
+import { spawnSync } from "child_process";
+import * as fs from "fs";
+import * as path from "path";
+import * as os from "os";
 
-const ROOT = path.resolve(import.meta.dir, '..');
+const ROOT = path.resolve(import.meta.dir, "..");
 
 // The exact sanitize+collision bash used by context-save/SKILL.md Step 4.
 // Kept in sync with context-save/SKILL.md.tmpl. If the template changes
@@ -50,10 +50,13 @@ else
 fi
 `;
 
-function runBash(script: string, env: Record<string, string>): { stdout: string; stderr: string; exitCode: number } {
-  const result = spawnSync('bash', ['-c', script], {
+function runBash(
+  script: string,
+  env: Record<string, string>,
+): { stdout: string; stderr: string; exitCode: number } {
+  const result = spawnSync("bash", ["-c", script], {
     env: { ...process.env, ...env },
-    stdio: ['ignore', 'pipe', 'pipe'],
+    stdio: ["ignore", "pipe", "pipe"],
     timeout: 5000,
   });
   return {
@@ -65,8 +68,8 @@ function runBash(script: string, env: Record<string, string>): { stdout: string;
 
 function parseKV(stdout: string): Record<string, string> {
   const out: Record<string, string> = {};
-  for (const line of stdout.split('\n')) {
-    const eq = line.indexOf('=');
+  for (const line of stdout.split("\n")) {
+    const eq = line.indexOf("=");
     if (eq > 0) out[line.slice(0, eq)] = line.slice(eq + 1);
   }
   return out;
@@ -74,31 +77,41 @@ function parseKV(stdout: string): Record<string, string> {
 
 // ─── Title sanitizer ───────────────────────────────────────────────────────
 
-describe('context-save: title sanitizer', () => {
+describe("context-save: title sanitizer", () => {
   let tmp: string;
-  beforeEach(() => { tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'ctx-san-')); });
-  afterEach(() => { try { fs.rmSync(tmp, { recursive: true, force: true }); } catch {} });
-
-  test('shell metachars stripped to allowlist', () => {
-    const kv = parseKV(runBash(TITLE_BASH, {
-      TITLE_RAW: '$(rm -rf /) `whoami` ; echo pwned',
-      CHECKPOINT_DIR: tmp,
-      TIMESTAMP: '20260419-120000',
-    }).stdout);
-    expect(kv.TITLE_SLUG).toMatch(/^[a-z0-9.-]*$/);
-    expect(kv.TITLE_SLUG).not.toContain('$');
-    expect(kv.TITLE_SLUG).not.toContain('(');
-    expect(kv.TITLE_SLUG).not.toContain(';');
-    expect(kv.TITLE_SLUG).not.toContain('`');
+  beforeEach(() => {
+    tmp = fs.mkdtempSync(path.join(os.tmpdir(), "ctx-san-"));
+  });
+  afterEach(() => {
+    try {
+      fs.rmSync(tmp, { recursive: true, force: true });
+    } catch {}
   });
 
-  test('path traversal attempt stripped', () => {
-    const kv = parseKV(runBash(TITLE_BASH, {
-      TITLE_RAW: '../../../etc/passwd',
-      CHECKPOINT_DIR: tmp,
-      TIMESTAMP: '20260419-120000',
-    }).stdout);
-    expect(kv.TITLE_SLUG).not.toContain('/');
+  test("shell metachars stripped to allowlist", () => {
+    const kv = parseKV(
+      runBash(TITLE_BASH, {
+        TITLE_RAW: "$(rm -rf /) `whoami` ; echo pwned",
+        CHECKPOINT_DIR: tmp,
+        TIMESTAMP: "20260419-120000",
+      }).stdout,
+    );
+    expect(kv.TITLE_SLUG).toMatch(/^[a-z0-9.-]*$/);
+    expect(kv.TITLE_SLUG).not.toContain("$");
+    expect(kv.TITLE_SLUG).not.toContain("(");
+    expect(kv.TITLE_SLUG).not.toContain(";");
+    expect(kv.TITLE_SLUG).not.toContain("`");
+  });
+
+  test("path traversal attempt stripped", () => {
+    const kv = parseKV(
+      runBash(TITLE_BASH, {
+        TITLE_RAW: "../../../etc/passwd",
+        CHECKPOINT_DIR: tmp,
+        TIMESTAMP: "20260419-120000",
+      }).stdout,
+    );
+    expect(kv.TITLE_SLUG).not.toContain("/");
     // Slashes stripped, dots retained — result is contained within the
     // checkpoint directory (no path escape possible). The exact number of dots
     // depends on the input; what matters is the file stays inside $CHECKPOINT_DIR.
@@ -106,127 +119,159 @@ describe('context-save: title sanitizer', () => {
     expect(path.dirname(kv.FILE)).toBe(tmp);
   });
 
-  test('uppercase lowercased', () => {
-    const kv = parseKV(runBash(TITLE_BASH, {
-      TITLE_RAW: 'Wintermute Progress',
-      CHECKPOINT_DIR: tmp,
-      TIMESTAMP: '20260419-120000',
-    }).stdout);
-    expect(kv.TITLE_SLUG).toBe('wintermute-progress');
+  test("uppercase lowercased", () => {
+    const kv = parseKV(
+      runBash(TITLE_BASH, {
+        TITLE_RAW: "Wintermute Progress",
+        CHECKPOINT_DIR: tmp,
+        TIMESTAMP: "20260419-120000",
+      }).stdout,
+    );
+    expect(kv.TITLE_SLUG).toBe("wintermute-progress");
   });
 
-  test('whitespace collapsed to single hyphen', () => {
-    const kv = parseKV(runBash(TITLE_BASH, {
-      TITLE_RAW: 'foo    bar\t\tbaz',
-      CHECKPOINT_DIR: tmp,
-      TIMESTAMP: '20260419-120000',
-    }).stdout);
-    expect(kv.TITLE_SLUG).toBe('foo-bar-baz');
+  test("whitespace collapsed to single hyphen", () => {
+    const kv = parseKV(
+      runBash(TITLE_BASH, {
+        TITLE_RAW: "foo    bar\t\tbaz",
+        CHECKPOINT_DIR: tmp,
+        TIMESTAMP: "20260419-120000",
+      }).stdout,
+    );
+    expect(kv.TITLE_SLUG).toBe("foo-bar-baz");
   });
 
-  test('length capped at 60 chars', () => {
-    const kv = parseKV(runBash(TITLE_BASH, {
-      TITLE_RAW: 'a'.repeat(200),
-      CHECKPOINT_DIR: tmp,
-      TIMESTAMP: '20260419-120000',
-    }).stdout);
+  test("length capped at 60 chars", () => {
+    const kv = parseKV(
+      runBash(TITLE_BASH, {
+        TITLE_RAW: "a".repeat(200),
+        CHECKPOINT_DIR: tmp,
+        TIMESTAMP: "20260419-120000",
+      }).stdout,
+    );
     expect(kv.TITLE_SLUG.length).toBe(60);
   });
 
   test('empty title falls back to "untitled"', () => {
-    const kv = parseKV(runBash(TITLE_BASH, {
-      TITLE_RAW: '',
-      CHECKPOINT_DIR: tmp,
-      TIMESTAMP: '20260419-120000',
-    }).stdout);
-    expect(kv.TITLE_SLUG).toBe('untitled');
+    const kv = parseKV(
+      runBash(TITLE_BASH, {
+        TITLE_RAW: "",
+        CHECKPOINT_DIR: tmp,
+        TIMESTAMP: "20260419-120000",
+      }).stdout,
+    );
+    expect(kv.TITLE_SLUG).toBe("untitled");
   });
 
   test('only-special-chars title falls back to "untitled"', () => {
-    const kv = parseKV(runBash(TITLE_BASH, {
-      TITLE_RAW: '!@#$%^&*()+=<>?',
-      CHECKPOINT_DIR: tmp,
-      TIMESTAMP: '20260419-120000',
-    }).stdout);
-    expect(kv.TITLE_SLUG).toBe('untitled');
+    const kv = parseKV(
+      runBash(TITLE_BASH, {
+        TITLE_RAW: "!@#$%^&*()+=<>?",
+        CHECKPOINT_DIR: tmp,
+        TIMESTAMP: "20260419-120000",
+      }).stdout,
+    );
+    expect(kv.TITLE_SLUG).toBe("untitled");
   });
 
-  test('unicode stripped to ASCII allowlist', () => {
-    const kv = parseKV(runBash(TITLE_BASH, {
-      TITLE_RAW: '日本語 emoji 🚀 test',
-      CHECKPOINT_DIR: tmp,
-      TIMESTAMP: '20260419-120000',
-    }).stdout);
+  test("unicode stripped to ASCII allowlist", () => {
+    const kv = parseKV(
+      runBash(TITLE_BASH, {
+        TITLE_RAW: "日本語 emoji 🚀 test",
+        CHECKPOINT_DIR: tmp,
+        TIMESTAMP: "20260419-120000",
+      }).stdout,
+    );
     expect(kv.TITLE_SLUG).toMatch(/^[a-z0-9.-]*$/);
     // Must contain the ASCII words that survived
-    expect(kv.TITLE_SLUG).toContain('emoji');
-    expect(kv.TITLE_SLUG).toContain('test');
+    expect(kv.TITLE_SLUG).toContain("emoji");
+    expect(kv.TITLE_SLUG).toContain("test");
   });
 
-  test('numbers + dots + hyphens preserved', () => {
-    const kv = parseKV(runBash(TITLE_BASH, {
-      TITLE_RAW: 'v1.0.1-release-notes',
-      CHECKPOINT_DIR: tmp,
-      TIMESTAMP: '20260419-120000',
-    }).stdout);
-    expect(kv.TITLE_SLUG).toBe('v1.0.1-release-notes');
+  test("numbers + dots + hyphens preserved", () => {
+    const kv = parseKV(
+      runBash(TITLE_BASH, {
+        TITLE_RAW: "v1.0.1-release-notes",
+        CHECKPOINT_DIR: tmp,
+        TIMESTAMP: "20260419-120000",
+      }).stdout,
+    );
+    expect(kv.TITLE_SLUG).toBe("v1.0.1-release-notes");
   });
 });
 
 // ─── Filename collision handling ───────────────────────────────────────────
 
-describe('context-save: filename collision', () => {
+describe("context-save: filename collision", () => {
   let tmp: string;
-  beforeEach(() => { tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'ctx-col-')); });
-  afterEach(() => { try { fs.rmSync(tmp, { recursive: true, force: true }); } catch {} });
+  beforeEach(() => {
+    tmp = fs.mkdtempSync(path.join(os.tmpdir(), "ctx-col-"));
+  });
+  afterEach(() => {
+    try {
+      fs.rmSync(tmp, { recursive: true, force: true });
+    } catch {}
+  });
 
-  test('first save with title uses predictable path', () => {
-    const kv = parseKV(runBash(TITLE_BASH, {
-      TITLE_RAW: 'foo',
-      CHECKPOINT_DIR: tmp,
-      TIMESTAMP: '20260419-120000',
-    }).stdout);
+  test("first save with title uses predictable path", () => {
+    const kv = parseKV(
+      runBash(TITLE_BASH, {
+        TITLE_RAW: "foo",
+        CHECKPOINT_DIR: tmp,
+        TIMESTAMP: "20260419-120000",
+      }).stdout,
+    );
     expect(kv.FILE).toBe(`${tmp}/20260419-120000-foo.md`);
   });
 
-  test('second save same-second same-title gets random suffix', () => {
+  test("second save same-second same-title gets random suffix", () => {
     // Pre-seed: file already exists at the predictable path.
-    fs.writeFileSync(`${tmp}/20260419-120000-foo.md`, 'prior save');
-    const kv = parseKV(runBash(TITLE_BASH, {
-      TITLE_RAW: 'foo',
-      CHECKPOINT_DIR: tmp,
-      TIMESTAMP: '20260419-120000',
-    }).stdout);
+    fs.writeFileSync(`${tmp}/20260419-120000-foo.md`, "prior save");
+    const kv = parseKV(
+      runBash(TITLE_BASH, {
+        TITLE_RAW: "foo",
+        CHECKPOINT_DIR: tmp,
+        TIMESTAMP: "20260419-120000",
+      }).stdout,
+    );
     // Path must differ (append-only contract).
     expect(kv.FILE).not.toBe(`${tmp}/20260419-120000-foo.md`);
     // Suffix format: base-XXXX.md where XXXX matches the suffix allowlist.
-    expect(kv.FILE).toMatch(new RegExp(`^${tmp.replace(/[/.]/g, '\\$&')}/20260419-120000-foo-[a-z0-9]+\\.md$`));
+    expect(kv.FILE).toMatch(
+      new RegExp(
+        `^${tmp.replace(/[/.]/g, "\\$&")}/20260419-120000-foo-[a-z0-9]+\\.md$`,
+      ),
+    );
   });
 
-  test('collision suffix preserves append-only — prior file intact', () => {
+  test("collision suffix preserves append-only — prior file intact", () => {
     const priorPath = `${tmp}/20260419-120000-foo.md`;
-    fs.writeFileSync(priorPath, 'critical prior save');
-    const kv = parseKV(runBash(TITLE_BASH, {
-      TITLE_RAW: 'foo',
-      CHECKPOINT_DIR: tmp,
-      TIMESTAMP: '20260419-120000',
-    }).stdout);
+    fs.writeFileSync(priorPath, "critical prior save");
+    const kv = parseKV(
+      runBash(TITLE_BASH, {
+        TITLE_RAW: "foo",
+        CHECKPOINT_DIR: tmp,
+        TIMESTAMP: "20260419-120000",
+      }).stdout,
+    );
     // Write a new file at the collision-safe path.
-    fs.writeFileSync(kv.FILE, 'new save');
+    fs.writeFileSync(kv.FILE, "new save");
     // Prior file must still exist and be untouched.
-    expect(fs.readFileSync(priorPath, 'utf-8')).toBe('critical prior save');
-    expect(fs.readFileSync(kv.FILE, 'utf-8')).toBe('new save');
+    expect(fs.readFileSync(priorPath, "utf-8")).toBe("critical prior save");
+    expect(fs.readFileSync(kv.FILE, "utf-8")).toBe("new save");
     // Directory should have exactly 2 files.
     expect(fs.readdirSync(tmp).length).toBe(2);
   });
 
-  test('different titles same second — no collision, no suffix', () => {
-    fs.writeFileSync(`${tmp}/20260419-120000-foo.md`, 'first save');
-    const kv = parseKV(runBash(TITLE_BASH, {
-      TITLE_RAW: 'bar',
-      CHECKPOINT_DIR: tmp,
-      TIMESTAMP: '20260419-120000',
-    }).stdout);
+  test("different titles same second — no collision, no suffix", () => {
+    fs.writeFileSync(`${tmp}/20260419-120000-foo.md`, "first save");
+    const kv = parseKV(
+      runBash(TITLE_BASH, {
+        TITLE_RAW: "bar",
+        CHECKPOINT_DIR: tmp,
+        TIMESTAMP: "20260419-120000",
+      }).stdout,
+    );
     // Different title → predictable path, no suffix.
     expect(kv.FILE).toBe(`${tmp}/20260419-120000-bar.md`);
   });
@@ -234,56 +279,62 @@ describe('context-save: filename collision', () => {
 
 // ─── Restore flow: head-20 cap + empty-set ─────────────────────────────────
 
-describe('context-restore: find + sort + head cap', () => {
+describe("context-restore: find + sort + head cap", () => {
   let tmp: string;
-  beforeEach(() => { tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'ctx-rest-')); });
-  afterEach(() => { try { fs.rmSync(tmp, { recursive: true, force: true }); } catch {} });
+  beforeEach(() => {
+    tmp = fs.mkdtempSync(path.join(os.tmpdir(), "ctx-rest-"));
+  });
+  afterEach(() => {
+    try {
+      fs.rmSync(tmp, { recursive: true, force: true });
+    } catch {}
+  });
 
-  test('missing directory → NO_CHECKPOINTS', () => {
+  test("missing directory → NO_CHECKPOINTS", () => {
     const out = runBash(RESTORE_FIND_BASH, {
       CHECKPOINT_DIR: `${tmp}/nonexistent`,
     }).stdout;
-    expect(out.trim()).toBe('NO_CHECKPOINTS');
+    expect(out.trim()).toBe("NO_CHECKPOINTS");
   });
 
-  test('empty directory → NO_CHECKPOINTS', () => {
+  test("empty directory → NO_CHECKPOINTS", () => {
     const out = runBash(RESTORE_FIND_BASH, {
       CHECKPOINT_DIR: tmp,
     }).stdout;
-    expect(out.trim()).toBe('NO_CHECKPOINTS');
+    expect(out.trim()).toBe("NO_CHECKPOINTS");
   });
 
-  test('directory with non-.md files → NO_CHECKPOINTS', () => {
-    fs.writeFileSync(`${tmp}/not-a-save.txt`, 'noise');
-    fs.writeFileSync(`${tmp}/.DS_Store`, 'macos');
+  test("directory with non-.md files → NO_CHECKPOINTS", () => {
+    fs.writeFileSync(`${tmp}/not-a-save.txt`, "noise");
+    fs.writeFileSync(`${tmp}/.DS_Store`, "macos");
     const out = runBash(RESTORE_FIND_BASH, {
       CHECKPOINT_DIR: tmp,
     }).stdout;
-    expect(out.trim()).toBe('NO_CHECKPOINTS');
+    expect(out.trim()).toBe("NO_CHECKPOINTS");
   });
 
-  test('50 .md files → only 20 returned, newest first by filename', () => {
+  test("50 .md files → only 20 returned, newest first by filename", () => {
     // Seed 50 files with monotonically increasing timestamps.
     for (let i = 0; i < 50; i++) {
-      const ts = `20260419-${String(120000 + i).padStart(6, '0')}`;
+      const ts = `20260419-${String(120000 + i).padStart(6, "0")}`;
       fs.writeFileSync(`${tmp}/${ts}-file${i}.md`, `content ${i}`);
     }
     const out = runBash(RESTORE_FIND_BASH, {
       CHECKPOINT_DIR: tmp,
     }).stdout;
-    const lines = out.trim().split('\n').filter(Boolean);
+    const lines = out.trim().split("\n").filter(Boolean);
     expect(lines.length).toBe(20);
     // sort -r → newest first by filename. Highest timestamps (files 30-49).
-    expect(lines[0]).toContain('file49');
-    expect(lines[19]).toContain('file30');
+    expect(lines[0]).toContain("file49");
+    expect(lines[19]).toContain("file30");
   });
 
-  test('sort is by filename prefix, NOT mtime', () => {
+  test("sort is by filename prefix, NOT mtime", () => {
     // Older filename, newer mtime. Sort -r must still put newer filename first.
     const olderByFilename = `${tmp}/20260101-120000-old.md`;
     const newerByFilename = `${tmp}/20260419-120000-new.md`;
-    fs.writeFileSync(olderByFilename, 'old content');
-    fs.writeFileSync(newerByFilename, 'new content');
+    fs.writeFileSync(olderByFilename, "old content");
+    fs.writeFileSync(newerByFilename, "new content");
     // Scramble mtimes: older filename gets newer mtime.
     const now = Math.floor(Date.now() / 1000);
     fs.utimesSync(olderByFilename, now, now);
@@ -292,12 +343,12 @@ describe('context-restore: find + sort + head cap', () => {
     const out = runBash(RESTORE_FIND_BASH, {
       CHECKPOINT_DIR: tmp,
     }).stdout;
-    const lines = out.trim().split('\n').filter(Boolean);
+    const lines = out.trim().split("\n").filter(Boolean);
     expect(lines[0]).toBe(newerByFilename);
     expect(lines[1]).toBe(olderByFilename);
   });
 
-  test('no listing-cwd fallback when empty (macOS xargs ls gotcha)', () => {
+  test("no listing-cwd fallback when empty (macOS xargs ls gotcha)", () => {
     // On macOS, `find ... | xargs ls -1t` with zero results falls back to
     // listing the current working directory. Our find|sort|head pattern must
     // NOT have that behavior. Running from a dir with many .md files.
@@ -305,45 +356,59 @@ describe('context-restore: find + sort + head cap', () => {
       CHECKPOINT_DIR: tmp,
       // Intentionally: working directory is the gstack repo which has many .md files.
     }).stdout;
-    expect(out.trim()).toBe('NO_CHECKPOINTS');
+    expect(out.trim()).toBe("NO_CHECKPOINTS");
     // Must NOT contain any .md filename from cwd.
-    expect(out).not.toContain('SKILL.md');
-    expect(out).not.toContain('README.md');
+    expect(out).not.toContain("SKILL.md");
+    expect(out).not.toContain("README.md");
   });
 });
 
 // ─── Migration HOME guard ──────────────────────────────────────────────────
 
-describe('migration v1.1.3.0: HOME guard', () => {
+describe("migration v1.1.3.0: HOME guard", () => {
   let tmp: string;
-  const MIGRATION = path.join(ROOT, 'gstack-upgrade', 'migrations', 'v1.1.3.0.sh');
+  const MIGRATION = path.join(
+    ROOT,
+    "gstack-upgrade",
+    "migrations",
+    "v1.1.3.0.sh",
+  );
 
-  beforeEach(() => { tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'ctx-home-')); });
-  afterEach(() => { try { fs.rmSync(tmp, { recursive: true, force: true }); } catch {} });
+  beforeEach(() => {
+    tmp = fs.mkdtempSync(path.join(os.tmpdir(), "ctx-home-"));
+  });
+  afterEach(() => {
+    try {
+      fs.rmSync(tmp, { recursive: true, force: true });
+    } catch {}
+  });
 
-  test('HOME unset → exits 0 with diagnostic, no filesystem changes', () => {
+  test("HOME unset → exits 0 with diagnostic, no filesystem changes", () => {
     // Create a file that would be wiped by an HOME="" bug: /.claude/skills/gstack/checkpoint
     // (not actually writable by the test, but we verify the script doesn't TRY).
     // Spawn without HOME in env.
-    const env = { PATH: process.env.PATH || '/usr/bin:/bin' } as Record<string, string>;
-    const result = spawnSync('bash', [MIGRATION], {
+    const env = { PATH: process.env.PATH || "/usr/bin:/bin" } as Record<
+      string,
+      string
+    >;
+    const result = spawnSync("bash", [MIGRATION], {
       env,
-      stdio: ['ignore', 'pipe', 'pipe'],
+      stdio: ["ignore", "pipe", "pipe"],
       timeout: 5000,
     });
     expect(result.status).toBe(0);
-    expect(result.stderr.toString()).toContain('HOME is unset');
+    expect(result.stderr.toString()).toContain("HOME is unset");
   });
 
   test('HOME="" → exits 0 with diagnostic', () => {
-    const result = spawnSync('bash', [MIGRATION], {
-      env: { HOME: '', PATH: process.env.PATH || '/usr/bin:/bin' },
-      stdio: ['ignore', 'pipe', 'pipe'],
+    const result = spawnSync("bash", [MIGRATION], {
+      env: { HOME: "", PATH: process.env.PATH || "/usr/bin:/bin" },
+      stdio: ["ignore", "pipe", "pipe"],
       timeout: 5000,
     });
     expect(result.status).toBe(0);
-    expect(result.stderr.toString()).toContain('HOME is unset or empty');
+    expect(result.stderr.toString()).toContain("HOME is unset or empty");
     // Critical: no stdout (no "Removed stale" messages — nothing touched).
-    expect(result.stdout.toString().trim()).toBe('');
+    expect(result.stdout.toString().trim()).toBe("");
   });
 });

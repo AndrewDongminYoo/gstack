@@ -31,7 +31,9 @@ describe("gstack-redact exit codes", () => {
     expect(run([], "key AKIA1234567890ABCDEF").code).toBe(3);
   });
   test("MEDIUM only → 2", () => {
-    expect(run(["--repo-visibility", "public"], "mail bob@corp.io").code).toBe(2);
+    expect(run(["--repo-visibility", "public"], "mail bob@corp.io").code).toBe(
+      2,
+    );
   });
 });
 
@@ -48,7 +50,10 @@ describe("gstack-redact --json", () => {
 
 describe("gstack-redact --auto-redact", () => {
   test("prints redacted body to stdout, exits 0", () => {
-    const { stdout, code } = run(["--auto-redact", "pii.email"], "ping bob@corp.io please");
+    const { stdout, code } = run(
+      ["--auto-redact", "pii.email"],
+      "ping bob@corp.io please",
+    );
     expect(code).toBe(0);
     expect(stdout).toContain("<REDACTED-EMAIL>");
     expect(stdout).not.toContain("bob@corp.io");

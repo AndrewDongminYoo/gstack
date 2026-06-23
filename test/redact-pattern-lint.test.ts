@@ -15,7 +15,8 @@ import { scan } from "../lib/redact-engine";
 
 // Nested-quantifier ReDoS shapes: a group ending in +/*/{n,} that is itself
 // immediately quantified by +/*/{n,}. e.g. (x+)+  (x*)*  (x+)*  (?:x+){2,}
-const NESTED_QUANTIFIER = /\([^)]*[+*]\)[+*]|\([^)]*[+*]\)\{\d+,?\}|\([^)]*\{\d+,\}\)[+*]/;
+const NESTED_QUANTIFIER =
+  /\([^)]*[+*]\)[+*]|\([^)]*[+*]\)\{\d+,?\}|\([^)]*\{\d+,\}\)[+*]/;
 
 describe("pattern lint — no catastrophic backtracking", () => {
   for (const p of PATTERNS) {

@@ -23,61 +23,60 @@
  * Periodic tier.
  */
 
-import { describe, test, expect } from 'bun:test';
+import { describe, test, expect } from "bun:test";
 import {
   setupSkillDir,
   skillFromWorktree,
   captureSectionReads,
-} from './helpers/auq-sdk-capture';
+} from "./helpers/auq-sdk-capture";
 
-const shouldRun = !!process.env.EVALS && process.env.EVALS_TIER === 'periodic';
+const shouldRun = !!process.env.EVALS && process.env.EVALS_TIER === "periodic";
 const describeE2E = shouldRun ? describe : describe.skip;
-const runId = `ship-section-loading-${process.env.EVALS_RUN_ID ?? 'local'}`;
+const runId = `ship-section-loading-${process.env.EVALS_RUN_ID ?? "local"}`;
 
 // Sections every version-changing ship must consult.
-const REQUIRED_SECTIONS = ['review-army.md', 'changelog.md'];
+const REQUIRED_SECTIONS = ["review-army.md", "changelog.md"];
 
 const FIXTURES: Record<string, string> = {
-  VERSION: '0.0.1\n',
-  'package.json': JSON.stringify({ name: 'fx', version: '0.0.1', private: true }, null, 2) + '\n',
-  'CHANGELOG.md': '# Changelog\n\n## [0.0.1] - 2026-01-01\n\n- Initial release\n',
-  'app.js': '// base\nexport function newThing() { return 42; }\n',
-  'app.test.js': 'test("newThing", () => {});\n',
+  VERSION: "0.0.1\n",
+  "package.json":
+    JSON.stringify({ name: "fx", version: "0.0.1", private: true }, null, 2) +
+    "\n",
+  "CHANGELOG.md":
+    "# Changelog\n\n## [0.0.1] - 2026-01-01\n\n- Initial release\n",
+  "app.js": "// base\nexport function newThing() { return 42; }\n",
+  "app.test.js": 'test("newThing", () => {});\n',
 };
 
-describeE2E('/ship section-loading E2E (periodic, SDK capture)', () => {
-  test(
-    'fresh version-changing ship Reads the required sections',
-    async () => {
-      const { skillMd, sectionsFrom } = skillFromWorktree('ship');
-      const planDir = setupSkillDir({
-        skillName: 'ship',
-        skillMd,
-        sectionsFrom,
-        fixtures: FIXTURES,
-        tmpPrefix: 'gstack-ship-secload-',
-      });
+describeE2E("/ship section-loading E2E (periodic, SDK capture)", () => {
+  test("fresh version-changing ship Reads the required sections", async () => {
+    const { skillMd, sectionsFrom } = skillFromWorktree("ship");
+    const planDir = setupSkillDir({
+      skillName: "ship",
+      skillMd,
+      sectionsFrom,
+      fixtures: FIXTURES,
+      tmpPrefix: "gstack-ship-secload-",
+    });
 
-      const { readSections, reportProduced, output } = await captureSectionReads({
-        planDir,
-        skillName: 'ship',
-        scenario:
-          'This is a FRESH version-changing ship: the branch has a real code change (app.js gained a new function with a test), VERSION still equals the base version (0.0.1, so it needs a bump), and CHANGELOG.md needs a new entry. Follow the skill\'s flow for a version-changing ship: run the pre-landing review and prepare the CHANGELOG entry. Produce the ship plan / review report. Do NOT actually commit, push, or open a PR.',
-        requiredSections: REQUIRED_SECTIONS,
-        reportMarker: /version|changelog|review|ship/i,
-        testName: 'ship-section-loading',
-        runId,
-      });
+    const { readSections, reportProduced, output } = await captureSectionReads({
+      planDir,
+      skillName: "ship",
+      scenario:
+        "This is a FRESH version-changing ship: the branch has a real code change (app.js gained a new function with a test), VERSION still equals the base version (0.0.1, so it needs a bump), and CHANGELOG.md needs a new entry. Follow the skill's flow for a version-changing ship: run the pre-landing review and prepare the CHANGELOG entry. Produce the ship plan / review report. Do NOT actually commit, push, or open a PR.",
+      requiredSections: REQUIRED_SECTIONS,
+      reportMarker: /version|changelog|review|ship/i,
+      testName: "ship-section-loading",
+      runId,
+    });
 
-      const missing = REQUIRED_SECTIONS.filter(s => !readSections.has(s));
-      expect({ reportProduced, read: [...readSections], missing }).toEqual({
-        reportProduced: true,
-        read: expect.any(Array),
-        missing: [],
-      });
-      // Guard against an empty pass: the report must have real content.
-      expect(output.trim().length).toBeGreaterThan(200);
-    },
-    360_000,
-  );
+    const missing = REQUIRED_SECTIONS.filter((s) => !readSections.has(s));
+    expect({ reportProduced, read: [...readSections], missing }).toEqual({
+      reportProduced: true,
+      read: expect.any(Array),
+      missing: [],
+    });
+    // Guard against an empty pass: the report must have real content.
+    expect(output.trim().length).toBeGreaterThan(200);
+  }, 360_000);
 });

@@ -36,7 +36,9 @@ function readMd(): string {
 describe("#1624 retro stale-base guard — Step 0.5 exists and is ordered before Step 1", () => {
   test("Step 0.5 header is present in template", () => {
     const body = readTmpl();
-    expect(body).toMatch(/### Step 0\.5: Stale-base \+ bad-today-anchor pre-flight guard/);
+    expect(body).toMatch(
+      /### Step 0\.5: Stale-base \+ bad-today-anchor pre-flight guard/,
+    );
   });
 
   test("Step 0.5 appears before Step 1: Gather Raw Data", () => {
@@ -50,7 +52,9 @@ describe("#1624 retro stale-base guard — Step 0.5 exists and is ordered before
 
   test("regenerated SKILL.md carries the Step 0.5 guard", () => {
     const md = readMd();
-    expect(md).toMatch(/Step 0\.5: Stale-base \+ bad-today-anchor pre-flight guard/);
+    expect(md).toMatch(
+      /Step 0\.5: Stale-base \+ bad-today-anchor pre-flight guard/,
+    );
   });
 });
 
@@ -91,7 +95,9 @@ describe("#1624 retro guard — branch C: fetch-fail warn", () => {
   test("template warns and proceeds against last-known origin when fetch fails", () => {
     const body = readTmpl();
     // Match either `git fetch ... ||` or `if ! git fetch ...` shape.
-    expect(body).toMatch(/(?:if !\s+|[^\n]*\|\|\s*)git fetch origin <default>|git fetch origin <default>[^\n]*--quiet 2>\/dev\/null; then/);
+    expect(body).toMatch(
+      /(?:if !\s+|[^\n]*\|\|\s*)git fetch origin <default>|git fetch origin <default>[^\n]*--quiet 2>\/dev\/null; then/,
+    );
     expect(body).toMatch(/fetch[^\n]*failed[^\n]*offline/);
     expect(body).toMatch(/_RETRO_GUARD_VERDICT="warn-fetch-failed"/);
   });
@@ -141,6 +147,8 @@ describe("#1624 retro guard — disclosure must reach the narrative", () => {
     expect(body).toMatch(/warn-fetch-failed/);
     // The prose names disclosure + narrative together (either order) so the
     // retro output is never silently confidently-wrong.
-    expect(body).toMatch(/(?:disclosure[\s\S]{0,200}narrative|narrative[\s\S]{0,200}disclosure)/);
+    expect(body).toMatch(
+      /(?:disclosure[\s\S]{0,200}narrative|narrative[\s\S]{0,200}disclosure)/,
+    );
   });
 });

@@ -108,7 +108,11 @@ exit 0
   };
 }
 
-function runMigration(env: MigEnv): { stdout: string; stderr: string; exitCode: number } {
+function runMigration(env: MigEnv): {
+  stdout: string;
+  stderr: string;
+  exitCode: number;
+} {
   const result = spawnSync("bash", [MIGRATION], {
     encoding: "utf-8",
     timeout: 5_000,
@@ -166,7 +170,11 @@ describe("gstack-upgrade/migrations/v1.37.0.0.sh", () => {
   });
 
   it("OPT-OUT: local_code_index_offered=true → silent, touchfile written", () => {
-    const env = makeEnv({ remoteHttpMcp: true, hasLocalConfig: false, optedOut: true });
+    const env = makeEnv({
+      remoteHttpMcp: true,
+      hasLocalConfig: false,
+      optedOut: true,
+    });
     try {
       const r = runMigration(env);
       expect(r.exitCode).toBe(0);

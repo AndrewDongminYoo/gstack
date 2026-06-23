@@ -55,9 +55,15 @@ describe("diagram-render bundle drift", () => {
     // the print document lays it out with print-css's; drift = overflowing
     // labels (eng-review D3).
     for (const family of [
-      "Helvetica", "Liberation Sans", "Arial",
-      "Hiragino Kaku Gothic ProN", "Noto Sans CJK JP", "Microsoft YaHei",
-      "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji",
+      "Helvetica",
+      "Liberation Sans",
+      "Arial",
+      "Hiragino Kaku Gothic ProN",
+      "Noto Sans CJK JP",
+      "Microsoft YaHei",
+      "Apple Color Emoji",
+      "Segoe UI Emoji",
+      "Noto Color Emoji",
     ]) {
       expect(entrySrc).toContain(family);
     }
@@ -86,7 +92,9 @@ describe("diagram-render bundle drift", () => {
     "deep: fresh build reproduces committed dist",
     async () => {
       const before = await Bun.file(BUILD_INFO).json();
-      const proc = Bun.spawnSync(["bun", "run", "scripts/build.ts"], { cwd: ROOT });
+      const proc = Bun.spawnSync(["bun", "run", "scripts/build.ts"], {
+        cwd: ROOT,
+      });
       expect(proc.exitCode).toBe(0);
       const after = await Bun.file(BUILD_INFO).json();
       expect(after.sha256).toBe(before.sha256);

@@ -30,7 +30,7 @@
  *   SCOPE EXPANSION   — "expansion" or "10x" or "delight" or "dream"
  */
 
-import { describe, test } from 'bun:test';
+import { describe, test } from "bun:test";
 import {
   launchClaudePty,
   isNumberedOptionListVisible,
@@ -41,20 +41,26 @@ import {
   optionsSignature,
   TAIL_SCAN_BYTES,
   type ClaudePtySession,
-} from './helpers/claude-pty-runner';
+} from "./helpers/claude-pty-runner";
 
-const shouldRun = !!process.env.EVALS && process.env.EVALS_TIER === 'periodic';
+const shouldRun = !!process.env.EVALS && process.env.EVALS_TIER === "periodic";
 const describeE2E = shouldRun ? describe : describe.skip;
 
 interface ModeCase {
-  mode: 'HOLD SCOPE' | 'SCOPE EXPANSION';
+  mode: "HOLD SCOPE" | "SCOPE EXPANSION";
   /** Regex applied to visible-since-mode-pick text. At least one must match. */
   postureRe: RegExp;
 }
 
 const CASES: ModeCase[] = [
-  { mode: 'HOLD SCOPE',      postureRe: /\b(rigor|bulletproof|hold\s*scope|maximum\s+rigor)\b/i },
-  { mode: 'SCOPE EXPANSION', postureRe: /\b(expansion|10x|delight|dream|cathedral|opt[\s-]?in)\b/i },
+  {
+    mode: "HOLD SCOPE",
+    postureRe: /\b(rigor|bulletproof|hold\s*scope|maximum\s+rigor)\b/i,
+  },
+  {
+    mode: "SCOPE EXPANSION",
+    postureRe: /\b(expansion|10x|delight|dream|cathedral|opt[\s-]?in)\b/i,
+  },
 ];
 
 /**
@@ -68,7 +74,7 @@ const CASES: ModeCase[] = [
 async function navigateToModeAskUserQuestion(
   session: ClaudePtySession,
   since: number,
-  targetMode: ModeCase['mode'],
+  targetMode: ModeCase["mode"],
   opts: { maxNav?: number; budgetMs?: number } = {},
 ): Promise<{ modeIndex: number; visibleAtMode: string }> {
   // /plan-ceo-review's mode AskUserQuestion (Step 0F) sits behind several preamble
@@ -85,7 +91,7 @@ async function navigateToModeAskUserQuestion(
     if (session.exited()) {
       throw new Error(
         `claude exited (code=${session.exitCode()}) during nav.\n` +
-        `Last visible:\n${session.visibleSince(since).slice(-2000)}`,
+          `Last visible:\n${session.visibleSince(since).slice(-2000)}`,
       );
     }
     await Bun.sleep(2000);
@@ -102,12 +108,14 @@ async function navigateToModeAskUserQuestion(
     lastSeenList = opts;
 
     // Is THIS the mode AskUserQuestion?
-    if (opts.some(o => MODE_RE.test(o.label))) {
-      const target = opts.find(o => o.label.toUpperCase().includes(targetMode));
+    if (opts.some((o) => MODE_RE.test(o.label))) {
+      const target = opts.find((o) =>
+        o.label.toUpperCase().includes(targetMode),
+      );
       if (!target) {
         throw new Error(
           `Mode AskUserQuestion rendered but target "${targetMode}" not in option labels:\n` +
-          opts.map(o => `  ${o.index}. ${o.label}`).join('\n'),
+            opts.map((o) => `  ${o.index}. ${o.label}`).join("\n"),
         );
       }
       return { modeIndex: target.index, visibleAtMode: visible };
@@ -124,7 +132,7 @@ async function navigateToModeAskUserQuestion(
     // paths share TAIL_SCAN_BYTES as the recent-tail window so tuning stays
     // in sync.
     if (isPermissionDialogVisible(visible.slice(-TAIL_SCAN_BYTES))) {
-      session.send('1\r');
+      session.send("1\r");
       await Bun.sleep(1500);
       continue;
     }
@@ -133,80 +141,80 @@ async function navigateToModeAskUserQuestion(
     if (priorAnswered >= maxNav) {
       throw new Error(
         `Navigated ${maxNav} prior AskUserQuestions without reaching the mode AskUserQuestion. ` +
-        `Last list:\n${opts.map(o => `  ${o.index}. ${o.label}`).join('\n')}`,
+          `Last list:\n${opts.map((o) => `  ${o.index}. ${o.label}`).join("\n")}`,
       );
     }
     priorAnswered++;
-    session.send('1\r');
+    session.send("1\r");
     // Give the agent a beat to advance before re-polling.
     await Bun.sleep(2000);
   }
   throw new Error(`Mode AskUserQuestion not reached within ${budgetMs}ms`);
 }
 
-describeE2E('/plan-ceo-review mode routing (gate)', () => {
+describeE2E("/plan-ceo-review mode routing (gate)", () => {
   for (const c of CASES) {
-    test(
-      `mode "${c.mode}" routes to its distinctive posture`,
-      async () => {
-        const session = await launchClaudePty({
-          permissionMode: 'plan',
-          timeoutMs: 540_000,
-        });
-        try {
-          await Bun.sleep(8000);
-          const since = session.mark();
-          session.send('/plan-ceo-review\r');
+    test(`mode "${c.mode}" routes to its distinctive posture`, async () => {
+      const session = await launchClaudePty({
+        permissionMode: "plan",
+        timeoutMs: 540_000,
+      });
+      try {
+        await Bun.sleep(8000);
+        const since = session.mark();
+        session.send("/plan-ceo-review\r");
 
-          const { modeIndex } = await navigateToModeAskUserQuestion(session, since, c.mode);
+        const { modeIndex } = await navigateToModeAskUserQuestion(
+          session,
+          since,
+          c.mode,
+        );
 
-          // Snapshot the visible buffer at mode-pick time, then send the index.
-          const sincePick = session.rawOutput().length;
-          session.send(`${modeIndex}\r`);
+        // Snapshot the visible buffer at mode-pick time, then send the index.
+        const sincePick = session.rawOutput().length;
+        session.send(`${modeIndex}\r`);
 
-          // Wait for downstream evidence: either next AskUserQuestion or plan_ready or
-          // a posture-distinctive substring shows up.
-          const budgetMs = 240_000;
-          const start = Date.now();
-          let postureMatched = false;
-          let downstreamSnapshot = '';
-          while (Date.now() - start < budgetMs) {
-            await Bun.sleep(2500);
-            if (session.exited()) {
-              throw new Error(
-                `claude exited (code=${session.exitCode()}) after mode pick.\n` +
-                `Downstream:\n${session.visibleSince(sincePick).slice(-2000)}`,
-              );
-            }
-            downstreamSnapshot = session.visibleSince(sincePick);
-            if (c.postureRe.test(downstreamSnapshot)) {
-              postureMatched = true;
-              break;
-            }
-            // Don't bail early on plan_ready alone — the posture text may
-            // arrive as the agent finishes writing the plan. Only break
-            // once we either match posture or run the clock.
-            if (
-              isPlanReadyVisible(downstreamSnapshot) &&
-              isNumberedOptionListVisible(downstreamSnapshot) &&
-              !c.postureRe.test(downstreamSnapshot)
-            ) {
-              // Plan-ready AND a follow-up AskUserQuestion are both visible but
-              // posture text has not appeared yet. Keep polling for a bit.
-            }
-          }
-          if (!postureMatched) {
+        // Wait for downstream evidence: either next AskUserQuestion or plan_ready or
+        // a posture-distinctive substring shows up.
+        const budgetMs = 240_000;
+        const start = Date.now();
+        let postureMatched = false;
+        let downstreamSnapshot = "";
+        while (Date.now() - start < budgetMs) {
+          await Bun.sleep(2500);
+          if (session.exited()) {
             throw new Error(
-              `Mode "${c.mode}" routing FAILED: no posture match for ${c.postureRe.source}.\n` +
-              `--- downstream visible since mode pick (last 3KB) ---\n` +
-              downstreamSnapshot.slice(-3000),
+              `claude exited (code=${session.exitCode()}) after mode pick.\n` +
+                `Downstream:\n${session.visibleSince(sincePick).slice(-2000)}`,
             );
           }
-        } finally {
-          await session.close();
+          downstreamSnapshot = session.visibleSince(sincePick);
+          if (c.postureRe.test(downstreamSnapshot)) {
+            postureMatched = true;
+            break;
+          }
+          // Don't bail early on plan_ready alone — the posture text may
+          // arrive as the agent finishes writing the plan. Only break
+          // once we either match posture or run the clock.
+          if (
+            isPlanReadyVisible(downstreamSnapshot) &&
+            isNumberedOptionListVisible(downstreamSnapshot) &&
+            !c.postureRe.test(downstreamSnapshot)
+          ) {
+            // Plan-ready AND a follow-up AskUserQuestion are both visible but
+            // posture text has not appeared yet. Keep polling for a bit.
+          }
         }
-      },
-      600_000,
-    );
+        if (!postureMatched) {
+          throw new Error(
+            `Mode "${c.mode}" routing FAILED: no posture match for ${c.postureRe.source}.\n` +
+              `--- downstream visible since mode pick (last 3KB) ---\n` +
+              downstreamSnapshot.slice(-3000),
+          );
+        }
+      } finally {
+        await session.close();
+      }
+    }, 600_000);
   }
 });

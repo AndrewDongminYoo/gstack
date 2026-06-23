@@ -17,20 +17,16 @@
 
 import { describe, it, expect } from "bun:test";
 import { execFileSync, spawnSync } from "child_process";
-import {
-  mkdtempSync,
-  mkdirSync,
-  writeFileSync,
-  chmodSync,
-  rmSync,
-} from "fs";
+import { mkdtempSync, mkdirSync, writeFileSync, chmodSync, rmSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 
 const DETECT_BIN = join(import.meta.dir, "..", "bin", "gstack-gbrain-detect");
 
 /** Absolute bun path resolved once at module load (uses the test runner's PATH). */
-const BUN_BIN = execFileSync("sh", ["-c", "command -v bun"], { encoding: "utf-8" }).trim();
+const BUN_BIN = execFileSync("sh", ["-c", "command -v bun"], {
+  encoding: "utf-8",
+}).trim();
 
 /**
  * Run detect with a controlled HOME + PATH so the output is deterministic.
@@ -133,9 +129,11 @@ describe("bin/gstack-gbrain-detect — shape regression", () => {
       expect(typeof parsed.gstack_brain_git).toBe("boolean");
 
       // String | null unions (bash: `null` when absent; TS: null when absent)
-      const versionType = parsed.gbrain_version === null ? "null" : typeof parsed.gbrain_version;
+      const versionType =
+        parsed.gbrain_version === null ? "null" : typeof parsed.gbrain_version;
       expect(versionType === "string" || versionType === "null").toBe(true);
-      const engineType = parsed.gbrain_engine === null ? "null" : typeof parsed.gbrain_engine;
+      const engineType =
+        parsed.gbrain_engine === null ? "null" : typeof parsed.gbrain_engine;
       expect(engineType === "string" || engineType === "null").toBe(true);
 
       // Strings (bash: always emits a string, never null)
@@ -159,7 +157,9 @@ describe("bin/gstack-gbrain-detect — shape regression", () => {
         GSTACK_HOME: tmp,
       });
       const parsed = JSON.parse(out) as DetectShape;
-      expect(["local-stdio", "remote-http", "none"]).toContain(parsed.gbrain_mcp_mode);
+      expect(["local-stdio", "remote-http", "none"]).toContain(
+        parsed.gbrain_mcp_mode,
+      );
     } finally {
       rmSync(tmp, { recursive: true, force: true });
     }
@@ -174,7 +174,9 @@ describe("bin/gstack-gbrain-detect — shape regression", () => {
         GSTACK_HOME: tmp,
       });
       const parsed = JSON.parse(out) as DetectShape;
-      expect(["off", "artifacts-only", "full"]).toContain(parsed.gstack_brain_sync_mode);
+      expect(["off", "artifacts-only", "full"]).toContain(
+        parsed.gstack_brain_sync_mode,
+      );
     } finally {
       rmSync(tmp, { recursive: true, force: true });
     }
@@ -189,9 +191,13 @@ describe("bin/gstack-gbrain-detect — shape regression", () => {
         GSTACK_HOME: tmp,
       });
       const parsed = JSON.parse(out) as DetectShape;
-      expect(["ok", "no-cli", "missing-config", "broken-config", "broken-db"]).toContain(
-        parsed.gbrain_local_status,
-      );
+      expect([
+        "ok",
+        "no-cli",
+        "missing-config",
+        "broken-config",
+        "broken-db",
+      ]).toContain(parsed.gbrain_local_status);
     } finally {
       rmSync(tmp, { recursive: true, force: true });
     }
@@ -282,7 +288,10 @@ describe("bin/gstack-gbrain-detect --is-ok — live gate", () => {
     try {
       mkdirSync(bindir, { recursive: true });
       mkdirSync(configDir, { recursive: true });
-      writeFileSync(join(configDir, "config.json"), JSON.stringify({ engine: "pglite" }));
+      writeFileSync(
+        join(configDir, "config.json"),
+        JSON.stringify({ engine: "pglite" }),
+      );
       const fake = `#!/bin/sh
 case "$1 $2" in
   "--version ")        echo "gbrain 0.33.1.0"; exit 0 ;;
@@ -311,8 +320,14 @@ exit 0
     // Run both surfaces against the same env and assert they never disagree.
     const tmp = mkdtempSync(join(tmpdir(), "detect-isok-"));
     try {
-      const env = { HOME: tmp, PATH: "/usr/bin:/bin", GSTACK_HOME: tmp, GSTACK_DETECT_NO_CACHE: "1" };
-      const status = (JSON.parse(runDetect(env)) as DetectShape).gbrain_local_status;
+      const env = {
+        HOME: tmp,
+        PATH: "/usr/bin:/bin",
+        GSTACK_HOME: tmp,
+        GSTACK_DETECT_NO_CACHE: "1",
+      };
+      const status = (JSON.parse(runDetect(env)) as DetectShape)
+        .gbrain_local_status;
       const code = runIsOk(env);
       expect(code === 0).toBe(status === "ok");
     } finally {

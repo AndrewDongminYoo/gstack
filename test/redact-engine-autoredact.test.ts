@@ -20,8 +20,12 @@ describe("applyRedactions", () => {
 
   test("multiple findings on one line redact correctly (right-to-left)", () => {
     const input = "a@x.io and b@y.io and c@z.io";
-    const { body } = applyRedactions(input, ["pii.email"], { repoVisibility: "private" });
-    expect(body).toBe("<REDACTED-EMAIL> and <REDACTED-EMAIL> and <REDACTED-EMAIL>");
+    const { body } = applyRedactions(input, ["pii.email"], {
+      repoVisibility: "private",
+    });
+    expect(body).toBe(
+      "<REDACTED-EMAIL> and <REDACTED-EMAIL> and <REDACTED-EMAIL>",
+    );
   });
 
   test("idempotent: re-scanning the redacted body finds no PII", () => {
@@ -38,7 +42,9 @@ describe("applyRedactions", () => {
 
   test("produces an ASCII unified diff preview", () => {
     const input = "reach alice@corp.io";
-    const { diff } = applyRedactions(input, ["pii.email"], { repoVisibility: "private" });
+    const { diff } = applyRedactions(input, ["pii.email"], {
+      repoVisibility: "private",
+    });
     expect(diff).toContain("- reach alice@corp.io");
     expect(diff).toContain("+ reach <REDACTED-EMAIL>");
   });

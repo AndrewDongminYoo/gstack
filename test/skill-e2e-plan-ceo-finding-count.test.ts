@@ -15,14 +15,14 @@
  * test/helpers/claude-pty-runner.ts for runPlanSkillCounting internals.
  */
 
-import { describe, test } from 'bun:test';
-import * as fs from 'node:fs';
+import { describe, test } from "bun:test";
+import * as fs from "node:fs";
 import {
   runPlanSkillCounting,
   ceoStep0Boundary,
   assertReviewReportAtBottom,
   type AskUserQuestionFingerprint,
-} from './helpers/claude-pty-runner';
+} from "./helpers/claude-pty-runner";
 
 /**
  * /plan-ceo-review's first AUQ asks "what scope?" with options like
@@ -51,7 +51,7 @@ function pickSkipInterview(fp: AskUserQuestionFingerprint): number {
   return 1;
 }
 
-const shouldRun = !!process.env.EVALS && process.env.EVALS_TIER === 'periodic';
+const shouldRun = !!process.env.EVALS && process.env.EVALS_TIER === "periodic";
 const describeE2E = shouldRun ? describe : describe.skip;
 
 const N_DISTINCT = 5;
@@ -63,52 +63,52 @@ const FLOOR_PAIRED = 2;
 const CEILING_PAIRED = 4;
 
 const PLAN_CEO_5_FINDINGS = [
-  'Please review this plan thoroughly. As you go, write your plan-mode plan to /tmp/gstack-test-plan-ceo.md (use Edit/Write to that exact path).',
-  '',
-  '# Plan: Payment Processing Integration',
-  '',
-  '## Architecture',
+  "Please review this plan thoroughly. As you go, write your plan-mode plan to /tmp/gstack-test-plan-ceo.md (use Edit/Write to that exact path).",
+  "",
+  "# Plan: Payment Processing Integration",
+  "",
+  "## Architecture",
   "We're adding a new `PaymentService` class that will handle Stripe webhooks.",
-  'This bypasses the existing `WebhookDispatcher` module — we want a clean',
-  'namespace separation.',
-  '',
-  '## Database access',
-  'The new endpoint reads `request.params.userId` directly into a raw SQL',
-  'fragment for the lookup query.',
-  '',
-  '## Webhook fan-out',
-  'On payment success we update the user record AND fire a notification email.',
-  'Both happen inline; no error handling on the email leg.',
-  '',
-  '## Tests',
+  "This bypasses the existing `WebhookDispatcher` module — we want a clean",
+  "namespace separation.",
+  "",
+  "## Database access",
+  "The new endpoint reads `request.params.userId` directly into a raw SQL",
+  "fragment for the lookup query.",
+  "",
+  "## Webhook fan-out",
+  "On payment success we update the user record AND fire a notification email.",
+  "Both happen inline; no error handling on the email leg.",
+  "",
+  "## Tests",
   "None planned. We'll rely on the existing integration suite catching regressions.",
-  '',
-  '## Performance',
-  'Each webhook lookup hits the database for the user, then fetches each',
-  'order in a loop.',
-].join('\n');
+  "",
+  "## Performance",
+  "Each webhook lookup hits the database for the user, then fetches each",
+  "order in a loop.",
+].join("\n");
 
 const PLAN_CEO_2_PAIRED_FINDINGS = [
-  'Please review this plan thoroughly. As you go, write your plan-mode plan to /tmp/gstack-test-plan-ceo-paired.md (use Edit/Write to that exact path).',
-  '',
-  '# Plan: Payment Processing — Test Coverage',
-  '',
-  '## Tests',
-  'We need test coverage for `processPayment()`. Specifically:',
-  '1. The happy path (successful Stripe charge — assert correct receipt is generated).',
-  '2. The error/timeout path (Stripe returns 502 — assert retry-with-backoff fires once, then fails clean).',
-  '',
-  'Currently neither has a unit test. These are deliberately separate concerns:',
-  'the success path is correctness, the failure path is graceful degradation.',
-].join('\n');
+  "Please review this plan thoroughly. As you go, write your plan-mode plan to /tmp/gstack-test-plan-ceo-paired.md (use Edit/Write to that exact path).",
+  "",
+  "# Plan: Payment Processing — Test Coverage",
+  "",
+  "## Tests",
+  "We need test coverage for `processPayment()`. Specifically:",
+  "1. The happy path (successful Stripe charge — assert correct receipt is generated).",
+  "2. The error/timeout path (Stripe returns 502 — assert retry-with-backoff fires once, then fails clean).",
+  "",
+  "Currently neither has a unit test. These are deliberately separate concerns:",
+  "the success path is correctness, the failure path is graceful degradation.",
+].join("\n");
 
-const PLAN_CEO_PATH = '/tmp/gstack-test-plan-ceo.md';
-const PLAN_CEO_PAIRED_PATH = '/tmp/gstack-test-plan-ceo-paired.md';
+const PLAN_CEO_PATH = "/tmp/gstack-test-plan-ceo.md";
+const PLAN_CEO_PAIRED_PATH = "/tmp/gstack-test-plan-ceo-paired.md";
 
-describeE2E('/plan-ceo-review per-finding AskUserQuestion count (periodic)', () => {
-  test(
-    `5-finding plan emits ${FLOOR_DISTINCT}-${CEILING_DISTINCT} review-phase AskUserQuestions`,
-    async () => {
+describeE2E(
+  "/plan-ceo-review per-finding AskUserQuestion count (periodic)",
+  () => {
+    test(`5-finding plan emits ${FLOOR_DISTINCT}-${CEILING_DISTINCT} review-phase AskUserQuestions`, async () => {
       try {
         fs.rmSync(PLAN_CEO_PATH, { force: true });
       } catch {
@@ -116,19 +116,23 @@ describeE2E('/plan-ceo-review per-finding AskUserQuestion count (periodic)', () 
       }
 
       const obs = await runPlanSkillCounting({
-        skillName: 'plan-ceo-review',
-        slashCommand: '/plan-ceo-review',
+        skillName: "plan-ceo-review",
+        slashCommand: "/plan-ceo-review",
         followUpPrompt: PLAN_CEO_5_FINDINGS,
         isLastStep0AUQ: ceoStep0Boundary,
         reviewCountCeiling: CEILING_DISTINCT + 1, // hard cap above assertion ceiling
         firstAUQPick: pickSkipInterview, // bypass scope-selection, route to review
         cwd: process.cwd(),
         timeoutMs: 1_500_000, // 25 min
-        env: { QUESTION_TUNING: 'false', EXPLAIN_LEVEL: 'default' },
+        env: { QUESTION_TUNING: "false", EXPLAIN_LEVEL: "default" },
       });
 
       try {
-        if (!['plan_ready', 'completion_summary', 'ceiling_reached'].includes(obs.outcome)) {
+        if (
+          !["plan_ready", "completion_summary", "ceiling_reached"].includes(
+            obs.outcome,
+          )
+        ) {
           throw new Error(
             `plan-ceo-review finding-count FAILED: outcome=${obs.outcome}\n` +
               `step0=${obs.step0Count} review=${obs.reviewCount} elapsed=${obs.elapsedMs}ms\n` +
@@ -139,7 +143,7 @@ describeE2E('/plan-ceo-review per-finding AskUserQuestion count (periodic)', () 
                   (f, i) =>
                     `  ${i}. preReview=${f.preReview} sig=${f.signature.slice(0, 12)} prompt="${f.promptSnippet.slice(0, 60)}"`,
                 )
-                .join('\n') +
+                .join("\n") +
               `\n--- evidence (last 3KB) ---\n${obs.evidence}`,
           );
         }
@@ -151,7 +155,7 @@ describeE2E('/plan-ceo-review per-finding AskUserQuestion count (periodic)', () 
               obs.fingerprints
                 .filter((f) => !f.preReview)
                 .map((f) => `  - "${f.promptSnippet.slice(0, 80)}"`)
-                .join('\n'),
+                .join("\n"),
           );
         }
         if (obs.reviewCount > CEILING_DISTINCT) {
@@ -161,7 +165,7 @@ describeE2E('/plan-ceo-review per-finding AskUserQuestion count (periodic)', () 
               obs.fingerprints
                 .filter((f) => !f.preReview)
                 .map((f) => `  - "${f.promptSnippet.slice(0, 80)}"`)
-                .join('\n'),
+                .join("\n"),
           );
         }
 
@@ -174,14 +178,14 @@ describeE2E('/plan-ceo-review per-finding AskUserQuestion count (periodic)', () 
               `outcome=${obs.outcome} review=${obs.reviewCount}`,
           );
         }
-        const planContent = fs.readFileSync(PLAN_CEO_PATH, 'utf-8');
+        const planContent = fs.readFileSync(PLAN_CEO_PATH, "utf-8");
         const verdict = assertReviewReportAtBottom(planContent);
         if (!verdict.ok) {
           throw new Error(
             `D19 FAIL: plan file at ${PLAN_CEO_PATH} ${verdict.reason}\n` +
               (verdict.trailingHeadings
-                ? `Trailing headings: ${verdict.trailingHeadings.join(' | ')}\n`
-                : '') +
+                ? `Trailing headings: ${verdict.trailingHeadings.join(" | ")}\n`
+                : "") +
               `--- plan content (last 1KB) ---\n${planContent.slice(-1024)}`,
           );
         }
@@ -192,13 +196,9 @@ describeE2E('/plan-ceo-review per-finding AskUserQuestion count (periodic)', () 
           /* best-effort */
         }
       }
-    },
-    1_700_000,
-  );
+    }, 1_700_000);
 
-  test(
-    `paired-finding positive control: ${N_PAIRED} related findings produce ${FLOOR_PAIRED}-${CEILING_PAIRED} AskUserQuestions`,
-    async () => {
+    test(`paired-finding positive control: ${N_PAIRED} related findings produce ${FLOOR_PAIRED}-${CEILING_PAIRED} AskUserQuestions`, async () => {
       try {
         fs.rmSync(PLAN_CEO_PAIRED_PATH, { force: true });
       } catch {
@@ -206,18 +206,22 @@ describeE2E('/plan-ceo-review per-finding AskUserQuestion count (periodic)', () 
       }
 
       const obs = await runPlanSkillCounting({
-        skillName: 'plan-ceo-review',
-        slashCommand: '/plan-ceo-review',
+        skillName: "plan-ceo-review",
+        slashCommand: "/plan-ceo-review",
         followUpPrompt: PLAN_CEO_2_PAIRED_FINDINGS,
         isLastStep0AUQ: ceoStep0Boundary,
         reviewCountCeiling: CEILING_PAIRED + 1,
         cwd: process.cwd(),
         timeoutMs: 1_500_000,
-        env: { QUESTION_TUNING: 'false', EXPLAIN_LEVEL: 'default' },
+        env: { QUESTION_TUNING: "false", EXPLAIN_LEVEL: "default" },
       });
 
       try {
-        if (!['plan_ready', 'completion_summary', 'ceiling_reached'].includes(obs.outcome)) {
+        if (
+          !["plan_ready", "completion_summary", "ceiling_reached"].includes(
+            obs.outcome,
+          )
+        ) {
           throw new Error(
             `paired-finding control FAILED: outcome=${obs.outcome}\n` +
               `step0=${obs.step0Count} review=${obs.reviewCount}\n` +
@@ -232,7 +236,7 @@ describeE2E('/plan-ceo-review per-finding AskUserQuestion count (periodic)', () 
               obs.fingerprints
                 .filter((f) => !f.preReview)
                 .map((f) => `  - "${f.promptSnippet.slice(0, 80)}"`)
-                .join('\n'),
+                .join("\n"),
           );
         }
         if (obs.reviewCount > CEILING_PAIRED) {
@@ -247,7 +251,6 @@ describeE2E('/plan-ceo-review per-finding AskUserQuestion count (periodic)', () 
           /* best-effort */
         }
       }
-    },
-    1_700_000,
-  );
-});
+    }, 1_700_000);
+  },
+);

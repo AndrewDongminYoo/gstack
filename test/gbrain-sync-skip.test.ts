@@ -13,19 +13,15 @@
  */
 
 import { describe, it, expect } from "bun:test";
-import {
-  mkdtempSync,
-  mkdirSync,
-  writeFileSync,
-  chmodSync,
-  rmSync,
-} from "fs";
+import { mkdtempSync, mkdirSync, writeFileSync, chmodSync, rmSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 import { execFileSync, spawnSync } from "child_process";
 
 const SCRIPT = join(import.meta.dir, "..", "bin", "gstack-gbrain-sync.ts");
-const BUN_BIN = execFileSync("sh", ["-c", "command -v bun"], { encoding: "utf-8" }).trim();
+const BUN_BIN = execFileSync("sh", ["-c", "command -v bun"], {
+  encoding: "utf-8",
+}).trim();
 
 interface FakeEnv {
   tmp: string;
@@ -110,10 +106,20 @@ function runOrchestrator(
   // Initialize a git repo in the sandbox so repoRoot() finds it (otherwise
   // code stage skips with "not in git repo" before our check ever fires).
   spawnSync("git", ["init", "-q", env.home], { encoding: "utf-8" });
-  spawnSync("git", ["-C", env.home, "commit", "--allow-empty", "-m", "init", "-q"], {
-    encoding: "utf-8",
-    env: { ...process.env, GIT_AUTHOR_NAME: "T", GIT_AUTHOR_EMAIL: "t@t", GIT_COMMITTER_NAME: "T", GIT_COMMITTER_EMAIL: "t@t" },
-  });
+  spawnSync(
+    "git",
+    ["-C", env.home, "commit", "--allow-empty", "-m", "init", "-q"],
+    {
+      encoding: "utf-8",
+      env: {
+        ...process.env,
+        GIT_AUTHOR_NAME: "T",
+        GIT_AUTHOR_EMAIL: "t@t",
+        GIT_COMMITTER_NAME: "T",
+        GIT_COMMITTER_EMAIL: "t@t",
+      },
+    },
+  );
 
   const result = spawnSync(BUN_BIN, [SCRIPT, ...args], {
     encoding: "utf-8",
@@ -136,7 +142,11 @@ function runOrchestrator(
 
 describe("gstack-gbrain-sync — split-engine SKIP (plan D12)", () => {
   it("PROCEEDS (with warning) when the engine probe times out — slow is not broken (#1964)", () => {
-    const env = makeEnv({ withGbrain: true, gbrainBehavior: "slow", withConfig: true });
+    const env = makeEnv({
+      withGbrain: true,
+      gbrainBehavior: "slow",
+      withConfig: true,
+    });
     try {
       const r = runOrchestrator(env, ["--code-only"], {
         GSTACK_GBRAIN_PROBE_TIMEOUT_MS: "300",
@@ -153,7 +163,11 @@ describe("gstack-gbrain-sync — split-engine SKIP (plan D12)", () => {
   }, 30_000); // proceeding runs the real code-import path against the slow fake (~11s)
 
   it("memory stage also PROCEEDS (with warning) on probe timeout (#1964)", () => {
-    const env = makeEnv({ withGbrain: true, gbrainBehavior: "slow", withConfig: true });
+    const env = makeEnv({
+      withGbrain: true,
+      gbrainBehavior: "slow",
+      withConfig: true,
+    });
     try {
       const r = runOrchestrator(env, ["--no-code", "--no-brain-sync"], {
         GSTACK_GBRAIN_PROBE_TIMEOUT_MS: "300",
@@ -167,7 +181,11 @@ describe("gstack-gbrain-sync — split-engine SKIP (plan D12)", () => {
   }, 30_000);
 
   it("dream stage also PROCEEDS (with warning) on probe timeout (#1964)", () => {
-    const env = makeEnv({ withGbrain: true, gbrainBehavior: "slow", withConfig: true });
+    const env = makeEnv({
+      withGbrain: true,
+      gbrainBehavior: "slow",
+      withConfig: true,
+    });
     try {
       const r = runOrchestrator(
         env,
@@ -183,7 +201,11 @@ describe("gstack-gbrain-sync — split-engine SKIP (plan D12)", () => {
   }, 30_000);
 
   it("SKIPs code stage when local engine is broken-db; brain-sync still attempted", () => {
-    const env = makeEnv({ withGbrain: true, gbrainBehavior: "broken-db", withConfig: true });
+    const env = makeEnv({
+      withGbrain: true,
+      gbrainBehavior: "broken-db",
+      withConfig: true,
+    });
     try {
       const r = runOrchestrator(env, ["--code-only"]);
       // Code stage should be SKIPped with a clear local-engine status reason.
@@ -198,7 +220,11 @@ describe("gstack-gbrain-sync — split-engine SKIP (plan D12)", () => {
   });
 
   it("SKIPs memory stage when local engine is broken-config", () => {
-    const env = makeEnv({ withGbrain: true, gbrainBehavior: "broken-config", withConfig: true });
+    const env = makeEnv({
+      withGbrain: true,
+      gbrainBehavior: "broken-config",
+      withConfig: true,
+    });
     try {
       const r = runOrchestrator(env, ["--no-code", "--no-brain-sync"]);
       expect(r.stdout + r.stderr).toContain("local engine broken-config");
@@ -225,7 +251,11 @@ describe("gstack-gbrain-sync — split-engine SKIP (plan D12)", () => {
   });
 
   it("SKIPs code stage when config is missing (missing-config)", () => {
-    const env = makeEnv({ withGbrain: true, gbrainBehavior: "ok", withConfig: false });
+    const env = makeEnv({
+      withGbrain: true,
+      gbrainBehavior: "ok",
+      withConfig: false,
+    });
     try {
       const r = runOrchestrator(env, ["--code-only"]);
       expect(r.stdout + r.stderr).toContain("local engine missing-config");
@@ -235,7 +265,11 @@ describe("gstack-gbrain-sync — split-engine SKIP (plan D12)", () => {
   });
 
   it("runs code stage normally when local engine is ok", () => {
-    const env = makeEnv({ withGbrain: true, gbrainBehavior: "ok", withConfig: true });
+    const env = makeEnv({
+      withGbrain: true,
+      gbrainBehavior: "ok",
+      withConfig: true,
+    });
     try {
       const r = runOrchestrator(env, ["--code-only"]);
       // When ok, the SKIP-for-local-status branch must NOT fire.

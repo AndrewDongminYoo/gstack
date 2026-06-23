@@ -90,7 +90,8 @@ describe("#1539 generated SKILL.md files — gate propagated to all consumers", 
     const secDir = path.join(ROOT, path.dirname(rel), "sections");
     if (fs.existsSync(secDir)) {
       for (const f of fs.readdirSync(secDir).sort()) {
-        if (f.endsWith(".md")) body += "\n" + fs.readFileSync(path.join(secDir, f), "utf-8");
+        if (f.endsWith(".md"))
+          body += "\n" + fs.readFileSync(path.join(secDir, f), "utf-8");
       }
     }
     return body;

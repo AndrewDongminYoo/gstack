@@ -9,14 +9,14 @@
  * skill without a registry entry and this fails CI.
  */
 
-import { describe, test, expect } from 'bun:test';
-import * as path from 'path';
-import { checkCompleteness } from './helpers/carve-guard-checks';
+import { describe, test, expect } from "bun:test";
+import * as path from "path";
+import { checkCompleteness } from "./helpers/carve-guard-checks";
 
-const ROOT = path.resolve(import.meta.dir, '..');
+const ROOT = path.resolve(import.meta.dir, "..");
 
-describe('carve-guard completeness (gate, free)', () => {
-  test('filesystem carved set == CARVE_GUARDS set, and every entry is consistent', () => {
+describe("carve-guard completeness (gate, free)", () => {
+  test("filesystem carved set == CARVE_GUARDS set, and every entry is consistent", () => {
     expect(checkCompleteness(ROOT)).toEqual([]);
   });
 });

@@ -19,14 +19,24 @@ describe("one-way-door credential keyword net (#1839)", () => {
 
   test("revoke/reset/rotate are all parallel for password", () => {
     for (const verb of ["revoke", "reset", "rotate"]) {
-      const r = classifyQuestion({ summary: `${verb} the production password` });
+      const r = classifyQuestion({
+        summary: `${verb} the production password`,
+      });
       expect(r.oneWay).toBe(true);
     }
   });
 
   test("rotate still catches the other credential nouns", () => {
-    for (const noun of ["api key", "token", "secret", "credential", "access key"]) {
-      expect(classifyQuestion({ summary: `rotate my ${noun}` }).oneWay).toBe(true);
+    for (const noun of [
+      "api key",
+      "token",
+      "secret",
+      "credential",
+      "access key",
+    ]) {
+      expect(classifyQuestion({ summary: `rotate my ${noun}` }).oneWay).toBe(
+        true,
+      );
     }
   });
 });

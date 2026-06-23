@@ -15,18 +15,26 @@ function unionTmpl(skill: string): string {
   const dir = path.join(ROOT, skill, "sections");
   if (fs.existsSync(dir)) {
     for (const f of fs.readdirSync(dir).sort()) {
-      if (f.endsWith(".md.tmpl")) t += "\n" + fs.readFileSync(path.join(dir, f), "utf-8");
+      if (f.endsWith(".md.tmpl"))
+        t += "\n" + fs.readFileSync(path.join(dir, f), "utf-8");
     }
   }
   return t;
 }
 const RELEASE = unionTmpl("document-release");
-const GENERATE = fs.readFileSync(path.join(ROOT, "document-generate", "SKILL.md.tmpl"), "utf-8");
+const GENERATE = fs.readFileSync(
+  path.join(ROOT, "document-generate", "SKILL.md.tmpl"),
+  "utf-8",
+);
 
 describe("/document-release redaction", () => {
   test("scans the PR-body temp file before gh pr edit", () => {
-    const scanIdx = RELEASE.indexOf("gstack-redact --from-file /tmp/gstack-pr-body");
-    const editIdx = RELEASE.indexOf("gh pr edit --body-file /tmp/gstack-pr-body");
+    const scanIdx = RELEASE.indexOf(
+      "gstack-redact --from-file /tmp/gstack-pr-body",
+    );
+    const editIdx = RELEASE.indexOf(
+      "gh pr edit --body-file /tmp/gstack-pr-body",
+    );
     expect(scanIdx).toBeGreaterThan(-1);
     expect(editIdx).toBeGreaterThan(scanIdx);
   });

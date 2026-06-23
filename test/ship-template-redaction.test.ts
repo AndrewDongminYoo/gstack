@@ -17,7 +17,8 @@ function readShipTemplateUnion(): string {
   const secDir = path.join(ROOT, "ship", "sections");
   if (fs.existsSync(secDir)) {
     for (const f of fs.readdirSync(secDir).sort()) {
-      if (f.endsWith(".md.tmpl")) t += "\n" + fs.readFileSync(path.join(secDir, f), "utf-8");
+      if (f.endsWith(".md.tmpl"))
+        t += "\n" + fs.readFileSync(path.join(secDir, f), "utf-8");
     }
   }
   return t;
@@ -30,7 +31,9 @@ describe("/ship redaction wiring", () => {
     expect(TMPL).toMatch(/Redaction scan \(PR body \+ title\)/);
   });
   test("creates from the scanned temp file (exact bytes)", () => {
-    expect(TMPL).toMatch(/gh pr create[\s\S]{0,120}--body-file "\$PR_BODY_FILE"/);
+    expect(TMPL).toMatch(
+      /gh pr create[\s\S]{0,120}--body-file "\$PR_BODY_FILE"/,
+    );
   });
   test("edit path also scans before sending", () => {
     expect(TMPL).toMatch(/gh pr edit --body-file "\$PR_BODY_FILE"/);
@@ -51,7 +54,8 @@ describe("/ship redaction wiring", () => {
 
 describe("tool-attributed fence behavior (engine contract /ship relies on)", () => {
   test("a doc-example credential inside a tool fence WARN-degrades, does not block", () => {
-    const body = "## Codex review\n```codex-review\nflagged your_aws_key AKIAIOSFODNN7EXAMPLE\n```";
+    const body =
+      "## Codex review\n```codex-review\nflagged your_aws_key AKIAIOSFODNN7EXAMPLE\n```";
     const r = scan(body, { repoVisibility: "public" });
     expect(r.counts.HIGH).toBe(0);
   });

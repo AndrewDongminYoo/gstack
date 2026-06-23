@@ -1,6 +1,6 @@
-import { describe, test, expect } from 'bun:test';
-import * as fs from 'fs';
-import * as path from 'path';
+import { describe, test, expect } from "bun:test";
+import * as fs from "fs";
+import * as path from "path";
 
 // Static invariants guarding Windows artifact-sync (bin/gstack-brain-sync).
 //
@@ -27,35 +27,40 @@ import * as path from 'path';
 //   5. the skip-list must be normalized to the same separator form as `rel`,
 //      or a backslash entry in .brain-skip.txt stops matching and a file the
 //      user explicitly skipped gets synced.
-const ROOT = path.resolve(import.meta.dir, '..');
-const SRC = fs.readFileSync(path.join(ROOT, 'bin', 'gstack-brain-sync'), 'utf-8');
+const ROOT = path.resolve(import.meta.dir, "..");
+const SRC = fs.readFileSync(
+  path.join(ROOT, "bin", "gstack-brain-sync"),
+  "utf-8",
+);
 
-describe('gstack-brain-sync — Windows path/exec invariants', () => {
-  test('discover-new normalizes relpath separators before fnmatch (bug 1)', () => {
-    expect(SRC).toContain('os.path.relpath(full, gstack_home).replace(os.sep, "/")');
+describe("gstack-brain-sync — Windows path/exec invariants", () => {
+  test("discover-new normalizes relpath separators before fnmatch (bug 1)", () => {
+    expect(SRC).toContain(
+      'os.path.relpath(full, gstack_home).replace(os.sep, "/")',
+    );
   });
 
-  test('no python subprocess exec — Windows cannot exec the bash shims (bug 2)', () => {
+  test("no python subprocess exec — Windows cannot exec the bash shims (bug 2)", () => {
     // The whole script must never shell out to a bin/ bash script from Python;
     // that is the exec failure that left discover enqueuing nothing on Windows.
-    expect(SRC).not.toContain('subprocess');
+    expect(SRC).not.toContain("subprocess");
   });
 
-  test('drain loop strips trailing CR before git add (bug 3)', () => {
+  test("drain loop strips trailing CR before git add (bug 3)", () => {
     const CR_STRIP = "p=\"${p%$'\\r'}\"";
     expect(SRC).toContain(CR_STRIP);
     // The strip must precede the staging call, or the pathspec still carries \r.
     expect(SRC.indexOf(CR_STRIP)).toBeLessThan(SRC.indexOf('add -f -- "$p"'));
   });
 
-  test('inline enqueue appends one atomic record at a time (codex P2 #1)', () => {
-    expect(SRC).toContain('os.O_APPEND');
-    expect(SRC).toContain('os.write(fd');
+  test("inline enqueue appends one atomic record at a time (codex P2 #1)", () => {
+    expect(SRC).toContain("os.O_APPEND");
+    expect(SRC).toContain("os.write(fd");
     // No buffered batch write to the queue (the interleave-corruption shape).
     expect(SRC).not.toContain('open(queue_path, "a"');
   });
 
-  test('skip-list is normalized on BOTH discover and drain sides (codex P2 #2)', () => {
+  test("skip-list is normalized on BOTH discover and drain sides (codex P2 #2)", () => {
     // The drain (compute_paths_to_stage) is the real staging boundary, so it
     // must normalize skip entries identically to discover_new — otherwise a
     // backslash .brain-skip.txt entry is honored at discovery but bypassed at

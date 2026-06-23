@@ -1,49 +1,55 @@
-import { describe, test, expect } from 'bun:test';
-import { spawnSync } from 'child_process';
-import * as path from 'path';
-import * as fs from 'fs';
-import * as os from 'os';
+import { describe, test, expect } from "bun:test";
+import { spawnSync } from "child_process";
+import * as path from "path";
+import * as fs from "fs";
+import * as os from "os";
 
-const ROOT = path.resolve(import.meta.dir, '..');
-const SETUP_SCRIPT = path.join(ROOT, 'setup');
+const ROOT = path.resolve(import.meta.dir, "..");
+const SETUP_SCRIPT = path.join(ROOT, "setup");
 
-describe('setup: Conductor worktree guard', () => {
-  test('setup contains the real-dir guard before the symlink-or-copy into ~/.claude/skills/', () => {
-    const content = fs.readFileSync(SETUP_SCRIPT, 'utf-8');
-    const guardIdx = content.indexOf('_SKIP_CLAUDE_REGISTER=0');
+describe("setup: Conductor worktree guard", () => {
+  test("setup contains the real-dir guard before the symlink-or-copy into ~/.claude/skills/", () => {
+    const content = fs.readFileSync(SETUP_SCRIPT, "utf-8");
+    const guardIdx = content.indexOf("_SKIP_CLAUDE_REGISTER=0");
     // v1.36.0.0: symlink work routes through _link_or_copy helper for Windows fallback.
-    const lnIdx = content.indexOf('_link_or_copy "$SOURCE_GSTACK_DIR" "$CLAUDE_GSTACK_LINK"');
+    const lnIdx = content.indexOf(
+      '_link_or_copy "$SOURCE_GSTACK_DIR" "$CLAUDE_GSTACK_LINK"',
+    );
     expect(guardIdx).toBeGreaterThan(-1);
     expect(lnIdx).toBeGreaterThan(-1);
     expect(guardIdx).toBeLessThan(lnIdx);
   });
 
-  test('guard resolves the existing real dir with `pwd -P` and compares against source', () => {
-    const content = fs.readFileSync(SETUP_SCRIPT, 'utf-8');
-    expect(content).toContain('[ -d "$CLAUDE_GSTACK_LINK" ] && [ ! -L "$CLAUDE_GSTACK_LINK" ]');
+  test("guard resolves the existing real dir with `pwd -P` and compares against source", () => {
+    const content = fs.readFileSync(SETUP_SCRIPT, "utf-8");
+    expect(content).toContain(
+      '[ -d "$CLAUDE_GSTACK_LINK" ] && [ ! -L "$CLAUDE_GSTACK_LINK" ]',
+    );
     expect(content).toContain('cd "$CLAUDE_GSTACK_LINK" 2>/dev/null && pwd -P');
     expect(content).toContain('"$_EXISTING_REAL" != "$SOURCE_GSTACK_DIR"');
   });
 
   test('skip branch prints "registration skipped" + remediation hint', () => {
-    const content = fs.readFileSync(SETUP_SCRIPT, 'utf-8');
-    expect(content).toContain('Skipping Claude skill registration');
-    expect(content).toContain('claude registration skipped');
-    expect(content).toContain('rm -rf $CLAUDE_GSTACK_LINK');
+    const content = fs.readFileSync(SETUP_SCRIPT, "utf-8");
+    expect(content).toContain("Skipping Claude skill registration");
+    expect(content).toContain("claude registration skipped");
+    expect(content).toContain("rm -rf $CLAUDE_GSTACK_LINK");
   });
 
   // Reproduce the BSD/macOS `ln -snf` behavior that caused the bug, then
   // confirm the guard avoids it. This is a behavioral test of the guard logic
   // running in an isolated tmpdir — not the full setup script.
-  test('BSD ln -snf into an existing real dir creates a child symlink (bug reproduces)', () => {
-    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'gstack-setup-guard-'));
+  test("BSD ln -snf into an existing real dir creates a child symlink (bug reproduces)", () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "gstack-setup-guard-"));
     try {
-      const source = path.join(tmp, 'source-worktree');
-      const dest = path.join(tmp, 'dest-real-dir');
+      const source = path.join(tmp, "source-worktree");
+      const dest = path.join(tmp, "dest-real-dir");
       fs.mkdirSync(source);
       fs.mkdirSync(dest);
       // The buggy invocation: target dest is an existing real dir.
-      const result = spawnSync('ln', ['-snf', source, dest], { encoding: 'utf-8' });
+      const result = spawnSync("ln", ["-snf", source, dest], {
+        encoding: "utf-8",
+      });
       expect(result.status).toBe(0);
       // Child symlink leaked inside dest.
       const leaked = path.join(dest, path.basename(source));
@@ -58,11 +64,11 @@ describe('setup: Conductor worktree guard', () => {
     }
   });
 
-  test('guard logic refuses to ln when dest is a real dir pointing elsewhere', () => {
-    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'gstack-setup-guard-'));
+  test("guard logic refuses to ln when dest is a real dir pointing elsewhere", () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "gstack-setup-guard-"));
     try {
-      const source = path.join(tmp, 'source-worktree');
-      const dest = path.join(tmp, 'dest-real-dir');
+      const source = path.join(tmp, "source-worktree");
+      const dest = path.join(tmp, "dest-real-dir");
       fs.mkdirSync(source);
       fs.mkdirSync(dest);
       // Inline the guard logic from setup. If it triggers, $_SKIP=1 is echoed
@@ -85,9 +91,9 @@ describe('setup: Conductor worktree guard', () => {
           echo "LINKED"
         fi
       `;
-      const result = spawnSync('bash', ['-c', script], { encoding: 'utf-8' });
+      const result = spawnSync("bash", ["-c", script], { encoding: "utf-8" });
       expect(result.status).toBe(0);
-      expect(result.stdout.trim()).toBe('SKIP');
+      expect(result.stdout.trim()).toBe("SKIP");
       // No child symlink leaked.
       const leaked = path.join(dest, path.basename(source));
       expect(fs.existsSync(leaked)).toBe(false);
@@ -96,11 +102,11 @@ describe('setup: Conductor worktree guard', () => {
     }
   });
 
-  test('guard allows ln when dest does not exist (fresh install path)', () => {
-    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'gstack-setup-guard-'));
+  test("guard allows ln when dest does not exist (fresh install path)", () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "gstack-setup-guard-"));
     try {
-      const source = path.join(tmp, 'source-worktree');
-      const dest = path.join(tmp, 'fresh-dest');
+      const source = path.join(tmp, "source-worktree");
+      const dest = path.join(tmp, "fresh-dest");
       fs.mkdirSync(source);
       const script = `
         set -e
@@ -120,9 +126,9 @@ describe('setup: Conductor worktree guard', () => {
           echo "LINKED"
         fi
       `;
-      const result = spawnSync('bash', ['-c', script], { encoding: 'utf-8' });
+      const result = spawnSync("bash", ["-c", script], { encoding: "utf-8" });
       expect(result.status).toBe(0);
-      expect(result.stdout.trim()).toBe('LINKED');
+      expect(result.stdout.trim()).toBe("LINKED");
       expect(fs.lstatSync(dest).isSymbolicLink()).toBe(true);
       expect(fs.readlinkSync(dest)).toBe(source);
     } finally {
@@ -130,12 +136,12 @@ describe('setup: Conductor worktree guard', () => {
     }
   });
 
-  test('guard allows ln when dest is an existing symlink (upgrade-in-place path)', () => {
-    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'gstack-setup-guard-'));
+  test("guard allows ln when dest is an existing symlink (upgrade-in-place path)", () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "gstack-setup-guard-"));
     try {
-      const source = path.join(tmp, 'new-source');
-      const oldSource = path.join(tmp, 'old-source');
-      const dest = path.join(tmp, 'dest-symlink');
+      const source = path.join(tmp, "new-source");
+      const oldSource = path.join(tmp, "old-source");
+      const dest = path.join(tmp, "dest-symlink");
       fs.mkdirSync(source);
       fs.mkdirSync(oldSource);
       fs.symlinkSync(oldSource, dest);
@@ -159,19 +165,19 @@ describe('setup: Conductor worktree guard', () => {
           echo "LINKED"
         fi
       `;
-      const result = spawnSync('bash', ['-c', script], { encoding: 'utf-8' });
+      const result = spawnSync("bash", ["-c", script], { encoding: "utf-8" });
       expect(result.status).toBe(0);
-      expect(result.stdout.trim()).toBe('LINKED');
+      expect(result.stdout.trim()).toBe("LINKED");
       expect(fs.readlinkSync(dest)).toBe(source);
     } finally {
       fs.rmSync(tmp, { recursive: true, force: true });
     }
   });
 
-  test('guard allows ln when dest is a real dir already pointing to source (self-rerun)', () => {
-    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'gstack-setup-guard-'));
+  test("guard allows ln when dest is a real dir already pointing to source (self-rerun)", () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "gstack-setup-guard-"));
     try {
-      const source = path.join(tmp, 'source-worktree');
+      const source = path.join(tmp, "source-worktree");
       fs.mkdirSync(source);
       // Mirror setup's SOURCE_GSTACK_DIR resolution (`pwd -P`) so the comparison
       // is fair on macOS where /tmp itself is a symlink to /private/tmp.
@@ -191,9 +197,9 @@ describe('setup: Conductor worktree guard', () => {
         fi
         echo "skip=$_SKIP_CLAUDE_REGISTER"
       `;
-      const result = spawnSync('bash', ['-c', script], { encoding: 'utf-8' });
+      const result = spawnSync("bash", ["-c", script], { encoding: "utf-8" });
       expect(result.status).toBe(0);
-      expect(result.stdout.trim()).toBe('skip=0');
+      expect(result.stdout.trim()).toBe("skip=0");
     } finally {
       fs.rmSync(tmp, { recursive: true, force: true });
     }

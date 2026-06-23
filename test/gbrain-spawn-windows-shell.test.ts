@@ -13,7 +13,9 @@ const read = (rel: string) => fs.readFileSync(path.join(ROOT, rel), "utf-8");
 describe("#1731 gbrain spawns carry the Windows shell flag", () => {
   test("NEEDS_SHELL_ON_WINDOWS is platform-gated in gbrain-exec.ts", () => {
     const src = read("lib/gbrain-exec.ts");
-    expect(src).toMatch(/export const NEEDS_SHELL_ON_WINDOWS\s*=\s*process\.platform === "win32"/);
+    expect(src).toMatch(
+      /export const NEEDS_SHELL_ON_WINDOWS\s*=\s*process\.platform === "win32"/,
+    );
   });
 
   // Every direct `gbrain` child spawn in these files must be matched by a
@@ -27,8 +29,10 @@ describe("#1731 gbrain spawns carry the Windows shell flag", () => {
   for (const rel of gbrainSpawnFiles) {
     test(`${rel}: every gbrain spawn has shell:NEEDS_SHELL_ON_WINDOWS`, () => {
       const src = read(rel);
-      const spawnOpeners = src.match(/(spawnSync|spawn|execFileSync)\("gbrain"/g)?.length ?? 0;
-      const shellFlags = src.match(/shell:\s*NEEDS_SHELL_ON_WINDOWS/g)?.length ?? 0;
+      const spawnOpeners =
+        src.match(/(spawnSync|spawn|execFileSync)\("gbrain"/g)?.length ?? 0;
+      const shellFlags =
+        src.match(/shell:\s*NEEDS_SHELL_ON_WINDOWS/g)?.length ?? 0;
       expect(spawnOpeners).toBeGreaterThan(0);
       expect(shellFlags).toBeGreaterThanOrEqual(spawnOpeners);
     });
@@ -36,10 +40,14 @@ describe("#1731 gbrain spawns carry the Windows shell flag", () => {
 
   test("orchestrator brain-sync spawns carry the Windows shell flag", () => {
     const src = read("bin/gstack-gbrain-sync.ts");
-    const brainSyncSpawns = src.match(/spawnSync\(brainSyncPath,/g)?.length ?? 0;
+    const brainSyncSpawns =
+      src.match(/spawnSync\(brainSyncPath,/g)?.length ?? 0;
     expect(brainSyncSpawns).toBe(2);
     // Both spawnSync(brainSyncPath, ...) blocks must include the shell flag.
-    const withShell = src.match(/spawnSync\(brainSyncPath,[\s\S]*?shell:\s*NEEDS_SHELL_ON_WINDOWS/g)?.length ?? 0;
+    const withShell =
+      src.match(
+        /spawnSync\(brainSyncPath,[\s\S]*?shell:\s*NEEDS_SHELL_ON_WINDOWS/g,
+      )?.length ?? 0;
     expect(withShell).toBe(2);
   });
 });

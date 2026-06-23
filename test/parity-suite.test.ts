@@ -20,22 +20,29 @@
  * alongside the sections/ extraction. Plumbing is in parity-harness.ts.
  */
 
-import { describe, test, expect } from 'bun:test';
-import * as fs from 'fs';
-import * as path from 'path';
-import { runParityChecks, PARITY_INVARIANTS } from './helpers/parity-harness';
-import type { ParityBaseline } from './helpers/capture-parity-baseline';
+import { describe, test, expect } from "bun:test";
+import * as fs from "fs";
+import * as path from "path";
+import { runParityChecks, PARITY_INVARIANTS } from "./helpers/parity-harness";
+import type { ParityBaseline } from "./helpers/capture-parity-baseline";
 
-const REPO_ROOT = path.resolve(import.meta.dir, '..');
-const BASELINE_PATH = path.join(REPO_ROOT, 'test', 'fixtures', 'parity-baseline-v1.57.7.0.json');
+const REPO_ROOT = path.resolve(import.meta.dir, "..");
+const BASELINE_PATH = path.join(
+  REPO_ROOT,
+  "test",
+  "fixtures",
+  "parity-baseline-v1.57.7.0.json",
+);
 
-describe('parity suite vs v1.57.7.0 baseline (gate, free)', () => {
-  test('baseline exists', () => {
+describe("parity suite vs v1.57.7.0 baseline (gate, free)", () => {
+  test("baseline exists", () => {
     expect(fs.existsSync(BASELINE_PATH)).toBe(true);
   });
 
-  test('all PARITY_INVARIANTS pass', () => {
-    const baseline: ParityBaseline = JSON.parse(fs.readFileSync(BASELINE_PATH, 'utf-8'));
+  test("all PARITY_INVARIANTS pass", () => {
+    const baseline: ParityBaseline = JSON.parse(
+      fs.readFileSync(BASELINE_PATH, "utf-8"),
+    );
     const report = runParityChecks({
       repoRoot: REPO_ROOT,
       baseline,
@@ -50,9 +57,9 @@ describe('parity suite vs v1.57.7.0 baseline (gate, free)', () => {
     if (report.failed === 0) return;
 
     const failureMessages = report.details
-      .filter(d => !d.passed)
-      .map(d => `  ${d.skill}:\n    - ${d.failures.join('\n    - ')}`)
-      .join('\n');
+      .filter((d) => !d.passed)
+      .map((d) => `  ${d.skill}:\n    - ${d.failures.join("\n    - ")}`)
+      .join("\n");
     throw new Error(
       `${report.failed} skill(s) failed parity checks vs ${baseline.tag}:\n${failureMessages}`,
     );

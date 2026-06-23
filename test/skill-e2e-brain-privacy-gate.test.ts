@@ -20,40 +20,48 @@
  * prose contract this test locks in.
  */
 
-import { describe, test, expect } from 'bun:test';
-import * as fs from 'fs';
-import * as os from 'os';
-import * as path from 'path';
-import { runAgentSdkTest, passThroughNonAskUserQuestion, resolveClaudeBinary } from './helpers/agent-sdk-runner';
+import { describe, test, expect } from "bun:test";
+import * as fs from "fs";
+import * as os from "os";
+import * as path from "path";
+import {
+  runAgentSdkTest,
+  passThroughNonAskUserQuestion,
+  resolveClaudeBinary,
+} from "./helpers/agent-sdk-runner";
 
-const shouldRun = !!process.env.EVALS && process.env.EVALS_TIER === 'periodic';
+const shouldRun = !!process.env.EVALS && process.env.EVALS_TIER === "periodic";
 const describeE2E = shouldRun ? describe : describe.skip;
 
-describeE2E('gbrain-sync privacy gate fires once via preamble', () => {
-  test('gstack skill preamble fires the 3-option AskUserQuestion when gbrain is detected', async () => {
+describeE2E("gbrain-sync privacy gate fires once via preamble", () => {
+  test("gstack skill preamble fires the 3-option AskUserQuestion when gbrain is detected", async () => {
     // Stage a fresh GSTACK_HOME with artifacts_sync_mode_prompted=false.
-    const gstackHome = fs.mkdtempSync(path.join(os.tmpdir(), 'privacy-gate-gstack-'));
-    const fakeBinDir = fs.mkdtempSync(path.join(os.tmpdir(), 'privacy-gate-bin-'));
+    const gstackHome = fs.mkdtempSync(
+      path.join(os.tmpdir(), "privacy-gate-gstack-"),
+    );
+    const fakeBinDir = fs.mkdtempSync(
+      path.join(os.tmpdir(), "privacy-gate-bin-"),
+    );
 
     // Seed the config so the gate's condition passes.
     fs.writeFileSync(
-      path.join(gstackHome, 'config.yaml'),
-      'artifacts_sync_mode: off\nartifacts_sync_mode_prompted: false\n',
-      { mode: 0o600 }
+      path.join(gstackHome, "config.yaml"),
+      "artifacts_sync_mode: off\nartifacts_sync_mode_prompted: false\n",
+      { mode: 0o600 },
     );
 
     // Fake `gbrain` binary that makes the host-detection probe succeed.
     // The preamble checks `gbrain doctor --fast --json` OR `which gbrain`.
     // Either branch counts as "gbrain detected."
     fs.writeFileSync(
-      path.join(fakeBinDir, 'gbrain'),
-      '#!/bin/bash\n' +
+      path.join(fakeBinDir, "gbrain"),
+      "#!/bin/bash\n" +
         'case "$1" in\n' +
         '  doctor) echo \'{"status":"ok","schema_version":2}\' ; exit 0 ;;\n' +
         '  --version) echo "0.18.2" ; exit 0 ;;\n' +
-        '  *) exit 0 ;;\n' +
-        'esac\n',
-      { mode: 0o755 }
+        "  *) exit 0 ;;\n" +
+        "esac\n",
+      { mode: 0o755 },
     );
 
     const askUserQuestions: Array<{ input: Record<string, unknown> }> = [];
@@ -64,7 +72,7 @@ describeE2E('gbrain-sync privacy gate fires once via preamble', () => {
     const origGstackHome = process.env.GSTACK_HOME;
     const origPath = process.env.PATH;
     process.env.GSTACK_HOME = gstackHome;
-    process.env.PATH = `${fakeBinDir}:${process.env.PATH ?? '/usr/bin:/bin:/opt/homebrew/bin'}`;
+    process.env.PATH = `${fakeBinDir}:${process.env.PATH ?? "/usr/bin:/bin:/opt/homebrew/bin"}`;
 
     try {
       // Pick a small skill with the preamble and load it via Read to force
@@ -74,17 +82,16 @@ describeE2E('gbrain-sync privacy gate fires once via preamble', () => {
       // follow the skill's instructions in full.
       const learnSkill = path.resolve(
         import.meta.dir,
-        '..',
-        'learn',
-        'SKILL.md'
+        "..",
+        "learn",
+        "SKILL.md",
       );
       await runAgentSdkTest({
-        systemPrompt: { type: 'preset', preset: 'claude_code' },
-        userPrompt:
-          `Read the skill file at ${learnSkill} and follow its instructions from the top, including every preamble directive. Execute every bash block. If any AskUserQuestion fires, present it.`,
+        systemPrompt: { type: "preset", preset: "claude_code" },
+        userPrompt: `Read the skill file at ${learnSkill} and follow its instructions from the top, including every preamble directive. Execute every bash block. If any AskUserQuestion fires, present it.`,
         workingDirectory: gstackHome,
         maxTurns: 10,
-        allowedTools: ['Read', 'Grep', 'Glob', 'Bash'],
+        allowedTools: ["Read", "Grep", "Glob", "Bash"],
         // NOTE: do NOT pass `env:` here. When the Agent SDK gets an explicit
         // env object, its auth pipeline doesn't pick up ANTHROPIC_API_KEY the
         // same way as when env is undefined (SDK-internal detail, verified
@@ -93,19 +100,22 @@ describeE2E('gbrain-sync privacy gate fires once via preamble', () => {
         // inherits our overrides ambiently.
         ...(binary ? { pathToClaudeCodeExecutable: binary } : {}),
         canUseTool: async (toolName, input) => {
-          if (toolName === 'AskUserQuestion') {
+          if (toolName === "AskUserQuestion") {
             askUserQuestions.push({ input });
             // Auto-answer "Decline — keep everything local" (option C)
             // so the skill can continue without actually turning on sync.
-            const q = (input.questions as Array<{
-              question: string;
-              options: Array<{ label: string }>;
-            }>)[0];
+            const q = (
+              input.questions as Array<{
+                question: string;
+                options: Array<{ label: string }>;
+              }>
+            )[0];
             const decline =
-              q.options.find((o) => /decline|keep everything local|no thanks/i.test(o.label)) ??
-              q.options[q.options.length - 1]!;
+              q.options.find((o) =>
+                /decline|keep everything local|no thanks/i.test(o.label),
+              ) ?? q.options[q.options.length - 1]!;
             return {
-              behavior: 'allow',
+              behavior: "allow",
               updatedInput: {
                 questions: input.questions,
                 answers: { [q.question]: decline.label },
@@ -119,9 +129,10 @@ describeE2E('gbrain-sync privacy gate fires once via preamble', () => {
       // Assertion 1: the privacy gate fired.
       const privacyQuestions = askUserQuestions.filter((aq) => {
         const qs = aq.input.questions as Array<{ question: string }>;
-        return qs.some(
-          (q) =>
-            /publish.*session memory|private github repo|gbrain indexes/i.test(q.question)
+        return qs.some((q) =>
+          /publish.*session memory|private github repo|gbrain indexes/i.test(
+            q.question,
+          ),
         );
       });
       expect(privacyQuestions.length).toBeGreaterThanOrEqual(1);
@@ -131,7 +142,9 @@ describeE2E('gbrain-sync privacy gate fires once via preamble', () => {
         question: string;
         options: Array<{ label: string }>;
       }>;
-      const labels = gate[0]!.options.map((o) => o.label.toLowerCase()).join(' | ');
+      const labels = gate[0]!.options
+        .map((o) => o.label.toLowerCase())
+        .join(" | ");
       // Full / artifacts-only / decline are the three canonical options.
       expect(labels).toMatch(/everything|allowlisted|full/);
       expect(labels).toMatch(/artifact/);
@@ -151,21 +164,25 @@ describeE2E('gbrain-sync privacy gate fires once via preamble', () => {
     }
   }, 180_000);
 
-  test('privacy gate does NOT fire when artifacts_sync_mode_prompted is already true', async () => {
+  test("privacy gate does NOT fire when artifacts_sync_mode_prompted is already true", async () => {
     // Same staging, but prompted=true this time. Gate should be silent.
-    const gstackHome = fs.mkdtempSync(path.join(os.tmpdir(), 'privacy-gate-off-'));
-    const fakeBinDir = fs.mkdtempSync(path.join(os.tmpdir(), 'privacy-gate-off-bin-'));
-
-    fs.writeFileSync(
-      path.join(gstackHome, 'config.yaml'),
-      'artifacts_sync_mode: off\nartifacts_sync_mode_prompted: true\n',
-      { mode: 0o600 }
+    const gstackHome = fs.mkdtempSync(
+      path.join(os.tmpdir(), "privacy-gate-off-"),
+    );
+    const fakeBinDir = fs.mkdtempSync(
+      path.join(os.tmpdir(), "privacy-gate-off-bin-"),
     );
 
     fs.writeFileSync(
-      path.join(fakeBinDir, 'gbrain'),
+      path.join(gstackHome, "config.yaml"),
+      "artifacts_sync_mode: off\nartifacts_sync_mode_prompted: true\n",
+      { mode: 0o600 },
+    );
+
+    fs.writeFileSync(
+      path.join(fakeBinDir, "gbrain"),
       '#!/bin/bash\necho \'{"status":"ok"}\'\nexit 0\n',
-      { mode: 0o755 }
+      { mode: 0o755 },
     );
 
     const askUserQuestions: Array<{ input: Record<string, unknown> }> = [];
@@ -175,27 +192,29 @@ describeE2E('gbrain-sync privacy gate fires once via preamble', () => {
     const origGstackHome = process.env.GSTACK_HOME;
     const origPath = process.env.PATH;
     process.env.GSTACK_HOME = gstackHome;
-    process.env.PATH = `${fakeBinDir}:${process.env.PATH ?? '/usr/bin:/bin:/opt/homebrew/bin'}`;
+    process.env.PATH = `${fakeBinDir}:${process.env.PATH ?? "/usr/bin:/bin:/opt/homebrew/bin"}`;
 
     try {
       await runAgentSdkTest({
-        systemPrompt: { type: 'preset', preset: 'claude_code' },
+        systemPrompt: { type: "preset", preset: "claude_code" },
         userPrompt:
-          'Run /learn with no arguments. Just report the learnings count.',
+          "Run /learn with no arguments. Just report the learnings count.",
         workingDirectory: gstackHome,
         maxTurns: 4,
-        allowedTools: ['Read', 'Grep', 'Glob', 'Bash'],
+        allowedTools: ["Read", "Grep", "Glob", "Bash"],
         ...(binary ? { pathToClaudeCodeExecutable: binary } : {}),
         canUseTool: async (toolName, input) => {
-          if (toolName === 'AskUserQuestion') {
+          if (toolName === "AskUserQuestion") {
             askUserQuestions.push({ input });
             // Pass through whatever the model asks; don't prefer anything.
-            const q = (input.questions as Array<{
-              question: string;
-              options: Array<{ label: string }>;
-            }>)[0];
+            const q = (
+              input.questions as Array<{
+                question: string;
+                options: Array<{ label: string }>;
+              }>
+            )[0];
             return {
-              behavior: 'allow',
+              behavior: "allow",
               updatedInput: {
                 questions: input.questions,
                 answers: { [q.question]: q.options[0]!.label },
@@ -209,9 +228,10 @@ describeE2E('gbrain-sync privacy gate fires once via preamble', () => {
       // No AskUserQuestion should have matched the privacy gate's prose.
       const privacyQuestions = askUserQuestions.filter((aq) => {
         const qs = aq.input.questions as Array<{ question: string }>;
-        return qs.some(
-          (q) =>
-            /publish.*session memory|private github repo|gbrain indexes/i.test(q.question)
+        return qs.some((q) =>
+          /publish.*session memory|private github repo|gbrain indexes/i.test(
+            q.question,
+          ),
         );
       });
       expect(privacyQuestions.length).toBe(0);

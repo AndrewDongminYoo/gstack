@@ -29,7 +29,11 @@ describe("parseSearchHits (text surface)", () => {
   test("parses scored lines, skips non-hit lines", () => {
     const hits = parseSearchHits(sample, 0.1, 10);
     expect(hits).toHaveLength(2);
-    expect(hits[0]).toEqual({ score: 0.91, slug: "decisions/foo", snippet: "We chose PGLite for the local engine" });
+    expect(hits[0]).toEqual({
+      score: 0.91,
+      slug: "decisions/foo",
+      snippet: "We chose PGLite for the local engine",
+    });
     expect(hits[1].slug).toBe("docs/bar");
   });
 

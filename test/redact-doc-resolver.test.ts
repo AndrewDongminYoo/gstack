@@ -70,7 +70,9 @@ describe("REDACT_INVOCATION_BLOCK", () => {
   });
 
   test("includes a which-bun probe", () => {
-    expect(generateRedactInvocationBlock(ctx, ["pre-issue"])).toContain("command -v bun");
+    expect(generateRedactInvocationBlock(ctx, ["pre-issue"])).toContain(
+      "command -v bun",
+    );
   });
 
   test("HIGH has no skip flag; framed as guardrail not enforcement", () => {
@@ -86,11 +88,17 @@ describe("REDACT_INVOCATION_BLOCK", () => {
   });
 
   test("sink label drives the prose noun/verb", () => {
-    expect(generateRedactInvocationBlock(ctx, ["pre-commit"])).toContain("commit");
-    expect(generateRedactInvocationBlock(ctx, ["pre-pr-title"])).toContain("PR title");
+    expect(generateRedactInvocationBlock(ctx, ["pre-commit"])).toContain(
+      "commit",
+    );
+    expect(generateRedactInvocationBlock(ctx, ["pre-pr-title"])).toContain(
+      "PR title",
+    );
   });
 
   test("unknown sink label falls back without throwing", () => {
-    expect(() => generateRedactInvocationBlock(ctx, ["bogus-sink"])).not.toThrow();
+    expect(() =>
+      generateRedactInvocationBlock(ctx, ["bogus-sink"]),
+    ).not.toThrow();
   });
 });

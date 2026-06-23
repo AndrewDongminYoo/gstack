@@ -85,7 +85,10 @@ describe("#1606 _gstack_gbrain_validate_varname — LC_ALL=C pin", () => {
     // distinctive value must survive.
     const result = spawnSync(
       "bash",
-      ["-c", `. "${LIB}"; LC_ALL=fr_FR.UTF-8; _gstack_gbrain_validate_varname FOO; echo "$LC_ALL"`],
+      [
+        "-c",
+        `. "${LIB}"; LC_ALL=fr_FR.UTF-8; _gstack_gbrain_validate_varname FOO; echo "$LC_ALL"`,
+      ],
       {
         encoding: "utf-8",
         timeout: 5000,

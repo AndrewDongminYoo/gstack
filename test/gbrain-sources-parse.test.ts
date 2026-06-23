@@ -9,7 +9,11 @@ import { parseSourcesList } from "../lib/gbrain-sources";
 describe("parseSourcesList", () => {
   const rows = [
     { id: "a", local_path: "/x", page_count: 3 },
-    { id: "b", local_path: "/y", config: { remote_url: "https://example.com/r.git" } },
+    {
+      id: "b",
+      local_path: "/y",
+      config: { remote_url: "https://example.com/r.git" },
+    },
   ];
 
   test("wrapped { sources: [...] } shape", () => {
@@ -44,6 +48,8 @@ describe("parseSourcesList", () => {
 
   test("preserves config.remote_url for the #1734 audit", () => {
     const parsed = parseSourcesList({ sources: rows });
-    expect(parsed.find((r) => r.id === "b")?.config?.remote_url).toBe("https://example.com/r.git");
+    expect(parsed.find((r) => r.id === "b")?.config?.remote_url).toBe(
+      "https://example.com/r.git",
+    );
   });
 });

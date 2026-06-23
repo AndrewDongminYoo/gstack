@@ -17,87 +17,106 @@
 //        c. swift build -c release with --vv shows DebugBridge target
 //           gated (no compilation step for DebugBridgeCore/UI)
 
-import { describe, test, expect } from 'bun:test';
-import { spawnSync } from 'child_process';
-import { existsSync, readFileSync } from 'fs';
-import { join } from 'path';
+import { describe, test, expect } from "bun:test";
+import { spawnSync } from "child_process";
+import { existsSync, readFileSync } from "fs";
+import { join } from "path";
 
-const ROOT = join(import.meta.dir, '..');
-const FIXTURE_PATH = join(ROOT, 'test/fixtures/ios-qa/FixtureApp');
-const TEMPLATES_PATH = join(ROOT, 'ios-qa/templates');
+const ROOT = join(import.meta.dir, "..");
+const FIXTURE_PATH = join(ROOT, "test/fixtures/ios-qa/FixtureApp");
+const TEMPLATES_PATH = join(ROOT, "ios-qa/templates");
 
 // Parity: canonical Obj-C touch templates must match the fixture's working
 // copy. The fixture is the only place the .m / .h are exercised end-to-end
 // on a real device, so any divergence means consuming apps would ship a
 // stale, untested version of the SwiftUI hit-test fix.
-describe('template ↔ fixture parity', () => {
-  test('DebugBridgeTouch.h.template matches fixture include', () => {
-    const tmpl = readFileSync(join(TEMPLATES_PATH, 'DebugBridgeTouch.h.template'), 'utf-8');
+describe("template ↔ fixture parity", () => {
+  test("DebugBridgeTouch.h.template matches fixture include", () => {
+    const tmpl = readFileSync(
+      join(TEMPLATES_PATH, "DebugBridgeTouch.h.template"),
+      "utf-8",
+    );
     const fixture = readFileSync(
-      join(FIXTURE_PATH, 'Sources/DebugBridgeTouch/include/DebugBridgeTouch.h'),
-      'utf-8',
+      join(FIXTURE_PATH, "Sources/DebugBridgeTouch/include/DebugBridgeTouch.h"),
+      "utf-8",
     );
     expect(tmpl).toBe(fixture);
   });
 
-  test('DebugBridgeTouch.m.template matches fixture .m', () => {
-    const tmpl = readFileSync(join(TEMPLATES_PATH, 'DebugBridgeTouch.m.template'), 'utf-8');
+  test("DebugBridgeTouch.m.template matches fixture .m", () => {
+    const tmpl = readFileSync(
+      join(TEMPLATES_PATH, "DebugBridgeTouch.m.template"),
+      "utf-8",
+    );
     const fixture = readFileSync(
-      join(FIXTURE_PATH, 'Sources/DebugBridgeTouch/DebugBridgeTouch.m'),
-      'utf-8',
+      join(FIXTURE_PATH, "Sources/DebugBridgeTouch/DebugBridgeTouch.m"),
+      "utf-8",
     );
     expect(tmpl).toBe(fixture);
   });
 
-  test('Package.swift.template declares all 3 DebugBridge targets', () => {
-    const tmpl = readFileSync(join(TEMPLATES_PATH, 'Package.swift.template'), 'utf-8');
+  test("Package.swift.template declares all 3 DebugBridge targets", () => {
+    const tmpl = readFileSync(
+      join(TEMPLATES_PATH, "Package.swift.template"),
+      "utf-8",
+    );
     // Each target must be present as a library product AND a target definition.
-    for (const name of ['DebugBridgeCore', 'DebugBridgeUI', 'DebugBridgeTouch']) {
+    for (const name of [
+      "DebugBridgeCore",
+      "DebugBridgeUI",
+      "DebugBridgeTouch",
+    ]) {
       expect(tmpl).toContain(`name: "${name}"`);
     }
     // DebugBridgeUI must depend on the other two; that's how the consuming
     // app gets the transitive set with one dependency entry.
-    expect(tmpl).toMatch(/name:\s*"DebugBridgeUI"[\s\S]*?dependencies:\s*\["DebugBridgeCore",\s*"DebugBridgeTouch"\]/);
+    expect(tmpl).toMatch(
+      /name:\s*"DebugBridgeUI"[\s\S]*?dependencies:\s*\["DebugBridgeCore",\s*"DebugBridgeTouch"\]/,
+    );
   });
 });
 
 function hasSwift(): boolean {
-  const r = spawnSync('swift', ['--version'], { stdio: 'pipe' });
+  const r = spawnSync("swift", ["--version"], { stdio: "pipe" });
   return r.status === 0;
 }
 
 const swiftAvailable = hasSwift();
 const describeIfSwift = swiftAvailable ? describe : describe.skip;
 
-describeIfSwift('swift build invariants', () => {
+describeIfSwift("swift build invariants", () => {
   // DebugBridgeUI + DebugBridgeTouch are iOS-only (they link UIKit). Plain
   // `swift build` on macOS host can't resolve UIKit, so we scope these
   // invariants to DebugBridgeCore (Swift, cross-platform) + its XCTest
   // target. The iOS-only targets are covered by xcodebuild on the device
   // path (test/skill-e2e-ios-device.test.ts).
-  test('Debug-config build succeeds (DebugBridgeCore)', () => {
-    const r = spawnSync('swift', ['build', '-c', 'debug', '--target', 'DebugBridgeCore'], {
-      cwd: FIXTURE_PATH,
-      stdio: 'pipe',
-      timeout: 120_000,
-    });
+  test("Debug-config build succeeds (DebugBridgeCore)", () => {
+    const r = spawnSync(
+      "swift",
+      ["build", "-c", "debug", "--target", "DebugBridgeCore"],
+      {
+        cwd: FIXTURE_PATH,
+        stdio: "pipe",
+        timeout: 120_000,
+      },
+    );
     if (r.status !== 0) {
-      console.error('swift build stderr:', r.stderr?.toString().slice(0, 4000));
+      console.error("swift build stderr:", r.stderr?.toString().slice(0, 4000));
     }
     expect(r.status).toBe(0);
   }, 180_000);
 
-  test('XCTest suite for StateServer passes (validates real Swift impl)', () => {
-    const r = spawnSync('swift', ['test', '--filter', 'DebugBridgeCoreTests'], {
+  test("XCTest suite for StateServer passes (validates real Swift impl)", () => {
+    const r = spawnSync("swift", ["test", "--filter", "DebugBridgeCoreTests"], {
       cwd: FIXTURE_PATH,
-      stdio: 'pipe',
+      stdio: "pipe",
       timeout: 180_000,
     });
-    const stdout = r.stdout?.toString() ?? '';
-    const stderr = r.stderr?.toString() ?? '';
+    const stdout = r.stdout?.toString() ?? "";
+    const stderr = r.stderr?.toString() ?? "";
     const combined = stdout + stderr;
     if (r.status !== 0) {
-      console.error('swift test failure:', combined.slice(-4000));
+      console.error("swift test failure:", combined.slice(-4000));
     }
     expect(r.status).toBe(0);
     // --filter scopes the run to DebugBridgeCoreTests; the xctest summary
@@ -105,7 +124,7 @@ describeIfSwift('swift build invariants', () => {
     expect(combined).toMatch(/'(?:All|Selected) tests' passed/);
     // Guard against an empty pass-by-no-tests (filter typo / target rename):
     // we expect at least one StateServer smoke test to actually execute.
-    expect(combined).toContain('StateServerSmokeTests');
+    expect(combined).toContain("StateServerSmokeTests");
   }, 240_000);
 
   // Codex-flagged: Release-build guard must be STRUCTURAL, not advisory.
@@ -113,35 +132,62 @@ describeIfSwift('swift build invariants', () => {
   // to compile-out the entire DebugBridgeCore target body in Release. Since
   // every public symbol is gated `#if DEBUG`, the release build emits an
   // empty module — zero symbols.
-  test('Release-config build excludes DebugBridge symbols', () => {
+  test("Release-config build excludes DebugBridge symbols", () => {
     // Step 1: clean + release build (Core only — UI/Touch can't build on macOS)
-    spawnSync('swift', ['package', 'clean'], { cwd: FIXTURE_PATH, stdio: 'pipe', timeout: 60_000 });
-    const build = spawnSync('swift', ['build', '-c', 'release', '--target', 'DebugBridgeCore'], {
+    spawnSync("swift", ["package", "clean"], {
       cwd: FIXTURE_PATH,
-      stdio: 'pipe',
-      timeout: 180_000,
+      stdio: "pipe",
+      timeout: 60_000,
     });
+    const build = spawnSync(
+      "swift",
+      ["build", "-c", "release", "--target", "DebugBridgeCore"],
+      {
+        cwd: FIXTURE_PATH,
+        stdio: "pipe",
+        timeout: 180_000,
+      },
+    );
     if (build.status !== 0) {
-      console.error('release build stderr:', build.stderr?.toString().slice(0, 4000));
+      console.error(
+        "release build stderr:",
+        build.stderr?.toString().slice(0, 4000),
+      );
     }
     expect(build.status).toBe(0);
 
     // Step 2: locate the built object file(s). SwiftPM puts .build artifacts
     // under .build/<triple>/release/.
-    const oFiles = spawnSync('find', [
-      join(FIXTURE_PATH, '.build'),
-      '-path', '*/release/*',
-      '-name', '*.o',
-      '-path', '*DebugBridge*',
-    ], { stdio: 'pipe' });
-    const files = (oFiles.stdout?.toString() ?? '').trim().split('\n').filter(Boolean);
+    const oFiles = spawnSync(
+      "find",
+      [
+        join(FIXTURE_PATH, ".build"),
+        "-path",
+        "*/release/*",
+        "-name",
+        "*.o",
+        "-path",
+        "*DebugBridge*",
+      ],
+      { stdio: "pipe" },
+    );
+    const files = (oFiles.stdout?.toString() ?? "")
+      .trim()
+      .split("\n")
+      .filter(Boolean);
     expect(files.length).toBeGreaterThan(0);
 
     let foundForbidden = 0;
-    const forbidden = ['StateServer', 'handleRequest', 'sessionAcquire', 'authRotate', 'snapshotGet'];
+    const forbidden = [
+      "StateServer",
+      "handleRequest",
+      "sessionAcquire",
+      "authRotate",
+      "snapshotGet",
+    ];
     for (const f of files) {
-      const nm = spawnSync('nm', ['-j', f], { stdio: 'pipe' });
-      const syms = nm.stdout?.toString() ?? '';
+      const nm = spawnSync("nm", ["-j", f], { stdio: "pipe" });
+      const syms = nm.stdout?.toString() ?? "";
       for (const tok of forbidden) {
         if (syms.includes(tok)) {
           console.error(`Release symbol leak: ${tok} found in ${f}`);

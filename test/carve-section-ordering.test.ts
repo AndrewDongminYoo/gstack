@@ -10,18 +10,21 @@
  * this generalizes and retires). One test() per skill so a failure names the skill.
  */
 
-import { describe, test, expect } from 'bun:test';
-import * as path from 'path';
-import { CARVE_GUARDS } from './helpers/carve-guards';
-import { checkOrdering } from './helpers/carve-guard-checks';
+import { describe, test, expect } from "bun:test";
+import * as path from "path";
+import { CARVE_GUARDS } from "./helpers/carve-guards";
+import { checkOrdering } from "./helpers/carve-guard-checks";
 
-const ROOT = path.resolve(import.meta.dir, '..');
+const ROOT = path.resolve(import.meta.dir, "..");
 
-describe('carve static ordering (gate, free)', () => {
+describe("carve static ordering (gate, free)", () => {
   for (const guard of Object.values(CARVE_GUARDS)) {
     test(`${guard.skill}: skeleton routes to sections correctly`, () => {
       const failures = checkOrdering(ROOT, guard);
-      expect({ skill: guard.skill, failures }).toEqual({ skill: guard.skill, failures: [] });
+      expect({ skill: guard.skill, failures }).toEqual({
+        skill: guard.skill,
+        failures: [],
+      });
     });
   }
 });

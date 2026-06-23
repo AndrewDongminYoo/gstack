@@ -191,7 +191,7 @@ describe("lib/gbrain-local-status — status classification", () => {
       "utf-8",
     );
 
-    expect(source).not.toContain('command -v gbrain');
+    expect(source).not.toContain("command -v gbrain");
     expect(source).toContain('execFileSync("gbrain", ["--version"]');
   });
 
@@ -202,25 +202,41 @@ describe("lib/gbrain-local-status — status classification", () => {
   });
 
   it("returns 'missing-config' when CLI is present but ~/.gbrain/config.json absent", () => {
-    env = makeEnv({ withGbrain: true, gbrainBehavior: "ok", withConfig: false });
+    env = makeEnv({
+      withGbrain: true,
+      gbrainBehavior: "ok",
+      withConfig: false,
+    });
     restoreEnv = applyEnv(env);
     expect(localEngineStatus({ noCache: true })).toBe("missing-config");
   });
 
   it("returns 'broken-db' when sources list emits 'Cannot connect to database'", () => {
-    env = makeEnv({ withGbrain: true, gbrainBehavior: "broken-db", withConfig: true });
+    env = makeEnv({
+      withGbrain: true,
+      gbrainBehavior: "broken-db",
+      withConfig: true,
+    });
     restoreEnv = applyEnv(env);
     expect(localEngineStatus({ noCache: true })).toBe("broken-db");
   });
 
   it("returns 'broken-config' when sources list emits config.json error", () => {
-    env = makeEnv({ withGbrain: true, gbrainBehavior: "broken-config", withConfig: true });
+    env = makeEnv({
+      withGbrain: true,
+      gbrainBehavior: "broken-config",
+      withConfig: true,
+    });
     restoreEnv = applyEnv(env);
     expect(localEngineStatus({ noCache: true })).toBe("broken-config");
   });
 
   it("returns 'broken-config' defensively when stderr matches neither pattern", () => {
-    env = makeEnv({ withGbrain: true, gbrainBehavior: "throws", withConfig: true });
+    env = makeEnv({
+      withGbrain: true,
+      gbrainBehavior: "throws",
+      withConfig: true,
+    });
     restoreEnv = applyEnv(env);
     expect(localEngineStatus({ noCache: true })).toBe("broken-config");
   });
@@ -232,7 +248,11 @@ describe("lib/gbrain-local-status — status classification", () => {
   });
 
   it("returns 'timeout' (not broken-config) when the probe exceeds the deadline (#1964)", () => {
-    env = makeEnv({ withGbrain: true, gbrainBehavior: "slow", withConfig: true });
+    env = makeEnv({
+      withGbrain: true,
+      gbrainBehavior: "slow",
+      withConfig: true,
+    });
     restoreEnv = applyEnv(env);
     process.env.GSTACK_GBRAIN_PROBE_TIMEOUT_MS = "300";
     expect(localEngineStatus({ noCache: true })).toBe("timeout");
@@ -240,7 +260,11 @@ describe("lib/gbrain-local-status — status classification", () => {
 
   it("honors GBRAIN_HOME for config detection (codex D11)", () => {
     // Config lives ONLY at the alternate GBRAIN_HOME; ~/.gbrain has none.
-    env = makeEnv({ withGbrain: true, gbrainBehavior: "ok", withConfig: false });
+    env = makeEnv({
+      withGbrain: true,
+      gbrainBehavior: "ok",
+      withConfig: false,
+    });
     restoreEnv = applyEnv(env);
     const altHome = join(env.tmp, "alt-gbrain");
     mkdirSync(altHome, { recursive: true });
@@ -258,7 +282,11 @@ describe("lib/gbrain-local-status — status classification", () => {
 
 describe("gstack-gbrain-detect --is-ok — timeout is usable (eng review D1)", () => {
   it("exits 0 when the engine probe times out (slow-but-healthy must not suppress brain features)", () => {
-    const env = makeEnv({ withGbrain: true, gbrainBehavior: "slow", withConfig: true });
+    const env = makeEnv({
+      withGbrain: true,
+      gbrainBehavior: "slow",
+      withConfig: true,
+    });
     try {
       const detect = join(import.meta.dir, "..", "bin", "gstack-gbrain-detect");
       const r = spawnSync(process.execPath, [detect, "--is-ok"], {
@@ -292,15 +320,25 @@ describe("probeTimeoutMs — env override parsing", () => {
   });
 
   it("falls back to the default on non-numeric, empty, and non-positive values", () => {
-    expect(probeTimeoutMs({ GSTACK_GBRAIN_PROBE_TIMEOUT_MS: "fast" })).toBe(DEFAULT_PROBE_TIMEOUT_MS);
-    expect(probeTimeoutMs({ GSTACK_GBRAIN_PROBE_TIMEOUT_MS: "" })).toBe(DEFAULT_PROBE_TIMEOUT_MS);
-    expect(probeTimeoutMs({ GSTACK_GBRAIN_PROBE_TIMEOUT_MS: "0" })).toBe(DEFAULT_PROBE_TIMEOUT_MS);
-    expect(probeTimeoutMs({ GSTACK_GBRAIN_PROBE_TIMEOUT_MS: "-5" })).toBe(DEFAULT_PROBE_TIMEOUT_MS);
+    expect(probeTimeoutMs({ GSTACK_GBRAIN_PROBE_TIMEOUT_MS: "fast" })).toBe(
+      DEFAULT_PROBE_TIMEOUT_MS,
+    );
+    expect(probeTimeoutMs({ GSTACK_GBRAIN_PROBE_TIMEOUT_MS: "" })).toBe(
+      DEFAULT_PROBE_TIMEOUT_MS,
+    );
+    expect(probeTimeoutMs({ GSTACK_GBRAIN_PROBE_TIMEOUT_MS: "0" })).toBe(
+      DEFAULT_PROBE_TIMEOUT_MS,
+    );
+    expect(probeTimeoutMs({ GSTACK_GBRAIN_PROBE_TIMEOUT_MS: "-5" })).toBe(
+      DEFAULT_PROBE_TIMEOUT_MS,
+    );
   });
 
   it("never returns 0 for fractional sub-millisecond values (0 = NO timeout in execFileSync)", () => {
     expect(probeTimeoutMs({ GSTACK_GBRAIN_PROBE_TIMEOUT_MS: "0.5" })).toBe(1);
-    expect(probeTimeoutMs({ GSTACK_GBRAIN_PROBE_TIMEOUT_MS: "0.0001" })).toBe(1);
+    expect(probeTimeoutMs({ GSTACK_GBRAIN_PROBE_TIMEOUT_MS: "0.0001" })).toBe(
+      1,
+    );
   });
 });
 
@@ -372,7 +410,11 @@ describe("lib/gbrain-local-status — cache behavior", () => {
   });
 
   it("caches a 'timeout' result (sync probes 3x/run — uncached would cost 3 deadlines)", () => {
-    env = makeEnv({ withGbrain: true, gbrainBehavior: "slow", withConfig: true });
+    env = makeEnv({
+      withGbrain: true,
+      gbrainBehavior: "slow",
+      withConfig: true,
+    });
     restoreEnv = applyEnv(env);
     process.env.GSTACK_GBRAIN_PROBE_TIMEOUT_MS = "300";
     expect(localEngineStatus({ noCache: false })).toBe("timeout");
@@ -385,7 +427,11 @@ describe("lib/gbrain-local-status — cache behavior", () => {
   });
 
   it("invalidates a cached 'timeout' when GSTACK_GBRAIN_PROBE_TIMEOUT_MS changes (key invariant, codex D13)", () => {
-    env = makeEnv({ withGbrain: true, gbrainBehavior: "slow", withConfig: true });
+    env = makeEnv({
+      withGbrain: true,
+      gbrainBehavior: "slow",
+      withConfig: true,
+    });
     restoreEnv = applyEnv(env);
     process.env.GSTACK_GBRAIN_PROBE_TIMEOUT_MS = "300";
     expect(localEngineStatus({ noCache: false })).toBe("timeout");

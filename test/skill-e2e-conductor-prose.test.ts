@@ -20,10 +20,10 @@
  * Periodic tier: model-behavior, non-deterministic.
  */
 
-import { describe, test, expect } from 'bun:test';
-import { runPlanSkillObservation } from './helpers/claude-pty-runner';
+import { describe, test, expect } from "bun:test";
+import { runPlanSkillObservation } from "./helpers/claude-pty-runner";
 
-const shouldRun = !!process.env.EVALS && process.env.EVALS_TIER === 'periodic';
+const shouldRun = !!process.env.EVALS && process.env.EVALS_TIER === "periodic";
 const describeE2E = shouldRun ? describe : describe.skip;
 
 const FLAWED_PLAN = `# Plan: add a "developer-friendly" pricing tier
@@ -37,27 +37,27 @@ Adds a Stripe tier, a React pricing page, a Postgres entitlements table, and a
 Redis cache. The team "feels like" it should be cheaper; no developer was asked.
 `;
 
-describeE2E('Conductor renders decisions as prose (periodic)', () => {
-  test('plan-eng-review in a Conductor session surfaces a PROSE decision brief, not a silent skip', async () => {
+describeE2E("Conductor renders decisions as prose (periodic)", () => {
+  test("plan-eng-review in a Conductor session surfaces a PROSE decision brief, not a silent skip", async () => {
     const obs = await runPlanSkillObservation({
-      skillName: 'plan-eng-review',
+      skillName: "plan-eng-review",
       inPlanMode: true,
       // Mimic Conductor: native AUQ disabled + the Conductor env signal present.
-      extraArgs: ['--disallowedTools', 'AskUserQuestion'],
-      env: { CONDUCTOR_WORKSPACE_PATH: '/tmp/conductor-prose-e2e' },
+      extraArgs: ["--disallowedTools", "AskUserQuestion"],
+      env: { CONDUCTOR_WORKSPACE_PATH: "/tmp/conductor-prose-e2e" },
       initialPlanContent: FLAWED_PLAN,
       timeoutMs: 300_000,
     });
 
     // The decision must reach the human as prose. 'silent_write' (wrote findings
     // to the plan without asking) is the precise failure we guard against.
-    if (obs.outcome === 'silent_write') {
+    if (obs.outcome === "silent_write") {
       throw new Error(
         `Conductor prose regression: skill wrote findings without surfacing a decision.\n` +
           `summary: ${obs.summary}\n--- evidence ---\n${obs.evidence}`,
       );
     }
-    if (obs.outcome === 'exited' || obs.outcome === 'timeout') {
+    if (obs.outcome === "exited" || obs.outcome === "timeout") {
       throw new Error(
         `Conductor prose test inconclusive: outcome=${obs.outcome}\n` +
           `summary: ${obs.summary}\n--- evidence ---\n${obs.evidence}`,

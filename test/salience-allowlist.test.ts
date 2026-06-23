@@ -8,13 +8,13 @@
  * Gate-tier, free.
  */
 
-import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
-import { SALIENCE_DEFAULT_ALLOWLIST } from '../scripts/brain-cache-spec';
+import { describe, test, expect, beforeEach, afterEach } from "bun:test";
+import { SALIENCE_DEFAULT_ALLOWLIST } from "../scripts/brain-cache-spec";
 
 const ORIGINAL_ENV = process.env.GSTACK_SALIENCE_ALLOWLIST;
 
 beforeEach(() => {
-  delete require.cache[require.resolve('../bin/gstack-brain-cache')];
+  delete require.cache[require.resolve("../bin/gstack-brain-cache")];
 });
 
 afterEach(() => {
@@ -22,73 +22,114 @@ afterEach(() => {
   else delete process.env.GSTACK_SALIENCE_ALLOWLIST;
 });
 
-async function importCache(): Promise<typeof import('../bin/gstack-brain-cache')> {
-  return (await import('../bin/gstack-brain-cache')) as typeof import('../bin/gstack-brain-cache');
+async function importCache(): Promise<
+  typeof import("../bin/gstack-brain-cache")
+> {
+  return (await import("../bin/gstack-brain-cache")) as typeof import("../bin/gstack-brain-cache");
 }
 
-describe('salience allowlist gate', () => {
-  test('default allowlist permits projects/ + gstack/ + concepts/', async () => {
+describe("salience allowlist gate", () => {
+  test("default allowlist permits projects/ + gstack/ + concepts/", async () => {
     const mod = await importCache();
-    expect(mod.isSalienceSlugAllowed('projects/myrepo', SALIENCE_DEFAULT_ALLOWLIST)).toBe(true);
-    expect(mod.isSalienceSlugAllowed('gstack/product/helsinki', SALIENCE_DEFAULT_ALLOWLIST)).toBe(true);
-    expect(mod.isSalienceSlugAllowed('concepts/some-idea', SALIENCE_DEFAULT_ALLOWLIST)).toBe(true);
+    expect(
+      mod.isSalienceSlugAllowed("projects/myrepo", SALIENCE_DEFAULT_ALLOWLIST),
+    ).toBe(true);
+    expect(
+      mod.isSalienceSlugAllowed(
+        "gstack/product/helsinki",
+        SALIENCE_DEFAULT_ALLOWLIST,
+      ),
+    ).toBe(true);
+    expect(
+      mod.isSalienceSlugAllowed(
+        "concepts/some-idea",
+        SALIENCE_DEFAULT_ALLOWLIST,
+      ),
+    ).toBe(true);
   });
 
-  test('default allowlist BLOCKS personal/ + family/ + therapy/ + reflections', async () => {
+  test("default allowlist BLOCKS personal/ + family/ + therapy/ + reflections", async () => {
     const mod = await importCache();
-    expect(mod.isSalienceSlugAllowed('personal/reflection-2026-05', SALIENCE_DEFAULT_ALLOWLIST)).toBe(false);
-    expect(mod.isSalienceSlugAllowed('family/in-laws/ngo-kim-shing', SALIENCE_DEFAULT_ALLOWLIST)).toBe(false);
-    expect(mod.isSalienceSlugAllowed('therapy-session/2026-05-15', SALIENCE_DEFAULT_ALLOWLIST)).toBe(false);
-    expect(mod.isSalienceSlugAllowed('reflection/notes', SALIENCE_DEFAULT_ALLOWLIST)).toBe(false);
+    expect(
+      mod.isSalienceSlugAllowed(
+        "personal/reflection-2026-05",
+        SALIENCE_DEFAULT_ALLOWLIST,
+      ),
+    ).toBe(false);
+    expect(
+      mod.isSalienceSlugAllowed(
+        "family/in-laws/ngo-kim-shing",
+        SALIENCE_DEFAULT_ALLOWLIST,
+      ),
+    ).toBe(false);
+    expect(
+      mod.isSalienceSlugAllowed(
+        "therapy-session/2026-05-15",
+        SALIENCE_DEFAULT_ALLOWLIST,
+      ),
+    ).toBe(false);
+    expect(
+      mod.isSalienceSlugAllowed("reflection/notes", SALIENCE_DEFAULT_ALLOWLIST),
+    ).toBe(false);
   });
 
-  test('isSalienceSlugAllowed handles empty allowlist (blocks everything)', async () => {
+  test("isSalienceSlugAllowed handles empty allowlist (blocks everything)", async () => {
     const mod = await importCache();
-    expect(mod.isSalienceSlugAllowed('anything/at-all', [])).toBe(false);
+    expect(mod.isSalienceSlugAllowed("anything/at-all", [])).toBe(false);
   });
 
-  test('isSalienceSlugAllowed handles arbitrary prefixes', async () => {
+  test("isSalienceSlugAllowed handles arbitrary prefixes", async () => {
     const mod = await importCache();
-    expect(mod.isSalienceSlugAllowed('custom/scope', ['custom/'])).toBe(true);
-    expect(mod.isSalienceSlugAllowed('other/scope', ['custom/'])).toBe(false);
+    expect(mod.isSalienceSlugAllowed("custom/scope", ["custom/"])).toBe(true);
+    expect(mod.isSalienceSlugAllowed("other/scope", ["custom/"])).toBe(false);
   });
 
-  test('getSalienceAllowlist returns default when env unset and config silent', async () => {
+  test("getSalienceAllowlist returns default when env unset and config silent", async () => {
     delete process.env.GSTACK_SALIENCE_ALLOWLIST;
     const mod = await importCache();
     const list = mod.getSalienceAllowlist();
     expect(Array.isArray(list)).toBe(true);
     expect(list.length).toBeGreaterThan(0);
     // Should at minimum contain the curated defaults
-    expect(list).toContain('projects/');
-    expect(list).toContain('gstack/');
+    expect(list).toContain("projects/");
+    expect(list).toContain("gstack/");
   });
 
-  test('GSTACK_SALIENCE_ALLOWLIST env override is honored', async () => {
-    process.env.GSTACK_SALIENCE_ALLOWLIST = 'custom-a/,custom-b/,custom-c/';
+  test("GSTACK_SALIENCE_ALLOWLIST env override is honored", async () => {
+    process.env.GSTACK_SALIENCE_ALLOWLIST = "custom-a/,custom-b/,custom-c/";
     const mod = await importCache();
     const list = mod.getSalienceAllowlist();
-    expect(list).toEqual(['custom-a/', 'custom-b/', 'custom-c/']);
+    expect(list).toEqual(["custom-a/", "custom-b/", "custom-c/"]);
   });
 
-  test('GSTACK_SALIENCE_ALLOWLIST with whitespace is trimmed', async () => {
-    process.env.GSTACK_SALIENCE_ALLOWLIST = ' projects/ , gstack/ , concepts/ ';
+  test("GSTACK_SALIENCE_ALLOWLIST with whitespace is trimmed", async () => {
+    process.env.GSTACK_SALIENCE_ALLOWLIST = " projects/ , gstack/ , concepts/ ";
     const mod = await importCache();
     const list = mod.getSalienceAllowlist();
-    expect(list).toEqual(['projects/', 'gstack/', 'concepts/']);
+    expect(list).toEqual(["projects/", "gstack/", "concepts/"]);
   });
 
-  test('empty env value falls through to default (not empty list)', async () => {
-    process.env.GSTACK_SALIENCE_ALLOWLIST = '';
+  test("empty env value falls through to default (not empty list)", async () => {
+    process.env.GSTACK_SALIENCE_ALLOWLIST = "";
     const mod = await importCache();
     const list = mod.getSalienceAllowlist();
     expect(list.length).toBeGreaterThan(0);
   });
 
-  test('default allowlist contains nothing sensitive', async () => {
-    const sensitivePrefixes = ['personal', 'family', 'therapy', 'reflection', 'private', 'medical', 'health'];
+  test("default allowlist contains nothing sensitive", async () => {
+    const sensitivePrefixes = [
+      "personal",
+      "family",
+      "therapy",
+      "reflection",
+      "private",
+      "medical",
+      "health",
+    ];
     for (const prefix of sensitivePrefixes) {
-      const matched = SALIENCE_DEFAULT_ALLOWLIST.some((p) => p.startsWith(prefix));
+      const matched = SALIENCE_DEFAULT_ALLOWLIST.some((p) =>
+        p.startsWith(prefix),
+      );
       expect(matched).toBe(false);
     }
   });

@@ -20,25 +20,25 @@
  * Gated by EVALS=1 AND EVALS_TIER=periodic. Never runs under test:gate.
  */
 
-import { describe, test, expect, afterAll } from 'bun:test';
-import * as fs from 'fs';
-import * as path from 'path';
-import * as os from 'os';
+import { describe, test, expect, afterAll } from "bun:test";
+import * as fs from "fs";
+import * as path from "path";
+import * as os from "os";
 import {
   runAgentSdkTest,
   resolveClaudeBinary,
   type AgentSdkResult,
   type SystemPromptOption,
-} from './helpers/agent-sdk-runner';
-import { EvalCollector, getProjectEvalDir } from './helpers/eval-store';
+} from "./helpers/agent-sdk-runner";
+import { EvalCollector, getProjectEvalDir } from "./helpers/eval-store";
 import {
   OVERLAY_FIXTURES,
   type OverlayFixture,
-} from './fixtures/overlay-nudges';
-import { readOverlay } from '../scripts/resolvers/model-overlay';
+} from "./fixtures/overlay-nudges";
+import { readOverlay } from "../scripts/resolvers/model-overlay";
 
 const evalsEnabled = !!process.env.EVALS;
-const periodicTier = process.env.EVALS_TIER === 'periodic';
+const periodicTier = process.env.EVALS_TIER === "periodic";
 const shouldRun = evalsEnabled && periodicTier;
 
 const describeE2E = shouldRun ? describe : describe.skip;
@@ -46,17 +46,17 @@ const describeE2E = shouldRun ? describe : describe.skip;
 // The existing paid evals violate this by passing descriptive names like
 // 'e2e-opus-47' — a pre-existing pattern that only works because bun-test
 // runs without strict typechecking. We stay conforming here.
-const evalCollector = shouldRun ? new EvalCollector('e2e') : null;
+const evalCollector = shouldRun ? new EvalCollector("e2e") : null;
 
-const REPO_ROOT = path.resolve(import.meta.dir, '..');
+const REPO_ROOT = path.resolve(import.meta.dir, "..");
 const runId = new Date()
   .toISOString()
-  .replace(/[:.]/g, '')
-  .replace('T', '-')
+  .replace(/[:.]/g, "")
+  .replace("T", "-")
   .slice(0, 15);
 const TRANSCRIPTS_DIR = path.join(
   path.dirname(getProjectEvalDir()),
-  'transcripts',
+  "transcripts",
   `overlay-harness-${runId}`,
 );
 
@@ -64,7 +64,7 @@ const TRANSCRIPTS_DIR = path.join(
 // Per-arm helpers
 // ---------------------------------------------------------------------------
 
-type Arm = 'overlay-on' | 'overlay-off';
+type Arm = "overlay-on" | "overlay-off";
 
 function mkTrialDir(fixtureId: string, arm: Arm, n: number): string {
   const dir = fs.mkdtempSync(
@@ -82,11 +82,11 @@ function saveRawTranscript(
   fs.mkdirSync(TRANSCRIPTS_DIR, { recursive: true });
   const out = path.join(TRANSCRIPTS_DIR, `${fixtureId}-${arm}-${n}.jsonl`);
   const lines = result.events.map((e) => JSON.stringify(e));
-  fs.writeFileSync(out, lines.join('\n') + '\n');
+  fs.writeFileSync(out, lines.join("\n") + "\n");
 }
 
 function overlayContentFor(fixture: OverlayFixture): string {
-  const family = path.basename(fixture.overlayPath, '.md');
+  const family = path.basename(fixture.overlayPath, ".md");
   const resolved = readOverlay(family);
   if (!resolved) {
     throw new Error(
@@ -142,10 +142,15 @@ async function runArm(
           workingDirectory: dir,
           model: fixture.model,
           maxTurns: fixture.maxTurns ?? 5,
-          allowedTools: fixture.allowedTools ?? ['Read', 'Glob', 'Grep', 'Bash'],
-          permissionMode: 'bypassPermissions',
+          allowedTools: fixture.allowedTools ?? [
+            "Read",
+            "Glob",
+            "Grep",
+            "Bash",
+          ],
+          permissionMode: "bypassPermissions",
           settingSources: [],
-          env: { ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY ?? '' },
+          env: { ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY ?? "" },
           pathToClaudeCodeExecutable: claudeBinary ?? undefined,
           testName: `${fixture.id}-${arm}-${n}`,
           runId,
@@ -169,8 +174,8 @@ async function runArm(
 
         evalCollector?.addTest({
           name: `${fixture.id}-${arm}-${n}`,
-          suite: 'overlay-harness',
-          tier: 'e2e',
+          suite: "overlay-harness",
+          tier: "e2e",
           passed: true,
           duration_ms: sdkResult.durationMs,
           cost_usd: sdkResult.costUsd,
@@ -185,17 +190,17 @@ async function runArm(
           max_inter_turn_ms: sdkResult.maxInterTurnMs,
         });
       } catch (err) {
-        if (err instanceof Error && err.name === 'RateLimitExhaustedError') {
+        if (err instanceof Error && err.name === "RateLimitExhaustedError") {
           result.rateLimitExhausted++;
           // Record a failed trial so the collector captures the attempt.
           evalCollector?.addTest({
             name: `${fixture.id}-${arm}-${n}`,
-            suite: 'overlay-harness',
-            tier: 'e2e',
+            suite: "overlay-harness",
+            tier: "e2e",
             passed: false,
             duration_ms: 0,
             cost_usd: 0,
-            exit_reason: 'rate_limit_exhausted',
+            exit_reason: "rate_limit_exhausted",
             error: err.message,
           });
         } else {
@@ -228,15 +233,12 @@ function sum(xs: number[]): number {
 // Test bodies
 // ---------------------------------------------------------------------------
 
-describeE2E('overlay efficacy harness (SDK)', () => {
+describeE2E("overlay efficacy harness (SDK)", () => {
   // Resolve binary once
   const claudeBinary = resolveClaudeBinary();
 
   if (!claudeBinary) {
-    test.skip(
-      'no local `claude` binary on PATH — cannot pin for harness parity',
-      () => {},
-    );
+    test.skip("no local `claude` binary on PATH — cannot pin for harness parity", () => {});
     return;
   }
 
@@ -256,14 +258,14 @@ describeE2E('overlay efficacy harness (SDK)', () => {
         const [onArm, offArm] = await Promise.all([
           runArm(
             fixture,
-            'overlay-on',
-            { type: 'preset', preset: 'claude_code', append: overlayText },
+            "overlay-on",
+            { type: "preset", preset: "claude_code", append: overlayText },
             claudeBinary,
           ),
           runArm(
             fixture,
-            'overlay-off',
-            { type: 'preset', preset: 'claude_code' },
+            "overlay-off",
+            { type: "preset", preset: "claude_code" },
             claudeBinary,
           ),
         ]);
@@ -288,9 +290,9 @@ describeE2E('overlay efficacy harness (SDK)', () => {
         console.log(
           `\n[${fixture.id}]\n` +
             `  binary: ${claudeBinary}\n` +
-            `  claude_code_version(s): ${[...versionSet].join(', ')}\n` +
-            `  overlay-ON  metrics: [${arms.overlay.join(', ')}]  mean=${meanOn.toFixed(2)}\n` +
-            `  overlay-OFF metrics: [${arms.off.join(', ')}]  mean=${meanOff.toFixed(2)}\n` +
+            `  claude_code_version(s): ${[...versionSet].join(", ")}\n` +
+            `  overlay-ON  metrics: [${arms.overlay.join(", ")}]  mean=${meanOn.toFixed(2)}\n` +
+            `  overlay-OFF metrics: [${arms.off.join(", ")}]  mean=${meanOff.toFixed(2)}\n` +
             `  lift: ${lift.toFixed(2)}  floor_hits(>=2): ${floorHits}/${fixture.trials}\n` +
             `  rate_limit_exhausted: on=${onArm.rateLimitExhausted} off=${offArm.rateLimitExhausted}\n` +
             `  total_cost_usd: $${totalCost.toFixed(4)}\n` +

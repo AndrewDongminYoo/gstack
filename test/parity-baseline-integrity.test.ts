@@ -21,14 +21,19 @@
  *      the v1→v2 reference contract.
  */
 
-import { describe, test, expect } from 'bun:test';
-import * as fs from 'fs';
-import * as path from 'path';
-import * as crypto from 'crypto';
+import { describe, test, expect } from "bun:test";
+import * as fs from "fs";
+import * as path from "path";
+import * as crypto from "crypto";
 
-const REPO_ROOT = path.resolve(import.meta.dir, '..');
-const BASELINE_PATH = path.join(REPO_ROOT, 'test', 'fixtures', 'parity-baseline-v1.44.1.json');
-const CHANGELOG_PATH = path.join(REPO_ROOT, 'CHANGELOG.md');
+const REPO_ROOT = path.resolve(import.meta.dir, "..");
+const BASELINE_PATH = path.join(
+  REPO_ROOT,
+  "test",
+  "fixtures",
+  "parity-baseline-v1.44.1.json",
+);
+const CHANGELOG_PATH = path.join(REPO_ROOT, "CHANGELOG.md");
 
 /**
  * The baseline was captured at this commit on the slim-skill-tokens branch
@@ -37,9 +42,7 @@ const CHANGELOG_PATH = path.join(REPO_ROOT, 'CHANGELOG.md');
  * the v1.46.0.0 CHANGELOG numbers table must be updated to reflect the new
  * v1.x baseline.
  */
-const ALLOWED_BASELINE_COMMITS = new Set([
-  '74bc8054',
-]);
+const ALLOWED_BASELINE_COMMITS = new Set(["74bc8054"]);
 
 /**
  * Headline numbers from the v1.46.0.0 CHANGELOG entry. If the baseline JSON
@@ -54,70 +57,78 @@ const EXPECTED_v144_NUMBERS = {
   estTotalCatalogTokensMax: 9_340, // CHANGELOG cites ~9,319
 };
 
-describe('parity-baseline-v1.44.1.json integrity (v1→v2 reference)', () => {
-  test('file exists at the canonical path', () => {
+describe("parity-baseline-v1.44.1.json integrity (v1→v2 reference)", () => {
+  test("file exists at the canonical path", () => {
     expect(fs.existsSync(BASELINE_PATH)).toBe(true);
   });
 
   test('tag is "v1.44.1" — file was not renamed by edit', () => {
-    const baseline = JSON.parse(fs.readFileSync(BASELINE_PATH, 'utf-8'));
-    expect(baseline.tag).toBe('v1.44.1');
+    const baseline = JSON.parse(fs.readFileSync(BASELINE_PATH, "utf-8"));
+    expect(baseline.tag).toBe("v1.44.1");
   });
 
-  test('capturedFromCommit is on the allowlist (rejects ad-hoc regeneration)', () => {
-    const baseline = JSON.parse(fs.readFileSync(BASELINE_PATH, 'utf-8'));
+  test("capturedFromCommit is on the allowlist (rejects ad-hoc regeneration)", () => {
+    const baseline = JSON.parse(fs.readFileSync(BASELINE_PATH, "utf-8"));
     if (!ALLOWED_BASELINE_COMMITS.has(baseline.capturedFromCommit)) {
       throw new Error(
         `parity-baseline-v1.44.1.json was captured at commit ${baseline.capturedFromCommit}, ` +
-        `not on the allowlist (${[...ALLOWED_BASELINE_COMMITS].join(', ')}).\n` +
-        `If you intentionally regenerated the baseline, add the new commit to ` +
-        `ALLOWED_BASELINE_COMMITS in test/parity-baseline-integrity.test.ts AND ` +
-        `update the v1.46.0.0 CHANGELOG numbers table to match the new baseline.\n` +
-        `If you didn't intend to regenerate it, restore the file from git history.`,
+          `not on the allowlist (${[...ALLOWED_BASELINE_COMMITS].join(", ")}).\n` +
+          `If you intentionally regenerated the baseline, add the new commit to ` +
+          `ALLOWED_BASELINE_COMMITS in test/parity-baseline-integrity.test.ts AND ` +
+          `update the v1.46.0.0 CHANGELOG numbers table to match the new baseline.\n` +
+          `If you didn't intend to regenerate it, restore the file from git history.`,
       );
     }
   });
 
-  test('totalSkills matches expected (51)', () => {
-    const baseline = JSON.parse(fs.readFileSync(BASELINE_PATH, 'utf-8'));
+  test("totalSkills matches expected (51)", () => {
+    const baseline = JSON.parse(fs.readFileSync(BASELINE_PATH, "utf-8"));
     expect(baseline.totalSkills).toBe(EXPECTED_v144_NUMBERS.totalSkills);
   });
 
-  test('totalCorpusBytes is within the CHANGELOG-cited range (~2,847 KB)', () => {
-    const baseline = JSON.parse(fs.readFileSync(BASELINE_PATH, 'utf-8'));
-    expect(baseline.totalCorpusBytes).toBeGreaterThanOrEqual(EXPECTED_v144_NUMBERS.totalCorpusBytesMin);
-    expect(baseline.totalCorpusBytes).toBeLessThanOrEqual(EXPECTED_v144_NUMBERS.totalCorpusBytesMax);
+  test("totalCorpusBytes is within the CHANGELOG-cited range (~2,847 KB)", () => {
+    const baseline = JSON.parse(fs.readFileSync(BASELINE_PATH, "utf-8"));
+    expect(baseline.totalCorpusBytes).toBeGreaterThanOrEqual(
+      EXPECTED_v144_NUMBERS.totalCorpusBytesMin,
+    );
+    expect(baseline.totalCorpusBytes).toBeLessThanOrEqual(
+      EXPECTED_v144_NUMBERS.totalCorpusBytesMax,
+    );
   });
 
-  test('estTotalCatalogTokens matches the CHANGELOG-cited ~9,319', () => {
-    const baseline = JSON.parse(fs.readFileSync(BASELINE_PATH, 'utf-8'));
-    expect(baseline.estTotalCatalogTokens).toBeGreaterThanOrEqual(EXPECTED_v144_NUMBERS.estTotalCatalogTokensMin);
-    expect(baseline.estTotalCatalogTokens).toBeLessThanOrEqual(EXPECTED_v144_NUMBERS.estTotalCatalogTokensMax);
+  test("estTotalCatalogTokens matches the CHANGELOG-cited ~9,319", () => {
+    const baseline = JSON.parse(fs.readFileSync(BASELINE_PATH, "utf-8"));
+    expect(baseline.estTotalCatalogTokens).toBeGreaterThanOrEqual(
+      EXPECTED_v144_NUMBERS.estTotalCatalogTokensMin,
+    );
+    expect(baseline.estTotalCatalogTokens).toBeLessThanOrEqual(
+      EXPECTED_v144_NUMBERS.estTotalCatalogTokensMax,
+    );
   });
 
-  test('CHANGELOG v1.46.0.0 entry references this baseline file by path', () => {
-    const changelog = fs.readFileSync(CHANGELOG_PATH, 'utf-8');
+  test("CHANGELOG v1.46.0.0 entry references this baseline file by path", () => {
+    const changelog = fs.readFileSync(CHANGELOG_PATH, "utf-8");
     // The CHANGELOG entry must mention the baseline file so reviewers know
     // where the numbers come from. If someone edits one without the other,
     // this test surfaces the drift.
-    expect(changelog).toContain('parity-baseline-v1.44.1.json');
+    expect(changelog).toContain("parity-baseline-v1.44.1.json");
   });
 
-  test('every per-skill entry has the required shape', () => {
-    const baseline = JSON.parse(fs.readFileSync(BASELINE_PATH, 'utf-8'));
+  test("every per-skill entry has the required shape", () => {
+    const baseline = JSON.parse(fs.readFileSync(BASELINE_PATH, "utf-8"));
     for (const [skill, entry] of Object.entries(baseline.skills)) {
       const e = entry as Record<string, unknown>;
-      expect(typeof e.skill).toBe('string');
+      expect(typeof e.skill).toBe("string");
       expect(e.skill).toBe(skill);
-      expect(typeof e.skillMdBytes).toBe('number');
-      expect(typeof e.skillMdLines).toBe('number');
-      expect(typeof e.estTokens).toBe('number');
-      expect(typeof e.descriptionLen).toBe('number');
+      expect(typeof e.skillMdBytes).toBe("number");
+      expect(typeof e.skillMdLines).toBe("number");
+      expect(typeof e.estTokens).toBe("number");
+      expect(typeof e.descriptionLen).toBe("number");
       expect(e.skillMdBytes as number).toBeGreaterThan(0);
     }
   });
 
-  test('content hash is stable (catches any byte-level edit)', () => {
+  test("content hash is stable (catches any byte-level edit)", () => {
     // Pinning the SHA256 of the file content is the strongest possible
     // integrity check. When the baseline file LEGITIMATELY needs to change
     // (rare — e.g. adding new skills since v1.44.1), this test fails with
@@ -128,17 +139,18 @@ describe('parity-baseline-v1.44.1.json integrity (v1→v2 reference)', () => {
     //
     // To re-capture: `shasum -a 256 test/fixtures/parity-baseline-v1.44.1.json`
     const buf = fs.readFileSync(BASELINE_PATH);
-    const hash = crypto.createHash('sha256').update(buf).digest('hex');
-    const EXPECTED_HASH = '29da01be6493bb2c7308b072f3066c09bdeb0397cb79ae1c708b5a38850efe46';
+    const hash = crypto.createHash("sha256").update(buf).digest("hex");
+    const EXPECTED_HASH =
+      "29da01be6493bb2c7308b072f3066c09bdeb0397cb79ae1c708b5a38850efe46";
     if (hash !== EXPECTED_HASH) {
       throw new Error(
         `parity-baseline-v1.44.1.json content hash changed.\n` +
-        `  expected: ${EXPECTED_HASH}\n` +
-        `  current:  ${hash}\n` +
-        `If you intentionally regenerated the baseline, update EXPECTED_HASH in ` +
-        `test/parity-baseline-integrity.test.ts AND justify the change in the ` +
-        `commit message AND update the v1.46.0.0 CHANGELOG numbers table.\n` +
-        `If you didn't intend to regenerate it, restore the file from git history.`,
+          `  expected: ${EXPECTED_HASH}\n` +
+          `  current:  ${hash}\n` +
+          `If you intentionally regenerated the baseline, update EXPECTED_HASH in ` +
+          `test/parity-baseline-integrity.test.ts AND justify the change in the ` +
+          `commit message AND update the v1.46.0.0 CHANGELOG numbers table.\n` +
+          `If you didn't intend to regenerate it, restore the file from git history.`,
       );
     }
   });

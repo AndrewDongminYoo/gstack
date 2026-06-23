@@ -16,20 +16,20 @@
  * minimum smoke that proves --execute end-to-end works.
  */
 
-import { describe, test, expect } from 'bun:test';
-import * as fs from 'fs';
-import * as path from 'path';
+import { describe, test, expect } from "bun:test";
+import * as fs from "fs";
+import * as path from "path";
 
-const shouldRun = !!process.env.EVALS && process.env.EVALS_TIER === 'periodic';
+const shouldRun = !!process.env.EVALS && process.env.EVALS_TIER === "periodic";
 const describeE2E = shouldRun ? describe : describe.skip;
 
-const ROOT = path.resolve(import.meta.dir, '..');
+const ROOT = path.resolve(import.meta.dir, "..");
 
-describeE2E('/spec --execute end-to-end (periodic)', () => {
-  test('phase gating + magical Phase 3 + quality gate + spawn — full pipeline', async () => {
+describeE2E("/spec --execute end-to-end (periodic)", () => {
+  test("phase gating + magical Phase 3 + quality gate + spawn — full pipeline", async () => {
     // Sanity: spec template + generated SKILL.md exist at expected paths.
-    expect(fs.existsSync(path.join(ROOT, 'spec', 'SKILL.md.tmpl'))).toBe(true);
-    expect(fs.existsSync(path.join(ROOT, 'spec', 'SKILL.md'))).toBe(true);
+    expect(fs.existsSync(path.join(ROOT, "spec", "SKILL.md.tmpl"))).toBe(true);
+    expect(fs.existsSync(path.join(ROOT, "spec", "SKILL.md"))).toBe(true);
 
     // Full PTY-driven E2E lives in a follow-up. For now this test exists as
     // the periodic-tier surface registered in E2E_TIERS so the diff-based

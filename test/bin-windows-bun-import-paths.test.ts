@@ -45,7 +45,10 @@ describe("bin/ — Windows bun-import path guard (#1950)", () => {
     const offenders: string[] = [];
     for (const name of bashBins()) {
       const content = readFileSync(join(BIN_DIR, name), "utf-8");
-      if (BUN_IMPORT_INTERPOLATION.test(content) && !CYGPATH_GUARD.test(content)) {
+      if (
+        BUN_IMPORT_INTERPOLATION.test(content) &&
+        !CYGPATH_GUARD.test(content)
+      ) {
         offenders.push(name);
       }
     }
@@ -107,7 +110,13 @@ describe("gstack-learnings-log — behavioral (runs on Windows CI via git-bash)"
     const tmp = mkdtempSync(join(tmpdir(), "gstack-win-learn-"));
     try {
       const r = runViaBash(
-        JSON.stringify({ skill: "test", type: "not-a-type", key: "k", insight: "x", confidence: 5 }),
+        JSON.stringify({
+          skill: "test",
+          type: "not-a-type",
+          key: "k",
+          insight: "x",
+          confidence: 5,
+        }),
         tmp,
       );
       expect(r.status).not.toBe(0);

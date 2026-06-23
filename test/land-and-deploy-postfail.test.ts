@@ -59,7 +59,9 @@ describe("PR #1620 §4a-postfail in land-and-deploy template", () => {
 
   test("Authoritative state query uses gh pr view --json", () => {
     const body = readTmpl();
-    expect(body).toMatch(/gh pr view --json state,mergeCommit,mergedAt,mergedBy/);
+    expect(body).toMatch(
+      /gh pr view --json state,mergeCommit,mergedAt,mergedBy/,
+    );
   });
 
   test("All three state branches named: MERGED, OPEN, CLOSED", () => {

@@ -14,7 +14,12 @@ import * as os from "os";
 import * as path from "path";
 import { spawnSync } from "child_process";
 
-const PREPUSH = path.resolve(import.meta.dir, "..", "bin", "gstack-redact-prepush");
+const PREPUSH = path.resolve(
+  import.meta.dir,
+  "..",
+  "bin",
+  "gstack-redact-prepush",
+);
 const REDACT = path.resolve(import.meta.dir, "..", "bin", "gstack-redact");
 
 let repo: string;
@@ -62,7 +67,9 @@ describe("pre-push hook gating", () => {
   test("HIGH credential in pushed diff blocks (exit 1)", () => {
     const base = git(["rev-parse", "HEAD"]);
     const head = commit("config.txt", "key AKIA1234567890ABCDEF\n", "add key");
-    const { code, stderr } = runHook(`refs/heads/main ${head} refs/heads/main ${base}\n`);
+    const { code, stderr } = runHook(
+      `refs/heads/main ${head} refs/heads/main ${base}\n`,
+    );
     expect(code).toBe(1);
     expect(stderr).toContain("BLOCKED");
     expect(stderr).toContain("aws.access_key");
@@ -71,14 +78,18 @@ describe("pre-push hook gating", () => {
   test("clean diff passes (exit 0)", () => {
     const base = git(["rev-parse", "HEAD"]);
     const head = commit("doc.md", "just documentation\n", "add doc");
-    const { code } = runHook(`refs/heads/main ${head} refs/heads/main ${base}\n`);
+    const { code } = runHook(
+      `refs/heads/main ${head} refs/heads/main ${base}\n`,
+    );
     expect(code).toBe(0);
   });
 
   test("MEDIUM warns but does not block", () => {
     const base = git(["rev-parse", "HEAD"]);
     const head = commit("notes.md", "contact bob@corp.io\n", "add note");
-    const { code, stderr } = runHook(`refs/heads/main ${head} refs/heads/main ${base}\n`);
+    const { code, stderr } = runHook(
+      `refs/heads/main ${head} refs/heads/main ${base}\n`,
+    );
     expect(code).toBe(0);
     expect(stderr).toContain("MEDIUM");
   });
@@ -87,22 +98,36 @@ describe("pre-push hook gating", () => {
 describe("diff direction + special refs", () => {
   test("only NEW content is scanned (remote..local), not pre-existing", () => {
     // Put a secret in the FIRST commit (already on remote), then push a clean commit.
-    const withSecret = commit("old.txt", "AKIA1234567890ABCDEF\n", "old secret already pushed");
+    const withSecret = commit(
+      "old.txt",
+      "AKIA1234567890ABCDEF\n",
+      "old secret already pushed",
+    );
     const clean = commit("new.txt", "totally clean\n", "new clean commit");
     // remote already has withSecret; we push only the clean commit on top.
-    const { code } = runHook(`refs/heads/main ${clean} refs/heads/main ${withSecret}\n`);
+    const { code } = runHook(
+      `refs/heads/main ${clean} refs/heads/main ${withSecret}\n`,
+    );
     expect(code).toBe(0); // pre-existing secret is not in the pushed delta
   });
 
   test("new branch (zero remote sha) scans commits unique to the branch", () => {
-    const head = commit("feature.txt", "ghp_" + "a".repeat(36) + "\n", "feature with token");
-    const { code, stderr } = runHook(`refs/heads/feat ${head} refs/heads/feat ${ZERO}\n`);
+    const head = commit(
+      "feature.txt",
+      "ghp_" + "a".repeat(36) + "\n",
+      "feature with token",
+    );
+    const { code, stderr } = runHook(
+      `refs/heads/feat ${head} refs/heads/feat ${ZERO}\n`,
+    );
     expect(code).toBe(1);
     expect(stderr).toContain("github.pat");
   });
 
   test("branch delete (zero local sha) is skipped", () => {
-    const { code } = runHook(`(delete) ${ZERO} refs/heads/old ${git(["rev-parse", "HEAD"])}\n`);
+    const { code } = runHook(
+      `(delete) ${ZERO} refs/heads/old ${git(["rev-parse", "HEAD"])}\n`,
+    );
     expect(code).toBe(0);
   });
 });
@@ -124,7 +149,9 @@ describe("fail closed on unscannable diffs (#1946)", () => {
   test("an empty-but-successful diff still passes (no-op push)", () => {
     const head = git(["rev-parse", "HEAD"]);
     // remote == local: diff succeeds and is empty — must NOT block.
-    const { code } = runHook(`refs/heads/main ${head} refs/heads/main ${head}\n`);
+    const { code } = runHook(
+      `refs/heads/main ${head} refs/heads/main ${head}\n`,
+    );
     expect(code).toBe(0);
   });
 
@@ -134,8 +161,14 @@ describe("fail closed on unscannable diffs (#1946)", () => {
     // merge-base/empty-tree range — a secret in the pushed content still
     // blocks; a clean push passes instead of hard-failing.
     const fakeRemoteSha = "c".repeat(40);
-    const head = commit("secrets.txt", "key AKIA1234567890ABCDEF\n", "leaky commit");
-    const { code, stderr } = runHook(`refs/heads/main ${head} refs/heads/main ${fakeRemoteSha}\n`);
+    const head = commit(
+      "secrets.txt",
+      "key AKIA1234567890ABCDEF\n",
+      "leaky commit",
+    );
+    const { code, stderr } = runHook(
+      `refs/heads/main ${head} refs/heads/main ${fakeRemoteSha}\n`,
+    );
     expect(code).toBe(1); // fallback range still catches the credential
     expect(stderr).toContain("aws.access_key");
     expect(stderr).not.toContain("could not compute the pushed diff");
@@ -155,9 +188,12 @@ describe("fail closed on unscannable diffs (#1946)", () => {
 
       const base = git(["rev-parse", "HEAD"]);
       const head = commit("clean.txt", "clean content\n", "clean commit");
-      const { code, stderr } = runHook(`refs/heads/main ${head} refs/heads/main ${base}\n`, {
-        PATH: `${stubDir}:${process.env.PATH}`,
-      });
+      const { code, stderr } = runHook(
+        `refs/heads/main ${head} refs/heads/main ${base}\n`,
+        {
+          PATH: `${stubDir}:${process.env.PATH}`,
+        },
+      );
       expect(code).toBe(1);
       expect(stderr).toContain("could not compute the pushed diff");
       expect(stderr).toContain("GSTACK_REDACT_PREPUSH=skip");
@@ -178,7 +214,10 @@ describe("install UX surfaces (#1946 / eng review D3+D10)", () => {
   });
 
   test("ship template owns per-repo install: silent-install path + one-time offer marker", () => {
-    const tmpl = fs.readFileSync(path.join(ROOT, "ship", "SKILL.md.tmpl"), "utf8");
+    const tmpl = fs.readFileSync(
+      path.join(ROOT, "ship", "SKILL.md.tmpl"),
+      "utf8",
+    );
     expect(tmpl).toContain("install-prepush-hook");
     expect(tmpl).toContain(".redact-prepush-prompted");
     expect(tmpl).toContain("redact_prepush_hook");
@@ -190,12 +229,18 @@ describe("escape valve", () => {
     const base = git(["rev-parse", "HEAD"]);
     const head = commit("config.txt", "key AKIA1234567890ABCDEF\n", "add key");
     const home = fs.mkdtempSync(path.join(os.tmpdir(), "ghome-"));
-    const { code } = runHook(`refs/heads/main ${head} refs/heads/main ${base}\n`, {
-      GSTACK_REDACT_PREPUSH: "skip",
-      GSTACK_HOME: home,
-    });
+    const { code } = runHook(
+      `refs/heads/main ${head} refs/heads/main ${base}\n`,
+      {
+        GSTACK_REDACT_PREPUSH: "skip",
+        GSTACK_HOME: home,
+      },
+    );
     expect(code).toBe(0);
-    const log = fs.readFileSync(path.join(home, "security", "prepush-skip.jsonl"), "utf8");
+    const log = fs.readFileSync(
+      path.join(home, "security", "prepush-skip.jsonl"),
+      "utf8",
+    );
     expect(log).toContain("env-skip");
     fs.rmSync(home, { recursive: true, force: true });
   });
@@ -206,22 +251,33 @@ describe("install / chaining", () => {
     const hookDir = path.join(repo, ".git", "hooks");
     fs.mkdirSync(hookDir, { recursive: true });
     const existing = path.join(hookDir, "pre-push");
-    fs.writeFileSync(existing, "#!/usr/bin/env bash\necho mine\n", { mode: 0o755 });
+    fs.writeFileSync(existing, "#!/usr/bin/env bash\necho mine\n", {
+      mode: 0o755,
+    });
 
-    const r = spawnSync("bun", [REDACT, "install-prepush-hook"], { cwd: repo, encoding: "utf8" });
+    const r = spawnSync("bun", [REDACT, "install-prepush-hook"], {
+      cwd: repo,
+      encoding: "utf8",
+    });
     expect(r.status).toBe(0);
     const installed = fs.readFileSync(existing, "utf8");
     expect(installed).toContain("gstack-redact pre-push (managed)");
     expect(fs.existsSync(path.join(hookDir, "pre-push.local"))).toBe(true);
-    expect(fs.readFileSync(path.join(hookDir, "pre-push.local"), "utf8")).toContain("echo mine");
+    expect(
+      fs.readFileSync(path.join(hookDir, "pre-push.local"), "utf8"),
+    ).toContain("echo mine");
   });
 
   test("uninstall restores the chained original", () => {
     const hookDir = path.join(repo, ".git", "hooks");
     fs.mkdirSync(hookDir, { recursive: true });
-    fs.writeFileSync(path.join(hookDir, "pre-push"), "#!/usr/bin/env bash\necho mine\n", {
-      mode: 0o755,
-    });
+    fs.writeFileSync(
+      path.join(hookDir, "pre-push"),
+      "#!/usr/bin/env bash\necho mine\n",
+      {
+        mode: 0o755,
+      },
+    );
     spawnSync("bun", [REDACT, "install-prepush-hook"], { cwd: repo });
     spawnSync("bun", [REDACT, "uninstall-prepush-hook"], { cwd: repo });
     const restored = fs.readFileSync(path.join(hookDir, "pre-push"), "utf8");

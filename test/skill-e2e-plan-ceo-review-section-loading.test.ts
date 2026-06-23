@@ -24,61 +24,62 @@
  * ~$1-2/run. Periodic tier.
  */
 
-import { describe, test, expect } from 'bun:test';
+import { describe, test, expect } from "bun:test";
 import {
   setupSkillDir,
   skillFromWorktree,
   captureSectionReads,
-} from './helpers/auq-sdk-capture';
+} from "./helpers/auq-sdk-capture";
 
-const shouldRun = !!process.env.EVALS && process.env.EVALS_TIER === 'periodic';
+const shouldRun = !!process.env.EVALS && process.env.EVALS_TIER === "periodic";
 const describeE2E = shouldRun ? describe : describe.skip;
-const runId = `plan-ceo-section-loading-${process.env.EVALS_RUN_ID ?? 'local'}`;
+const runId = `plan-ceo-section-loading-${process.env.EVALS_RUN_ID ?? "local"}`;
 
 // Sections every plan-ceo-review run must consult after Step 0.
-const REQUIRED_SECTIONS = ['review-sections.md'];
+const REQUIRED_SECTIONS = ["review-sections.md"];
 
 const PLAN_MD = [
-  '# Plan: add an in-memory cache layer',
-  '',
-  '## Context',
-  'Reads hit the DB on every request. Add a process-local LRU cache in front of',
-  'the read path to cut DB load.',
-  '',
-  '## Approach',
-  '- Wrap the read repository in a cache that stores the last 1000 keys.',
-  '- Invalidate on write.',
-  '',
-  '## Out of scope',
-  'Distributed cache, cross-process coherence.',
-  '',
-].join('\n');
+  "# Plan: add an in-memory cache layer",
+  "",
+  "## Context",
+  "Reads hit the DB on every request. Add a process-local LRU cache in front of",
+  "the read path to cut DB load.",
+  "",
+  "## Approach",
+  "- Wrap the read repository in a cache that stores the last 1000 keys.",
+  "- Invalidate on write.",
+  "",
+  "## Out of scope",
+  "Distributed cache, cross-process coherence.",
+  "",
+].join("\n");
 
-describeE2E('/plan-ceo-review section-loading E2E (periodic, SDK capture)', () => {
-  test(
-    'a real review Reads the carved section before producing the report',
-    async () => {
-      const { skillMd, sectionsFrom } = skillFromWorktree('plan-ceo-review');
+describeE2E(
+  "/plan-ceo-review section-loading E2E (periodic, SDK capture)",
+  () => {
+    test("a real review Reads the carved section before producing the report", async () => {
+      const { skillMd, sectionsFrom } = skillFromWorktree("plan-ceo-review");
       const planDir = setupSkillDir({
-        skillName: 'plan-ceo-review',
+        skillName: "plan-ceo-review",
         skillMd,
         sectionsFrom,
-        fixtures: { 'PLAN.md': PLAN_MD },
-        tmpPrefix: 'gstack-ceo-secload-',
+        fixtures: { "PLAN.md": PLAN_MD },
+        tmpPrefix: "gstack-ceo-secload-",
       });
 
-      const { readSections, reportProduced, output } = await captureSectionReads({
-        planDir,
-        skillName: 'plan-ceo-review',
-        scenario:
-          'Review the plan in PLAN.md. Hold the current scope (HOLD SCOPE mode) — do not challenge or expand scope. Run the full CEO review and produce the review report.',
-        requiredSections: REQUIRED_SECTIONS,
-        reportMarker: /GSTACK REVIEW REPORT|COMPLETION SUMMARY|review/i,
-        testName: 'plan-ceo-section-loading',
-        runId,
-      });
+      const { readSections, reportProduced, output } =
+        await captureSectionReads({
+          planDir,
+          skillName: "plan-ceo-review",
+          scenario:
+            "Review the plan in PLAN.md. Hold the current scope (HOLD SCOPE mode) — do not challenge or expand scope. Run the full CEO review and produce the review report.",
+          requiredSections: REQUIRED_SECTIONS,
+          reportMarker: /GSTACK REVIEW REPORT|COMPLETION SUMMARY|review/i,
+          testName: "plan-ceo-section-loading",
+          runId,
+        });
 
-      const missing = REQUIRED_SECTIONS.filter(s => !readSections.has(s));
+      const missing = REQUIRED_SECTIONS.filter((s) => !readSections.has(s));
       expect({ reportProduced, read: [...readSections], missing }).toEqual({
         reportProduced: true,
         read: expect.any(Array),
@@ -86,7 +87,6 @@ describeE2E('/plan-ceo-review section-loading E2E (periodic, SDK capture)', () =
       });
       // Guard against an empty pass: the report must have real content.
       expect(output.trim().length).toBeGreaterThan(200);
-    },
-    360_000,
-  );
-});
+    }, 360_000);
+  },
+);

@@ -35,8 +35,8 @@
  *   - Source-targeting (no way to fake source resolution in a stub CLI)
  */
 
-import { describe, test, expect, beforeAll, afterAll } from 'bun:test';
-import { execFileSync, spawnSync } from 'child_process';
+import { describe, test, expect, beforeAll, afterAll } from "bun:test";
+import { execFileSync, spawnSync } from "child_process";
 import {
   chmodSync,
   copyFileSync,
@@ -47,11 +47,11 @@ import {
   readdirSync,
   rmSync,
   writeFileSync,
-} from 'fs';
-import { tmpdir } from 'os';
-import { join } from 'path';
+} from "fs";
+import { tmpdir } from "os";
+import { join } from "path";
 
-import { runSkillTest } from './helpers/session-runner';
+import { runSkillTest } from "./helpers/session-runner";
 import {
   ROOT,
   runId,
@@ -60,108 +60,130 @@ import {
   logCost,
   recordE2E,
   createEvalCollector,
-} from './helpers/e2e-helpers';
+} from "./helpers/e2e-helpers";
 
-const evalCollector = createEvalCollector('e2e-office-hours-brain-writeback');
+const evalCollector = createEvalCollector("e2e-office-hours-brain-writeback");
 
 describeIfSelected(
-  'Office Hours Brain Writeback E2E',
-  ['office-hours-brain-writeback'],
+  "Office Hours Brain Writeback E2E",
+  ["office-hours-brain-writeback"],
   () => {
     let workDir: string;
     let callsLogPath: string;
     let payloadDir: string;
 
     beforeAll(() => {
-      workDir = mkdtempSync(join(tmpdir(), 'skill-e2e-brain-writeback-'));
+      workDir = mkdtempSync(join(tmpdir(), "skill-e2e-brain-writeback-"));
       const run = (cmd: string, args: string[]) =>
-        spawnSync(cmd, args, { cwd: workDir, stdio: 'pipe', timeout: 5000 });
-      run('git', ['init', '-b', 'main']);
-      run('git', ['config', 'user.email', 'test@test.com']);
-      run('git', ['config', 'user.name', 'Test']);
+        spawnSync(cmd, args, { cwd: workDir, stdio: "pipe", timeout: 5000 });
+      run("git", ["init", "-b", "main"]);
+      run("git", ["config", "user.email", "test@test.com"]);
+      run("git", ["config", "user.name", "Test"]);
 
       // Copy the founder pitch fixture into the workdir.
       const briefSrc = join(
         ROOT,
-        'test',
-        'fixtures',
-        'office-hours-brain-writeback',
-        'brief.md',
+        "test",
+        "fixtures",
+        "office-hours-brain-writeback",
+        "brief.md",
       );
-      copyFileSync(briefSrc, join(workDir, 'pitch.md'));
+      copyFileSync(briefSrc, join(workDir, "pitch.md"));
 
       // Generate a brain-aware office-hours/SKILL.md (with --respect-detection
       // against a temp GSTACK_HOME). Snapshot the content, restore the
       // canonical version, write the snapshot into the workdir.
-      const tmpHome = mkdtempSync(join(tmpdir(), 'gbrain-detect-home-'));
+      const tmpHome = mkdtempSync(join(tmpdir(), "gbrain-detect-home-"));
       writeFileSync(
-        join(tmpHome, 'gbrain-detection.json'),
+        join(tmpHome, "gbrain-detection.json"),
         JSON.stringify({
-          gbrain_local_status: 'ok',
+          gbrain_local_status: "ok",
           gbrain_on_path: true,
-          gbrain_version: 'test-0.41.0',
+          gbrain_version: "test-0.41.0",
         }),
       );
-      const skillPath = join(ROOT, 'office-hours', 'SKILL.md');
-      const originalSkill = readFileSync(skillPath, 'utf-8');
+      const skillPath = join(ROOT, "office-hours", "SKILL.md");
+      const originalSkill = readFileSync(skillPath, "utf-8");
       // office-hours is carved (v2 plan T9): GBRAIN_SAVE_RESULTS moved into
       // sections/design-and-handoff.md. Regen rewrites BOTH the skeleton and the
       // section, so we snapshot + restore + ship both, and check the UNION for
       // the gbrain put block.
-      const sectionPath = join(ROOT, 'office-hours', 'sections', 'design-and-handoff.md');
+      const sectionPath = join(
+        ROOT,
+        "office-hours",
+        "sections",
+        "design-and-handoff.md",
+      );
       const hasSection = existsSync(sectionPath);
-      const originalSection = hasSection ? readFileSync(sectionPath, 'utf-8') : null;
+      const originalSection = hasSection
+        ? readFileSync(sectionPath, "utf-8")
+        : null;
       try {
         execFileSync(
-          'bun',
+          "bun",
           [
-            'run',
-            'scripts/gen-skill-docs.ts',
-            '--host',
-            'claude',
-            '--respect-detection',
+            "run",
+            "scripts/gen-skill-docs.ts",
+            "--host",
+            "claude",
+            "--respect-detection",
           ],
           {
             cwd: ROOT,
             env: { ...process.env, GSTACK_HOME: tmpHome },
-            stdio: ['ignore', 'pipe', 'pipe'],
+            stdio: ["ignore", "pipe", "pipe"],
             timeout: 60_000,
           },
         );
-        const brainAwareSkill = readFileSync(skillPath, 'utf-8');
-        const brainAwareSection = hasSection ? readFileSync(sectionPath, 'utf-8') : '';
-        if (!(brainAwareSkill + brainAwareSection).includes('gbrain put "office-hours/')) {
+        const brainAwareSkill = readFileSync(skillPath, "utf-8");
+        const brainAwareSection = hasSection
+          ? readFileSync(sectionPath, "utf-8")
+          : "";
+        if (
+          !(brainAwareSkill + brainAwareSection).includes(
+            'gbrain put "office-hours/',
+          )
+        ) {
           throw new Error(
-            'Regenerated office-hours skeleton+section does not contain gbrain put block. ' +
-              'Detection override may be broken — see test/gbrain-detection-override.test.ts.',
+            "Regenerated office-hours skeleton+section does not contain gbrain put block. " +
+              "Detection override may be broken — see test/gbrain-detection-override.test.ts.",
           );
         }
-        mkdirSync(join(workDir, 'office-hours'), { recursive: true });
-        writeFileSync(join(workDir, 'office-hours', 'SKILL.md'), brainAwareSkill);
+        mkdirSync(join(workDir, "office-hours"), { recursive: true });
+        writeFileSync(
+          join(workDir, "office-hours", "SKILL.md"),
+          brainAwareSkill,
+        );
         if (hasSection) {
-          mkdirSync(join(workDir, 'office-hours', 'sections'), { recursive: true });
-          writeFileSync(join(workDir, 'office-hours', 'sections', 'design-and-handoff.md'), brainAwareSection);
+          mkdirSync(join(workDir, "office-hours", "sections"), {
+            recursive: true,
+          });
+          writeFileSync(
+            join(workDir, "office-hours", "sections", "design-and-handoff.md"),
+            brainAwareSection,
+          );
         }
       } finally {
         // Always restore the canonical skeleton + section so the working tree stays clean.
         writeFileSync(skillPath, originalSkill);
-        if (hasSection && originalSection !== null) writeFileSync(sectionPath, originalSection);
+        if (hasSection && originalSection !== null)
+          writeFileSync(sectionPath, originalSection);
         rmSync(tmpHome, { recursive: true, force: true });
       }
 
       // Copy docs/gbrain-write-surfaces.md so the compact resolver block's
       // on-demand reference resolves (the agent may read it for the full
       // template; we don't require this read but make it available).
-      const docsSrc = join(ROOT, 'docs', 'gbrain-write-surfaces.md');
-      const docsDst = join(workDir, 'docs', 'gbrain-write-surfaces.md');
-      mkdirSync(join(workDir, 'docs'), { recursive: true });
+      const docsSrc = join(ROOT, "docs", "gbrain-write-surfaces.md");
+      const docsDst = join(workDir, "docs", "gbrain-write-surfaces.md");
+      mkdirSync(join(workDir, "docs"), { recursive: true });
       copyFileSync(docsSrc, docsDst);
 
       // Set up the fake gbrain CLI with robust argv quoting + payload capture.
-      callsLogPath = join(workDir, 'gbrain-calls.log');
-      payloadDir = join(workDir, 'gbrain-payloads');
+      callsLogPath = join(workDir, "gbrain-calls.log");
+      payloadDir = join(workDir, "gbrain-payloads");
       mkdirSync(payloadDir, { recursive: true });
-      const binDir = join(workDir, 'bin');
+      const binDir = join(workDir, "bin");
       mkdirSync(binDir, { recursive: true });
       const fakeGbrain = `#!/bin/bash
 # Fake gbrain CLI for E2E test. Logs every invocation with shell-safe quoting
@@ -189,12 +211,12 @@ case "$1" in
 esac
 exit 0
 `;
-      const fakePath = join(binDir, 'gbrain');
+      const fakePath = join(binDir, "gbrain");
       writeFileSync(fakePath, fakeGbrain);
       chmodSync(fakePath, 0o755);
 
-      run('git', ['add', '.']);
-      run('git', ['commit', '-m', 'fixture']);
+      run("git", ["add", "."]);
+      run("git", ["commit", "-m", "fixture"]);
     });
 
     afterAll(() => {
@@ -206,7 +228,7 @@ exit 0
     });
 
     testConcurrentIfSelected(
-      'office-hours-brain-writeback',
+      "office-hours-brain-writeback",
       async () => {
         const result = await runSkillTest({
           prompt: `Read office-hours/SKILL.md for the workflow.
@@ -221,25 +243,25 @@ This is a test of the brain-writeback path. Do NOT skip the gbrain save step und
           workingDirectory: workDir,
           maxTurns: 12,
           timeout: 360_000,
-          testName: 'office-hours-brain-writeback',
+          testName: "office-hours-brain-writeback",
           runId,
-          model: 'claude-sonnet-4-6',
+          model: "claude-sonnet-4-6",
           extraEnv: {
-            PATH: `${join(workDir, 'bin')}:${process.env.PATH || ''}`,
+            PATH: `${join(workDir, "bin")}:${process.env.PATH || ""}`,
           },
         });
 
-        logCost('/office-hours (BRAIN WRITEBACK)', result);
+        logCost("/office-hours (BRAIN WRITEBACK)", result);
         recordE2E(
           evalCollector,
-          '/office-hours-brain-writeback',
-          'Office Hours Brain Writeback E2E',
+          "/office-hours-brain-writeback",
+          "Office Hours Brain Writeback E2E",
           result,
           {
-            passed: ['success', 'error_max_turns'].includes(result.exitReason),
+            passed: ["success", "error_max_turns"].includes(result.exitReason),
           },
         );
-        expect(['success', 'error_max_turns']).toContain(result.exitReason);
+        expect(["success", "error_max_turns"]).toContain(result.exitReason);
 
         // The headline assertion: agent actually called gbrain put on the
         // expected slug.
@@ -250,12 +272,12 @@ This is a test of the brain-writeback path. Do NOT skip the gbrain save step und
               `Check that office-hours/SKILL.md in the workdir contains the gbrain put block.`,
           );
         }
-        const callsLog = readFileSync(callsLogPath, 'utf-8');
-        console.log('--- gbrain calls log ---');
+        const callsLog = readFileSync(callsLogPath, "utf-8");
+        console.log("--- gbrain calls log ---");
         console.log(callsLog);
-        console.log('--- end calls log ---');
+        console.log("--- end calls log ---");
 
-        expect(callsLog).toContain('gbrain put');
+        expect(callsLog).toContain("gbrain put");
         // Agent obedience: the slug should contain 'pixel-fund' somewhere
         // (preferably under the office-hours/ prefix). The strict slug
         // SHAPE (office-hours/<slug>) is already pinned by the resolver
@@ -276,7 +298,7 @@ This is a test of the brain-writeback path. Do NOT skip the gbrain save step und
             if (entry.isDirectory()) {
               const nested = findPayload(full);
               if (nested) return nested;
-            } else if (entry.name.includes('pixel-fund')) {
+            } else if (entry.name.includes("pixel-fund")) {
               return full;
             }
           }
@@ -290,10 +312,10 @@ This is a test of the brain-writeback path. Do NOT skip the gbrain save step und
               `--content parser for argv quoting issues.`,
           );
         }
-        const payload = readFileSync(payloadPath, 'utf-8');
+        const payload = readFileSync(payloadPath, "utf-8");
         expect(payload).toMatch(/^---\s*\n/);
-        expect(payload).toContain('title:');
-        expect(payload).toContain('tags:');
+        expect(payload).toContain("title:");
+        expect(payload).toContain("tags:");
         expect(payload.length).toBeGreaterThan(200);
 
         // Entity stubs: agents are inconsistent about whether they use
@@ -304,8 +326,8 @@ This is a test of the brain-writeback path. Do NOT skip the gbrain save step und
           callsLog.match(/gbrain put entit(?:y|ies)\//g) || [];
         if (entityCallMatches.length === 0) {
           console.warn(
-            'No entity stub calls in gbrain calls log. Resolver instructs ' +
-              'entity extraction but it is best-effort.',
+            "No entity stub calls in gbrain calls log. Resolver instructs " +
+              "entity extraction but it is best-effort.",
           );
         } else {
           console.log(

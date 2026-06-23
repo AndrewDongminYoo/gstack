@@ -101,7 +101,19 @@ function run(
     // needs — everything except jq.
     const toolBin = join(tmp, "tool-bin");
     mkdirSync(toolBin, { recursive: true });
-    for (const tool of ["mktemp", "cat", "grep", "head", "sed", "awk", "rm", "sh", "bash", "tr", "tail"]) {
+    for (const tool of [
+      "mktemp",
+      "cat",
+      "grep",
+      "head",
+      "sed",
+      "awk",
+      "rm",
+      "sh",
+      "bash",
+      "tr",
+      "tail",
+    ]) {
       const real = Bun.which(tool);
       if (real) symlinkSync(real, join(toolBin, tool));
     }
@@ -152,7 +164,12 @@ describe("gstack-security-dashboard — never reports fake zeros (#1947)", () =>
   });
 
   it("jq missing → reason jq_missing (json mode)", () => {
-    const r = run(SEC_BIN, { mode: "ok", body: GOOD_BODY_MARKER, noJq: true, json: true });
+    const r = run(SEC_BIN, {
+      mode: "ok",
+      body: GOOD_BODY_MARKER,
+      noJq: true,
+      json: true,
+    });
     const parsed = JSON.parse(r.stdout.trim());
     expect(parsed.status).toBe("unknown");
     expect(parsed.reason).toBe("jq_missing");
@@ -175,7 +192,10 @@ describe("gstack-security-dashboard — never reports fake zeros (#1947)", () =>
   });
 
   it("stale cache responses pass the stale flag through (json mode)", () => {
-    const staleBody = JSON.stringify({ ...JSON.parse(GOOD_BODY_MARKER), stale: true });
+    const staleBody = JSON.stringify({
+      ...JSON.parse(GOOD_BODY_MARKER),
+      stale: true,
+    });
     const r = run(SEC_BIN, { mode: "ok", body: staleBody, json: true });
     const parsed = JSON.parse(r.stdout.trim());
     expect(parsed.status).toBe("ok");
@@ -183,7 +203,10 @@ describe("gstack-security-dashboard — never reports fake zeros (#1947)", () =>
   });
 
   it("stale snapshot is flagged in human mode too — frozen figures never read as current", () => {
-    const staleBody = JSON.stringify({ ...JSON.parse(GOOD_BODY_MARKER), stale: true });
+    const staleBody = JSON.stringify({
+      ...JSON.parse(GOOD_BODY_MARKER),
+      stale: true,
+    });
     const r = run(SEC_BIN, { mode: "ok", body: staleBody });
     expect(r.stdout).toContain("Attacks detected last 7 days: 3");
     expect(r.stdout).toContain("stale snapshot");
@@ -246,7 +269,7 @@ describe("gstack-community-dashboard — never reports fake zeros (#1947)", () =
     expect(r.stdout).not.toContain("Weekly active installs:");
   });
 
-  it("whitespaced marker ('\"status\": \"ok\"') still classified as verified when jq is present", () => {
+  it('whitespaced marker (\'"status": "ok"\') still classified as verified when jq is present', () => {
     // Pre-landing review: the grep-only marker check was whitespace-sensitive;
     // a proxy-reserialized body must not be misclassified as legacy.
     const spaced = GOOD_BODY_MARKER.replace('"status":"ok"', '"status": "ok"');
@@ -256,7 +279,10 @@ describe("gstack-community-dashboard — never reports fake zeros (#1947)", () =
   });
 
   it("stale snapshot flagged in human mode (matches security-dashboard)", () => {
-    const staleBody = JSON.stringify({ ...JSON.parse(GOOD_BODY_MARKER), stale: true });
+    const staleBody = JSON.stringify({
+      ...JSON.parse(GOOD_BODY_MARKER),
+      stale: true,
+    });
     const r = run(COMM_BIN, { mode: "ok", body: staleBody });
     expect(r.stdout).toContain("Weekly active installs: 42");
     expect(r.stdout).toContain("stale snapshot");

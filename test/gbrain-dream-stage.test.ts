@@ -57,8 +57,20 @@ describe("shouldRunDream — gate matrix", () => {
   });
 
   it("explicit --dream runs even with --code-only / --no-code (force)", () => {
-    expect(shouldRunDream(args({ dream: true, codeOnly: true, noMemory: true, noBrainSync: true }), null)).toBe(true);
-    expect(shouldRunDream(args({ dream: true, noCode: true }), null)).toBe(true);
+    expect(
+      shouldRunDream(
+        args({
+          dream: true,
+          codeOnly: true,
+          noMemory: true,
+          noBrainSync: true,
+        }),
+        null,
+      ),
+    ).toBe(true);
+    expect(shouldRunDream(args({ dream: true, noCode: true }), null)).toBe(
+      true,
+    );
   });
 
   it("--full auto-runs ONLY when the cycle was never built", () => {
@@ -69,11 +81,15 @@ describe("shouldRunDream — gate matrix", () => {
   });
 
   it("--full + --no-dream never auto-runs", () => {
-    expect(shouldRunDream(args({ mode: "full", noDream: true }), "never")).toBe(false);
+    expect(shouldRunDream(args({ mode: "full", noDream: true }), "never")).toBe(
+      false,
+    );
   });
 
   it("--full + --no-code never auto-runs", () => {
-    expect(shouldRunDream(args({ mode: "full", noCode: true }), "never")).toBe(false);
+    expect(shouldRunDream(args({ mode: "full", noCode: true }), "never")).toBe(
+      false,
+    );
   });
 
   it("plain incremental never runs (no flag, no full)", () => {
@@ -196,7 +212,8 @@ describe("parseResolvedEdges", () => {
   });
   it("does not match the bracketed [cycle.resolve_symbol_edges] marker lines", () => {
     // Markers have no 'resolved N' on the same line, so they must not match.
-    const markersOnly = "[cycle.resolve_symbol_edges] start\n[cycle.resolve_symbol_edges] done\n";
+    const markersOnly =
+      "[cycle.resolve_symbol_edges] start\n[cycle.resolve_symbol_edges] done\n";
     expect(parseResolvedEdges(markersOnly)).toBeNull();
   });
 });
@@ -234,7 +251,9 @@ describe("classifyDreamOutcome — post-flight truth guard", () => {
 describe("formatStage — WARN render", () => {
   const base = { name: "dream", duration_ms: 0, summary: "x" };
   it("renders WARN for a ran+ok+warn stage (degraded no-op)", () => {
-    expect(formatStage({ ...base, ran: true, ok: true, warn: true })).toContain("WARN");
+    expect(formatStage({ ...base, ran: true, ok: true, warn: true })).toContain(
+      "WARN",
+    );
   });
   it("renders OK for a ran+ok stage without warn", () => {
     const s = formatStage({ ...base, ran: true, ok: true });
@@ -242,7 +261,9 @@ describe("formatStage — WARN render", () => {
     expect(s).not.toContain("WARN");
   });
   it("renders ERR for a ran+!ok stage even if warn is set", () => {
-    expect(formatStage({ ...base, ran: true, ok: false, warn: true })).toContain("ERR");
+    expect(
+      formatStage({ ...base, ran: true, ok: false, warn: true }),
+    ).toContain("ERR");
   });
   it("renders SKIP for a !ran stage", () => {
     expect(formatStage({ ...base, ran: false, ok: true })).toContain("SKIP");

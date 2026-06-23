@@ -8,34 +8,41 @@
 //
 // Cost: ~$0.30-$0.50 per run. Gate-tier (EVALS=1 EVALS_TIER=gate).
 
-import { describe, test, expect } from 'bun:test';
-import * as fs from 'fs';
-import * as os from 'os';
-import * as path from 'path';
-import * as http from 'http';
-import { runAgentSdkTest, passThroughNonAskUserQuestion, resolveClaudeBinary } from './helpers/agent-sdk-runner';
+import { describe, test, expect } from "bun:test";
+import * as fs from "fs";
+import * as os from "os";
+import * as path from "path";
+import * as http from "http";
+import {
+  runAgentSdkTest,
+  passThroughNonAskUserQuestion,
+  resolveClaudeBinary,
+} from "./helpers/agent-sdk-runner";
 
 // Periodic-tier (companion to skill-e2e-setup-gbrain-remote.test.ts).
 // Deterministic gate coverage lives in setup-gbrain-path4-structure.test.ts.
-const shouldRun = !!process.env.EVALS && process.env.EVALS_TIER === 'periodic';
+const shouldRun = !!process.env.EVALS && process.env.EVALS_TIER === "periodic";
 const describeE2E = shouldRun ? describe : describe.skip;
 
 function startStub401(): Promise<{ url: string; close: () => Promise<void> }> {
   return new Promise((resolve) => {
     const server = http.createServer((req, res) => {
-      let body = '';
-      req.on('data', (c) => (body += c));
-      req.on('end', () => {
+      let body = "";
+      req.on("data", (c) => (body += c));
+      req.on("end", () => {
         res.statusCode = 401;
-        res.setHeader('Content-Type', 'application/json');
+        res.setHeader("Content-Type", "application/json");
         res.end(
-          JSON.stringify({ error: 'unauthorized', error_description: 'invalid or expired auth token' })
+          JSON.stringify({
+            error: "unauthorized",
+            error_description: "invalid or expired auth token",
+          }),
         );
       });
     });
-    server.listen(0, '127.0.0.1', () => {
+    server.listen(0, "127.0.0.1", () => {
       const addr = server.address();
-      if (!addr || typeof addr === 'string') throw new Error('no address');
+      if (!addr || typeof addr === "string") throw new Error("no address");
       resolve({
         url: `http://127.0.0.1:${addr.port}/mcp`,
         close: () => new Promise((r) => server.close(() => r())),
@@ -45,7 +52,7 @@ function startStub401(): Promise<{ url: string; close: () => Promise<void> }> {
 }
 
 function makeFakeClaude(fakeBinDir: string): string {
-  const callLog = path.join(fakeBinDir, 'claude-calls.log');
+  const callLog = path.join(fakeBinDir, "claude-calls.log");
   const script = `#!/bin/bash
 echo "claude $@" >> "${callLog}"
 case "$1 $2" in
@@ -56,21 +63,26 @@ case "$1 $2" in
 esac
 exit 0
 `;
-  fs.writeFileSync(path.join(fakeBinDir, 'claude'), script, { mode: 0o755 });
+  fs.writeFileSync(path.join(fakeBinDir, "claude"), script, { mode: 0o755 });
   return callLog;
 }
 
-describeE2E('/setup-gbrain Path 4 — bad token STOPs cleanly', () => {
-  test('AUTH classifier fires, no MCP registration, no CLAUDE.md mutation', async () => {
+describeE2E("/setup-gbrain Path 4 — bad token STOPs cleanly", () => {
+  test("AUTH classifier fires, no MCP registration, no CLAUDE.md mutation", async () => {
     const stubServer = await startStub401();
-    const gstackHome = fs.mkdtempSync(path.join(os.tmpdir(), 'setup-gbrain-bad-'));
-    const fakeBinDir = fs.mkdtempSync(path.join(os.tmpdir(), 'setup-gbrain-bad-bin-'));
+    const gstackHome = fs.mkdtempSync(
+      path.join(os.tmpdir(), "setup-gbrain-bad-"),
+    );
+    const fakeBinDir = fs.mkdtempSync(
+      path.join(os.tmpdir(), "setup-gbrain-bad-bin-"),
+    );
     const callLog = makeFakeClaude(fakeBinDir);
 
-    const ORIGINAL_CLAUDE_MD = '# Test project\n\nSome existing content here.\n';
-    fs.writeFileSync(path.join(gstackHome, 'CLAUDE.md'), ORIGINAL_CLAUDE_MD);
+    const ORIGINAL_CLAUDE_MD =
+      "# Test project\n\nSome existing content here.\n";
+    fs.writeFileSync(path.join(gstackHome, "CLAUDE.md"), ORIGINAL_CLAUDE_MD);
 
-    const BAD_TOKEN = 'gbrain_BAD_TOKEN_67890_DELIBERATELY_INVALID';
+    const BAD_TOKEN = "gbrain_BAD_TOKEN_67890_DELIBERATELY_INVALID";
     const askUserQuestions: Array<{ input: Record<string, unknown> }> = [];
     const binary = resolveClaudeBinary();
 
@@ -80,15 +92,20 @@ describeE2E('/setup-gbrain Path 4 — bad token STOPs cleanly', () => {
       mcpToken: process.env.GBRAIN_MCP_TOKEN,
     };
     process.env.GSTACK_HOME = gstackHome;
-    process.env.PATH = `${fakeBinDir}:${path.join(path.resolve(import.meta.dir, '..'), 'bin')}:${process.env.PATH ?? '/usr/bin:/bin:/opt/homebrew/bin'}`;
+    process.env.PATH = `${fakeBinDir}:${path.join(path.resolve(import.meta.dir, ".."), "bin")}:${process.env.PATH ?? "/usr/bin:/bin:/opt/homebrew/bin"}`;
     process.env.GBRAIN_MCP_TOKEN = BAD_TOKEN;
 
-    let modelTextOutput = '';
+    let modelTextOutput = "";
 
     try {
-      const skillPath = path.resolve(import.meta.dir, '..', 'setup-gbrain', 'SKILL.md');
+      const skillPath = path.resolve(
+        import.meta.dir,
+        "..",
+        "setup-gbrain",
+        "SKILL.md",
+      );
       const result = await runAgentSdkTest({
-        systemPrompt: { type: 'preset', preset: 'claude_code' },
+        systemPrompt: { type: "preset", preset: "claude_code" },
         userPrompt:
           `Read the skill file at ${skillPath} and follow Path 4 (Remote MCP) only. ` +
           `Use this MCP URL: ${stubServer.url}. ` +
@@ -98,19 +115,26 @@ describeE2E('/setup-gbrain Path 4 — bad token STOPs cleanly', () => {
           `Do NOT modify CLAUDE.md if verify failed.`,
         workingDirectory: gstackHome,
         maxTurns: 15,
-        allowedTools: ['Read', 'Grep', 'Glob', 'Bash', 'Write', 'Edit'],
+        allowedTools: ["Read", "Grep", "Glob", "Bash", "Write", "Edit"],
         ...(binary ? { pathToClaudeCodeExecutable: binary } : {}),
         canUseTool: async (toolName, input) => {
-          if (toolName === 'AskUserQuestion') {
+          if (toolName === "AskUserQuestion") {
             askUserQuestions.push({ input });
-            const q = (input.questions as Array<{
-              question: string;
-              options: Array<{ label: string }>;
-            }>)[0];
-            const decline = q.options.find((o) => /skip|decline|no/i.test(o.label)) ?? q.options[0]!;
+            const q = (
+              input.questions as Array<{
+                question: string;
+                options: Array<{ label: string }>;
+              }>
+            )[0];
+            const decline =
+              q.options.find((o) => /skip|decline|no/i.test(o.label)) ??
+              q.options[0]!;
             return {
-              behavior: 'allow',
-              updatedInput: { questions: input.questions, answers: { [q.question]: decline.label } },
+              behavior: "allow",
+              updatedInput: {
+                questions: input.questions,
+                answers: { [q.question]: decline.label },
+              },
             };
           }
           return passThroughNonAskUserQuestion(toolName, input);
@@ -129,19 +153,27 @@ describeE2E('/setup-gbrain Path 4 — bad token STOPs cleanly', () => {
       expect(hintShown).toBe(true);
 
       // Assertion 2: claude mcp add was NEVER called (verify failed → STOP).
-      const calls = fs.existsSync(callLog) ? fs.readFileSync(callLog, 'utf-8') : '';
+      const calls = fs.existsSync(callLog)
+        ? fs.readFileSync(callLog, "utf-8")
+        : "";
       expect(calls).not.toMatch(/mcp add.*--transport http/);
 
       // Assertion 3: CLAUDE.md is unchanged (no half-written block).
-      const finalClaudeMd = fs.readFileSync(path.join(gstackHome, 'CLAUDE.md'), 'utf-8');
+      const finalClaudeMd = fs.readFileSync(
+        path.join(gstackHome, "CLAUDE.md"),
+        "utf-8",
+      );
       expect(finalClaudeMd).toBe(ORIGINAL_CLAUDE_MD);
 
       // Assertion 4: the bad token never leaked to CLAUDE.md.
       expect(finalClaudeMd).not.toContain(BAD_TOKEN);
     } finally {
-      if (orig.gstackHome === undefined) delete process.env.GSTACK_HOME; else process.env.GSTACK_HOME = orig.gstackHome;
-      if (orig.pathEnv === undefined) delete process.env.PATH; else process.env.PATH = orig.pathEnv;
-      if (orig.mcpToken === undefined) delete process.env.GBRAIN_MCP_TOKEN; else process.env.GBRAIN_MCP_TOKEN = orig.mcpToken;
+      if (orig.gstackHome === undefined) delete process.env.GSTACK_HOME;
+      else process.env.GSTACK_HOME = orig.gstackHome;
+      if (orig.pathEnv === undefined) delete process.env.PATH;
+      else process.env.PATH = orig.pathEnv;
+      if (orig.mcpToken === undefined) delete process.env.GBRAIN_MCP_TOKEN;
+      else process.env.GBRAIN_MCP_TOKEN = orig.mcpToken;
       await stubServer.close();
       fs.rmSync(gstackHome, { recursive: true, force: true });
       fs.rmSync(fakeBinDir, { recursive: true, force: true });

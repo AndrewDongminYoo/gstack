@@ -22,13 +22,19 @@ function unionSkill(skill: string): string {
   const dir = path.join(ROOT, skill, "sections");
   if (fs.existsSync(dir)) {
     for (const f of fs.readdirSync(dir).sort()) {
-      if (f.endsWith(".md") && !f.endsWith(".md.tmpl")) t += "\n" + fs.readFileSync(path.join(dir, f), "utf-8");
+      if (f.endsWith(".md") && !f.endsWith(".md.tmpl"))
+        t += "\n" + fs.readFileSync(path.join(dir, f), "utf-8");
     }
   }
   return t;
 }
 const CSO = unionSkill("cso");
-const ctx = { skillName: "cso", tmplPath: "", host: "claude" as const, paths: HOST_PATHS["claude"] };
+const ctx = {
+  skillName: "cso",
+  tmplPath: "",
+  host: "claude" as const,
+  paths: HOST_PATHS["claude"],
+};
 
 describe("cso/spec taxonomy alignment", () => {
   test("cso archaeology names the recognizable HIGH-tier prefixes", () => {

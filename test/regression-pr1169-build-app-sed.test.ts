@@ -32,12 +32,12 @@ describe("PR #1169 bug #2: build-app.sh sed escape for $APP_NAME", () => {
     // safely — round-trip via a real `sed s///` against a stub strings file.
 
     const inputs: string[] = [
-      "Foo/Bar&Baz",      // slash + ampersand
-      "Cool\\App",        // backslash
-      "Plain Name",        // no metachars (baseline)
-      "A/B\\C&D",          // all three at once
-      "End/",              // trailing slash
-      "&Start",            // leading ampersand
+      "Foo/Bar&Baz", // slash + ampersand
+      "Cool\\App", // backslash
+      "Plain Name", // no metachars (baseline)
+      "A/B\\C&D", // all three at once
+      "End/", // trailing slash
+      "&Start", // leading ampersand
     ];
 
     for (const appName of inputs) {
@@ -46,7 +46,8 @@ describe("PR #1169 bug #2: build-app.sh sed escape for $APP_NAME", () => {
       // appearing in the output.
       const result = spawnSync(
         "bash",
-        ["-c",
+        [
+          "-c",
           `set -eu
            APP_NAME="$1"
            APP_NAME_SED_ESCAPED=$(printf '%s' "$APP_NAME" | sed 's/[&/\\]/\\\\&/g')
@@ -55,7 +56,7 @@ describe("PR #1169 bug #2: build-app.sh sed escape for $APP_NAME", () => {
           "_",
           appName,
         ],
-        { encoding: "utf-8" }
+        { encoding: "utf-8" },
       );
 
       expect(result.status).toBe(0);
@@ -68,16 +69,24 @@ describe("PR #1169 bug #2: build-app.sh sed escape for $APP_NAME", () => {
     // Belt-and-braces static check: the rebrand block must contain BOTH the
     // escape line and the sed line referencing the escaped variable.
     const body = fs.readFileSync(SCRIPT, "utf-8");
-    expect(body).toMatch(/APP_NAME_SED_ESCAPED=\$\(printf '%s' "\$APP_NAME" \| sed/);
-    expect(body).toMatch(/sed -i ''\s*"s\/Google Chrome for Testing\/\$\{APP_NAME_SED_ESCAPED\}\/g"/);
+    expect(body).toMatch(
+      /APP_NAME_SED_ESCAPED=\$\(printf '%s' "\$APP_NAME" \| sed/,
+    );
+    expect(body).toMatch(
+      /sed -i ''\s*"s\/Google Chrome for Testing\/\$\{APP_NAME_SED_ESCAPED\}\/g"/,
+    );
   });
 
   test("no bare `$APP_NAME` interpolation directly into the rebrand sed", () => {
     // Ensure no future refactor reintroduces the bug by interpolating
     // $APP_NAME straight into the s/// replacement.
     const body = fs.readFileSync(SCRIPT, "utf-8");
-    expect(body).not.toMatch(/sed -i ''\s*"s\/Google Chrome for Testing\/\$APP_NAME\//);
-    expect(body).not.toMatch(/sed -i ''\s*"s\/Google Chrome for Testing\/\$\{APP_NAME\}\//);
+    expect(body).not.toMatch(
+      /sed -i ''\s*"s\/Google Chrome for Testing\/\$APP_NAME\//,
+    );
+    expect(body).not.toMatch(
+      /sed -i ''\s*"s\/Google Chrome for Testing\/\$\{APP_NAME\}\//,
+    );
   });
 });
 
@@ -88,7 +97,7 @@ describe("PR #1169 bug #3: build-app.sh DMG_TMP mktemp failure guard", () => {
     // the SAME line via `||`, then validate the path is non-empty and a real
     // directory before cp.
     const guard = body.match(
-      /DMG_TMP=\$\(mktemp -d\)\s*\|\|\s*\{[^}]*exit\s+\d/
+      /DMG_TMP=\$\(mktemp -d\)\s*\|\|\s*\{[^}]*exit\s+\d/,
     );
     expect(guard).not.toBeNull();
   });
@@ -98,17 +107,15 @@ describe("PR #1169 bug #3: build-app.sh DMG_TMP mktemp failure guard", () => {
     // After mktemp, a defensive check should reject empty or non-directory
     // paths (covers cases where mktemp succeeds but returns garbage).
     expect(body).toMatch(
-      /\[\s*-z\s+"\$DMG_TMP"\s*\][^\n]*\|\|\s*\[\s*!\s+-d\s+"\$DMG_TMP"\s*\]/
+      /\[\s*-z\s+"\$DMG_TMP"\s*\][^\n]*\|\|\s*\[\s*!\s+-d\s+"\$DMG_TMP"\s*\]/,
     );
   });
 
-  test("no `cp -a ... \"$DMG_TMP/\"` before the validation block", () => {
+  test('no `cp -a ... "$DMG_TMP/"` before the validation block', () => {
     const body = fs.readFileSync(SCRIPT, "utf-8");
     // The cp must come AFTER the validation. Find the line offsets.
     const mktempIdx = body.search(/DMG_TMP=\$\(mktemp -d\)/);
-    const validationIdx = body.search(
-      /\[\s*-z\s+"\$DMG_TMP"\s*\]/
-    );
+    const validationIdx = body.search(/\[\s*-z\s+"\$DMG_TMP"\s*\]/);
     const cpIdx = body.search(/cp -a "\$APP_DIR" "\$DMG_TMP\//);
     expect(mktempIdx).toBeGreaterThan(-1);
     expect(validationIdx).toBeGreaterThan(mktempIdx);
@@ -122,35 +129,29 @@ describe("PR #1169 bug #3: build-app.sh DMG_TMP mktemp failure guard", () => {
     // that always exits 1. Asserts the script exits non-zero before cp.
 
     const fakeBin = fs.mkdtempSync(path.join("/tmp", "pr1169-fakebin-"));
-    fs.writeFileSync(
-      path.join(fakeBin, "mktemp"),
-      "#!/bin/sh\nexit 1\n",
-      { mode: 0o755 }
-    );
+    fs.writeFileSync(path.join(fakeBin, "mktemp"), "#!/bin/sh\nexit 1\n", {
+      mode: 0o755,
+    });
 
     // The guard, isolated. Mirrors the actual script's logic. Use a regular
     // string + array of lines so the embedded bash backticks/dollars don't
     // get interpreted by the JS template-literal parser.
     const guardScript = [
-      'set -u',
+      "set -u",
       'DMG_TMP=$(mktemp -d) || { echo "ERROR: mktemp -d failed — refusing to continue so we don\'t cp into the filesystem root." >&2; exit 1; }',
       'if [ -z "$DMG_TMP" ] || [ ! -d "$DMG_TMP" ]; then',
-      '  echo "ERROR: mktemp -d returned an invalid path (\'$DMG_TMP\')." >&2',
-      '  exit 1',
-      'fi',
-      '# If we got here, we would run the cp block, which is the bug.',
+      "  echo \"ERROR: mktemp -d returned an invalid path ('$DMG_TMP').\" >&2",
+      "  exit 1",
+      "fi",
+      "# If we got here, we would run the cp block, which is the bug.",
       'echo "REACHED_CP_BLOCK_WHICH_IS_THE_BUG" >&2',
-      'exit 0',
-    ].join('\n');
+      "exit 0",
+    ].join("\n");
 
-    const result = spawnSync(
-      "bash",
-      ["-c", guardScript],
-      {
-        encoding: "utf-8",
-        env: { ...process.env, PATH: `${fakeBin}:${process.env.PATH}` },
-      }
-    );
+    const result = spawnSync("bash", ["-c", guardScript], {
+      encoding: "utf-8",
+      env: { ...process.env, PATH: `${fakeBin}:${process.env.PATH}` },
+    });
 
     fs.rmSync(fakeBin, { recursive: true, force: true });
 

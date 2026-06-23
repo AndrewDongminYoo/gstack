@@ -9,7 +9,15 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
-import { mkdtempSync, writeFileSync, readFileSync, existsSync, rmSync, chmodSync, statSync } from "fs";
+import {
+  mkdtempSync,
+  writeFileSync,
+  readFileSync,
+  existsSync,
+  rmSync,
+  chmodSync,
+  statSync,
+} from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 

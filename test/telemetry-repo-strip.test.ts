@@ -24,19 +24,25 @@
  *      a strip rule fails CI even if a producer also stops emitting it.
  */
 
-import { describe, test, expect } from 'bun:test';
-import { spawnSync } from 'bun';
-import fs from 'fs';
-import path from 'path';
+import { describe, test, expect } from "bun:test";
+import { spawnSync } from "bun";
+import fs from "fs";
+import path from "path";
 
-const ROOT = path.resolve(__dirname, '..');
-const SYNC = path.join(ROOT, 'bin', 'gstack-telemetry-sync');
-const PREAMBLE = path.join(ROOT, 'scripts', 'resolvers', 'preamble', 'generate-preamble-bash.ts');
-const TEL_LOG = path.join(ROOT, 'bin', 'gstack-telemetry-log');
+const ROOT = path.resolve(__dirname, "..");
+const SYNC = path.join(ROOT, "bin", "gstack-telemetry-sync");
+const PREAMBLE = path.join(
+  ROOT,
+  "scripts",
+  "resolvers",
+  "preamble",
+  "generate-preamble-bash.ts",
+);
+const TEL_LOG = path.join(ROOT, "bin", "gstack-telemetry-log");
 
 // Fields that identify the user's repo/branch. The promise is that NONE of
 // these reach the network. Add to this floor if a new identity field is born.
-const REPO_IDENTITY_FLOOR = ['repo', '_repo_slug', '_branch'];
+const REPO_IDENTITY_FLOOR = ["repo", "_repo_slug", "_branch"];
 
 const isRepoIdentity = (field: string) => /repo|branch/i.test(field);
 
@@ -58,47 +64,51 @@ function fieldFromSedExpr(expr: string): string | null {
  * carries "branch" but is never synced) don't count against the egress invariant.
  */
 function emittedRepoFields(lines: string[]): string[] {
-  const text = lines.join('\n');
-  const keys = [...text.matchAll(/"([A-Za-z_][A-Za-z0-9_]*)":/g)].map((m) => m[1]);
+  const text = lines.join("\n");
+  const keys = [...text.matchAll(/"([A-Za-z_][A-Za-z0-9_]*)":/g)].map(
+    (m) => m[1],
+  );
   return [...new Set(keys.filter(isRepoIdentity))];
 }
 
-describe('telemetry no-repo-identity-egress invariant', () => {
-  const syncText = fs.readFileSync(SYNC, 'utf-8');
+describe("telemetry no-repo-identity-egress invariant", () => {
+  const syncText = fs.readFileSync(SYNC, "utf-8");
   const sedExprs = extractSedExprs(syncText);
   const strippedRepoExprs = sedExprs.filter((e) => {
     const f = fieldFromSedExpr(e);
     return f !== null && isRepoIdentity(f);
   });
   const strippedFields = new Set(
-    strippedRepoExprs.map(fieldFromSedExpr).filter((f): f is string => f !== null),
+    strippedRepoExprs
+      .map(fieldFromSedExpr)
+      .filter((f): f is string => f !== null),
   );
 
-  test('floor: the three known repo-identity fields are stripped', () => {
+  test("floor: the three known repo-identity fields are stripped", () => {
     for (const field of REPO_IDENTITY_FLOOR) {
       expect(strippedFields.has(field)).toBe(true);
     }
   });
 
-  test('coverage: every repo/branch field the producers emit into skill-usage.jsonl is stripped', () => {
+  test("coverage: every repo/branch field the producers emit into skill-usage.jsonl is stripped", () => {
     // Only emission lines that target the synced file (skill-usage.jsonl). The
     // preamble appends directly; gstack-telemetry-log builds the synced event
     // with a `printf '{"v":1,...` line into $JSONL_FILE (= skill-usage.jsonl).
     const preambleSynced = fs
-      .readFileSync(PREAMBLE, 'utf-8')
-      .split('\n')
-      .filter((l) => l.includes('skill-usage.jsonl'));
+      .readFileSync(PREAMBLE, "utf-8")
+      .split("\n")
+      .filter((l) => l.includes("skill-usage.jsonl"));
     const telLogSynced = fs
-      .readFileSync(TEL_LOG, 'utf-8')
-      .split('\n')
-      .filter((l) => l.includes('"v":1') || l.includes('skill-usage'));
+      .readFileSync(TEL_LOG, "utf-8")
+      .split("\n")
+      .filter((l) => l.includes('"v":1') || l.includes("skill-usage"));
     const emitted = new Set<string>([
       ...emittedRepoFields(preambleSynced),
       ...emittedRepoFields(telLogSynced),
     ]);
     // The preamble must emit "repo" — guards against the test silently passing
     // because a regex stopped matching the producer.
-    expect(emitted.has('repo')).toBe(true);
+    expect(emitted.has("repo")).toBe(true);
     for (const field of emitted) {
       expect(
         strippedFields.has(field),
@@ -107,7 +117,7 @@ describe('telemetry no-repo-identity-egress invariant', () => {
     }
   });
 
-  test('behavior: the real sed expressions remove repo identity, keep benign fields', () => {
+  test("behavior: the real sed expressions remove repo identity, keep benign fields", () => {
     const sample =
       '{"v":1,"ts":"2026-06-02T00:00:00Z","skill":"design-shotgun",' +
       '"repo":"my-secret-repo","_repo_slug":"acme-my-secret-repo","_branch":"feature-x",' +
@@ -115,19 +125,19 @@ describe('telemetry no-repo-identity-egress invariant', () => {
 
     const sedArgs: string[] = [];
     for (const e of strippedRepoExprs) {
-      sedArgs.push('-e', e);
+      sedArgs.push("-e", e);
     }
-    const out = spawnSync(['sed', ...sedArgs], {
+    const out = spawnSync(["sed", ...sedArgs], {
       stdin: Buffer.from(sample),
     });
     const cleaned = out.stdout.toString();
 
     // No repo/branch identity survives, value or key.
-    expect(cleaned).not.toContain('my-secret-repo');
-    expect(cleaned).not.toContain('feature-x');
+    expect(cleaned).not.toContain("my-secret-repo");
+    expect(cleaned).not.toContain("feature-x");
     expect(cleaned).not.toContain('"repo"');
-    expect(cleaned).not.toContain('_repo_slug');
-    expect(cleaned).not.toContain('_branch');
+    expect(cleaned).not.toContain("_repo_slug");
+    expect(cleaned).not.toContain("_branch");
 
     // Benign fields are untouched — the strip is surgical, not a blanket wipe.
     expect(cleaned).toContain('"skill":"design-shotgun"');

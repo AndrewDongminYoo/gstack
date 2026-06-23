@@ -44,9 +44,7 @@ describe("PR #1169 bug #4: gstack-telemetry-sync mktemp fallback", () => {
     const body = readScript(SCRIPT);
     // The mktemp invocation must be guarded by `|| { ... exit 0; }` or
     // equivalent. Match the multi-line guard immediately after `mktemp`.
-    const guard = body.match(
-      /mktemp\s+[^\n]+\)["']\s*\|\|\s*\{[^}]*exit\s+\d/
-    );
+    const guard = body.match(/mktemp\s+[^\n]+\)["']\s*\|\|\s*\{[^}]*exit\s+\d/);
     expect(guard).not.toBeNull();
   });
 
@@ -75,7 +73,7 @@ describe("PR #1169 bug #5: supabase/verify-rls.sh mktemp fallback", () => {
     // The check function must fail loudly — `return 1` (or `exit`) inside
     // the mktemp error handler. Same multi-line guard shape.
     const guard = body.match(
-      /mktemp\s+[^\n]+\)["']\s*\|\|\s*\{[^}]*(?:return|exit)\s+\d/
+      /mktemp\s+[^\n]+\)["']\s*\|\|\s*\{[^}]*(?:return|exit)\s+\d/,
     );
     expect(guard).not.toBeNull();
   });

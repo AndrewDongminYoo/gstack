@@ -22,20 +22,23 @@
  *
  * Run a subset in the foreground with AUQ_MATRIX_ONLY="plan-eng-review,cso".
  */
-import { describe, test } from 'bun:test';
-import * as fs from 'node:fs';
+import { describe, test } from "bun:test";
+import * as fs from "node:fs";
 import {
   setupSkillDir,
   captureFirstAuq,
   scoreAuqFormat,
   skillFromWorktree,
   gradeAuqRecommendation,
-} from './helpers/auq-sdk-capture';
+} from "./helpers/auq-sdk-capture";
 
-const shouldRun = !!process.env.EVALS && process.env.EVALS_TIER === 'periodic';
+const shouldRun = !!process.env.EVALS && process.env.EVALS_TIER === "periodic";
 const describeE2E = shouldRun ? describe : describe.skip;
-const runId = `auq-matrix-${process.env.EVALS_RUN_ID ?? 'local'}`;
-const ONLY = (process.env.AUQ_MATRIX_ONLY ?? '').split(',').map(s => s.trim()).filter(Boolean);
+const runId = `auq-matrix-${process.env.EVALS_RUN_ID ?? "local"}`;
+const ONLY = (process.env.AUQ_MATRIX_ONLY ?? "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
 
 const FLAWED_PLAN = `# Plan: Launch a "developer-friendly" pricing tier
 
@@ -71,100 +74,122 @@ interface MatrixSkill {
 
 const MATRIX: MatrixSkill[] = [
   {
-    skill: 'plan-eng-review',
-    fixtures: { 'plan.md': FLAWED_PLAN },
-    scenario: 'Read plan.md — that is the plan to review. It is a standalone plan document, not a codebase. Walk the review until the first AskUserQuestion (a per-issue finding or a scope decision).',
+    skill: "plan-eng-review",
+    fixtures: { "plan.md": FLAWED_PLAN },
+    scenario:
+      "Read plan.md — that is the plan to review. It is a standalone plan document, not a codebase. Walk the review until the first AskUserQuestion (a per-issue finding or a scope decision).",
   },
   {
-    skill: 'plan-design-review',
-    fixtures: { 'plan.md': FLAWED_PLAN + '\n## UI\nA new pricing page with a comparison table, plan cards, and an upgrade modal.\n' },
-    scenario: 'Read plan.md — that is the plan to review (it has UI scope). Walk the review until the first AskUserQuestion.',
+    skill: "plan-design-review",
+    fixtures: {
+      "plan.md":
+        FLAWED_PLAN +
+        "\n## UI\nA new pricing page with a comparison table, plan cards, and an upgrade modal.\n",
+    },
+    scenario:
+      "Read plan.md — that is the plan to review (it has UI scope). Walk the review until the first AskUserQuestion.",
   },
   {
-    skill: 'plan-devex-review',
-    fixtures: { 'plan.md': FLAWED_PLAN + '\n## CLI\nShip a `mytool pricing` command and a setup wizard for the new tier.\n' },
-    scenario: 'Read plan.md — that is the plan to review (developer-experience scope). Walk the review until the first AskUserQuestion.',
+    skill: "plan-devex-review",
+    fixtures: {
+      "plan.md":
+        FLAWED_PLAN +
+        "\n## CLI\nShip a `mytool pricing` command and a setup wizard for the new tier.\n",
+    },
+    scenario:
+      "Read plan.md — that is the plan to review (developer-experience scope). Walk the review until the first AskUserQuestion.",
   },
   {
-    skill: 'office-hours',
+    skill: "office-hours",
     fixtures: {},
-    scenario: 'The founder says: "I am building an AI tool that auto-writes unit tests for any repo. I think it is a great idea but I have zero users. Should I build it, and how do I get my first users?" Run the office-hours diagnostic until the first AskUserQuestion.',
+    scenario:
+      'The founder says: "I am building an AI tool that auto-writes unit tests for any repo. I think it is a great idea but I have zero users. Should I build it, and how do I get my first users?" Run the office-hours diagnostic until the first AskUserQuestion.',
   },
   {
-    skill: 'cso',
-    fixtures: { 'server/auth.js': VULN_CODE },
-    scenario: 'Audit the code in this repo (server/auth.js) for security issues. Walk the audit until the first AskUserQuestion (scope/stack confirmation or first finding).',
+    skill: "cso",
+    fixtures: { "server/auth.js": VULN_CODE },
+    scenario:
+      "Audit the code in this repo (server/auth.js) for security issues. Walk the audit until the first AskUserQuestion (scope/stack confirmation or first finding).",
   },
   {
-    skill: 'spec',
+    skill: "spec",
     fixtures: {},
-    scenario: 'Turn this vague intent into a precise spec: "add email notifications when a task is assigned to someone." Walk the spec workflow until the first AskUserQuestion.',
+    scenario:
+      'Turn this vague intent into a precise spec: "add email notifications when a task is assigned to someone." Walk the spec workflow until the first AskUserQuestion.',
   },
   {
-    skill: 'design-consultation',
-    fixtures: { 'product.md': '# Product\nA terminal-first task manager for developers. Audience: senior engineers. Stage: pre-launch.\n' },
-    scenario: 'Read product.md. Run the design consultation for this product until the first AskUserQuestion.',
+    skill: "design-consultation",
+    fixtures: {
+      "product.md":
+        "# Product\nA terminal-first task manager for developers. Audience: senior engineers. Stage: pre-launch.\n",
+    },
+    scenario:
+      "Read product.md. Run the design consultation for this product until the first AskUserQuestion.",
   },
 ];
 
-const selected = ONLY.length ? MATRIX.filter(m => ONLY.includes(m.skill)) : MATRIX;
+const selected = ONLY.length
+  ? MATRIX.filter((m) => ONLY.includes(m.skill))
+  : MATRIX;
 
-describeE2E('AUQ behavioral matrix (periodic)', () => {
+describeE2E("AUQ behavioral matrix (periodic)", () => {
   for (const m of selected) {
-    test(
-      `${m.skill}: first AUQ is a compliant decision brief (7/7 format, substance >=4)`,
-      async () => {
-        const wt = skillFromWorktree(m.skill);
-        const dir = setupSkillDir({
+    test(`${m.skill}: first AUQ is a compliant decision brief (7/7 format, substance >=4)`, async () => {
+      const wt = skillFromWorktree(m.skill);
+      const dir = setupSkillDir({
+        skillName: m.skill,
+        skillMd: wt.skillMd,
+        sectionsFrom: wt.sectionsFrom,
+        fixtures: m.fixtures,
+        tmpPrefix: `auq-matrix-${m.skill}-`,
+      });
+      let text = "";
+      try {
+        text = await captureFirstAuq({
+          planDir: dir,
           skillName: m.skill,
-          skillMd: wt.skillMd,
-          sectionsFrom: wt.sectionsFrom,
-          fixtures: m.fixtures,
-          tmpPrefix: `auq-matrix-${m.skill}-`,
+          scenario: m.scenario,
+          testName: `auq-matrix-${m.skill}`,
+          runId,
         });
-        let text = '';
-        try {
-          text = await captureFirstAuq({
-            planDir: dir,
-            skillName: m.skill,
-            scenario: m.scenario,
-            testName: `auq-matrix-${m.skill}`,
-            runId,
-          });
-        } finally {
-          fs.rmSync(dir, { recursive: true, force: true });
-        }
+      } finally {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
 
-        const fmt = scoreAuqFormat(text);
-        let substance = 0;
-        let recPresent = false;
-        let hadBecause = false;
-        if (text.trim()) {
-          const g = await gradeAuqRecommendation(text);
-          substance = g.substance;
-          recPresent = g.present;
-          hadBecause = g.hadLiteralBecause;
-        }
-        // eslint-disable-next-line no-console
-        console.log(
-          `[AUQ-matrix ${m.skill}] captured=${text.length}B format=${fmt.present}/${fmt.total} ` +
-            `missing=[${fmt.missing.join(',')}] recPresent=${recPresent} substance=${substance} ` +
-            `literalBecause=${hadBecause}`,
+      const fmt = scoreAuqFormat(text);
+      let substance = 0;
+      let recPresent = false;
+      let hadBecause = false;
+      if (text.trim()) {
+        const g = await gradeAuqRecommendation(text);
+        substance = g.substance;
+        recPresent = g.present;
+        hadBecause = g.hadLiteralBecause;
+      }
+      // eslint-disable-next-line no-console
+      console.log(
+        `[AUQ-matrix ${m.skill}] captured=${text.length}B format=${fmt.present}/${fmt.total} ` +
+          `missing=[${fmt.missing.join(",")}] recPresent=${recPresent} substance=${substance} ` +
+          `literalBecause=${hadBecause}`,
+      );
+
+      if (!text.trim()) {
+        throw new Error(
+          `${m.skill}: agent produced NO AUQ capture (never reached a question in budget).`,
         );
-
-        if (!text.trim()) {
-          throw new Error(`${m.skill}: agent produced NO AUQ capture (never reached a question in budget).`);
-        }
-        const problems: string[] = [];
-        if (fmt.missing.length > 0) problems.push(`missing format element(s): ${fmt.missing.join(', ')}`);
-        if (substance < 4) problems.push(`recommendation substance ${substance} < 4 (boilerplate/weak)`);
-        if (problems.length > 0) {
-          throw new Error(
-            `${m.skill} AUQ not at plan-ceo bar:\n  - ${problems.join('\n  - ')}\n--- captured AUQ ---\n${text}`,
-          );
-        }
-      },
-      300_000,
-    );
+      }
+      const problems: string[] = [];
+      if (fmt.missing.length > 0)
+        problems.push(`missing format element(s): ${fmt.missing.join(", ")}`);
+      if (substance < 4)
+        problems.push(
+          `recommendation substance ${substance} < 4 (boilerplate/weak)`,
+        );
+      if (problems.length > 0) {
+        throw new Error(
+          `${m.skill} AUQ not at plan-ceo bar:\n  - ${problems.join("\n  - ")}\n--- captured AUQ ---\n${text}`,
+        );
+      }
+    }, 300_000);
   }
 });

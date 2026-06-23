@@ -67,7 +67,9 @@ afterEach(() => {
  * migration script needs (mkdir, grep, sed, mv, rm, mktemp, cat, touch, printf,
  * command, etc.). Optionally omit jq, or substitute a shim.
  */
-function makeCuratedPath(opts: { jq?: "missing" | "shim-fail" | "real" } = {}): string {
+function makeCuratedPath(
+  opts: { jq?: "missing" | "shim-fail" | "real" } = {},
+): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "gstack-mig-path-"));
   const utils = [
     "bash",
@@ -238,11 +240,7 @@ describe("migrations/v1.40.0.0.sh", () => {
     freshAllowlist();
     fs.writeFileSync(
       privacyPath,
-      JSON.stringify(
-        [{ pattern: NEW_PATTERN, class: "artifact" }],
-        null,
-        2,
-      ),
+      JSON.stringify([{ pattern: NEW_PATTERN, class: "artifact" }], null, 2),
     );
     freshGitattrs();
 
@@ -308,10 +306,7 @@ describe("migrations/v1.40.0.0.sh", () => {
     // falls into the plain `printf >>` append path. Make the file read-only
     // so the append fails (sed -i.bak on macOS silently no-ops on read-only
     // files, so we have to take the printf path to exercise this).
-    fs.writeFileSync(
-      allowlistPath,
-      "# header\nprojects/*/*-some-other-*.md\n",
-    );
+    fs.writeFileSync(allowlistPath, "# header\nprojects/*/*-some-other-*.md\n");
     freshPrivacyMap();
     freshGitattrs();
     fs.chmodSync(allowlistPath, 0o444);

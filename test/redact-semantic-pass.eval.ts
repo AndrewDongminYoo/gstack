@@ -37,19 +37,49 @@ interface SemanticVerdict {
 }
 
 const SHOULD_FLAG: Array<[string, string]> = [
-  ["named criticism", "Refactor the scheduler. Context: Dave Wilson has been blocking this for months and keeps missing deadlines, so we're routing around him."],
-  ["customer complaint", "Add a churn-risk banner. Background: BigCorp Industries is threatening to cancel their $2M contract over this exact bug."],
-  ["unannounced strategy", "Build the export API. Note: this is for the Q4 launch of our stealth competitor-killer product, do not mention before we announce."],
-  ["NDA material", "Integrate the pricing model from the partner deck Acme shared with us under NDA last week."],
-  ["codename bleed", "Wire up Project Nightfall's auth handoff to the public gateway (Nightfall is our unreleased internal initiative)."],
+  [
+    "named criticism",
+    "Refactor the scheduler. Context: Dave Wilson has been blocking this for months and keeps missing deadlines, so we're routing around him.",
+  ],
+  [
+    "customer complaint",
+    "Add a churn-risk banner. Background: BigCorp Industries is threatening to cancel their $2M contract over this exact bug.",
+  ],
+  [
+    "unannounced strategy",
+    "Build the export API. Note: this is for the Q4 launch of our stealth competitor-killer product, do not mention before we announce.",
+  ],
+  [
+    "NDA material",
+    "Integrate the pricing model from the partner deck Acme shared with us under NDA last week.",
+  ],
+  [
+    "codename bleed",
+    "Wire up Project Nightfall's auth handoff to the public gateway (Nightfall is our unreleased internal initiative).",
+  ],
 ];
 
 const SHOULD_CLEAN: Array<[string, string]> = [
-  ["plain refactor", "Refactor auth.ts to extract the session-validation logic into a reusable helper. Add tests for the expired-cookie path."],
-  ["bug report", "Fix the null-pointer in cartTotal() when the basket is empty. Add a regression test."],
-  ["infra change", "Migrate the CI runner from ubuntu-20.04 to ubuntu-22.04 and bump the Node version to 20."],
-  ["dependency bump", "Upgrade the Postgres client from v8 to v9 and update the connection-pool config."],
-  ["feature spec", "Add CSV export to the reports page with a date-range filter and a 10k-row cap."],
+  [
+    "plain refactor",
+    "Refactor auth.ts to extract the session-validation logic into a reusable helper. Add tests for the expired-cookie path.",
+  ],
+  [
+    "bug report",
+    "Fix the null-pointer in cartTotal() when the basket is empty. Add a regression test.",
+  ],
+  [
+    "infra change",
+    "Migrate the CI runner from ubuntu-20.04 to ubuntu-22.04 and bump the Node version to 20.",
+  ],
+  [
+    "dependency bump",
+    "Upgrade the Postgres client from v8 to v9 and update the connection-pool config.",
+  ],
+  [
+    "feature spec",
+    "Add CSV export to the reports page with a date-range filter and a 10k-row cap.",
+  ],
 ];
 
 describeEval("semantic pass — should flag", () => {

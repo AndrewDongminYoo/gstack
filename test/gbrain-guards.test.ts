@@ -22,19 +22,28 @@ describe("detectAutopilot", () => {
     const tmp = fs.mkdtempSync(join(os.tmpdir(), "ap-"));
     const lock = join(tmp, "autopilot.lock");
     fs.writeFileSync(lock, "");
-    const r = detectAutopilot(process.env, { lockPaths: [lock], processRunning: () => false });
+    const r = detectAutopilot(process.env, {
+      lockPaths: [lock],
+      processRunning: () => false,
+    });
     expect(r.active).toBe(true);
     expect(r.signal).toContain("lock:");
   });
 
   test("refuses on a live autopilot process (primary signal)", () => {
-    const r = detectAutopilot(process.env, { lockPaths: [], processRunning: () => true });
+    const r = detectAutopilot(process.env, {
+      lockPaths: [],
+      processRunning: () => true,
+    });
     expect(r.active).toBe(true);
     expect(r.signal).toBe("process:gbrain autopilot");
   });
 
   test("proceeds when no signal fires (never blanket-refuses)", () => {
-    const r = detectAutopilot(process.env, { lockPaths: [], processRunning: () => false });
+    const r = detectAutopilot(process.env, {
+      lockPaths: [],
+      processRunning: () => false,
+    });
     expect(r.active).toBe(false);
     expect(r.signal).toBeNull();
   });
@@ -47,7 +56,10 @@ describe("detectAutopilot", () => {
     const tmp = fs.mkdtempSync(join(os.tmpdir(), "ap-"));
     const lock = join(tmp, "autopilot.lock");
     fs.writeFileSync(lock, `${DEAD_PID}\n`);
-    const r = detectAutopilot(process.env, { lockPaths: [lock], processRunning: () => false });
+    const r = detectAutopilot(process.env, {
+      lockPaths: [lock],
+      processRunning: () => false,
+    });
     expect(r.active).toBe(false);
     expect(r.signal).toBeNull();
   });
@@ -56,7 +68,10 @@ describe("detectAutopilot", () => {
     const tmp = fs.mkdtempSync(join(os.tmpdir(), "ap-"));
     const lock = join(tmp, "autopilot.lock");
     fs.writeFileSync(lock, String(process.pid)); // the test runner itself is alive
-    const r = detectAutopilot(process.env, { lockPaths: [lock], processRunning: () => false });
+    const r = detectAutopilot(process.env, {
+      lockPaths: [lock],
+      processRunning: () => false,
+    });
     expect(r.active).toBe(true);
     expect(r.signal).toContain(`pid ${process.pid}`);
   });
@@ -65,7 +80,10 @@ describe("detectAutopilot", () => {
     const tmp = fs.mkdtempSync(join(os.tmpdir(), "ap-"));
     const lock = join(tmp, "autopilot.lock");
     fs.writeFileSync(lock, JSON.stringify({ pid: DEAD_PID, started_at: "x" }));
-    const r = detectAutopilot(process.env, { lockPaths: [lock], processRunning: () => false });
+    const r = detectAutopilot(process.env, {
+      lockPaths: [lock],
+      processRunning: () => false,
+    });
     expect(r.active).toBe(false);
   });
 
@@ -73,7 +91,10 @@ describe("detectAutopilot", () => {
     const tmp = fs.mkdtempSync(join(os.tmpdir(), "ap-"));
     const lock = join(tmp, "autopilot.lock");
     fs.writeFileSync(lock, `${DEAD_PID}`);
-    const r = detectAutopilot(process.env, { lockPaths: [lock], processRunning: () => true });
+    const r = detectAutopilot(process.env, {
+      lockPaths: [lock],
+      processRunning: () => true,
+    });
     expect(r.active).toBe(true);
     expect(r.signal).toBe("process:gbrain autopilot");
   });
@@ -82,7 +103,10 @@ describe("detectAutopilot", () => {
     const tmp = fs.mkdtempSync(join(os.tmpdir(), "ap-"));
     const lock = join(tmp, "autopilot.lock");
     fs.writeFileSync(lock, "corrupted-no-pid-here");
-    const r = detectAutopilot(process.env, { lockPaths: [lock], processRunning: () => false });
+    const r = detectAutopilot(process.env, {
+      lockPaths: [lock],
+      processRunning: () => false,
+    });
     expect(r.active).toBe(true); // can't introspect → don't ignore the lock
     expect(r.signal).toContain("lock:");
     expect(r.signal).not.toContain("pid");
@@ -92,45 +116,70 @@ describe("detectAutopilot", () => {
 // ── #1734 remove safety (E7: fail closed on user-managed without keep-storage) ─
 describe("decideSourceRemove", () => {
   const rows = (extra: GbrainSourceRow[] = []): GbrainSourceRow[] => [
-    { id: "gbrain-managed", local_path: clonesPath("repo"), config: { remote_url: "https://x/r.git" } },
-    { id: "user-managed", local_path: "/tmp/user-repo", config: { remote_url: "https://x/r.git" } },
+    {
+      id: "gbrain-managed",
+      local_path: clonesPath("repo"),
+      config: { remote_url: "https://x/r.git" },
+    },
+    {
+      id: "user-managed",
+      local_path: "/tmp/user-repo",
+      config: { remote_url: "https://x/r.git" },
+    },
     { id: "path-managed", local_path: "/tmp/path-repo" }, // no remote_url
     ...extra,
   ];
   const fetchRows = (extra?: GbrainSourceRow[]) => () => rows(extra);
 
   test("absent source → allow (no-op)", () => {
-    const d = decideSourceRemove("nope", process.env, { keepStorage: false, fetchRows: fetchRows() });
+    const d = decideSourceRemove("nope", process.env, {
+      keepStorage: false,
+      fetchRows: fetchRows(),
+    });
     expect(d.allow).toBe(true);
     expect(d.reason).toContain("absent");
   });
 
   test("user-managed + no --keep-storage → FAIL CLOSED", () => {
-    const d = decideSourceRemove("user-managed", process.env, { keepStorage: false, fetchRows: fetchRows() });
+    const d = decideSourceRemove("user-managed", process.env, {
+      keepStorage: false,
+      fetchRows: fetchRows(),
+    });
     expect(d.allow).toBe(false);
     expect(d.reason).toContain("user-managed");
   });
 
   test("user-managed + --keep-storage supported → allow with flag", () => {
-    const d = decideSourceRemove("user-managed", process.env, { keepStorage: true, fetchRows: fetchRows() });
+    const d = decideSourceRemove("user-managed", process.env, {
+      keepStorage: true,
+      fetchRows: fetchRows(),
+    });
     expect(d.allow).toBe(true);
     expect(d.extraArgs).toContain("--keep-storage");
   });
 
   test("gbrain-managed (inside clones) → allow even without keep-storage", () => {
-    const d = decideSourceRemove("gbrain-managed", process.env, { keepStorage: false, fetchRows: fetchRows() });
+    const d = decideSourceRemove("gbrain-managed", process.env, {
+      keepStorage: false,
+      fetchRows: fetchRows(),
+    });
     expect(d.allow).toBe(true);
   });
 
   test("path-managed without remote_url → allow (normal --path case)", () => {
-    const d = decideSourceRemove("path-managed", process.env, { keepStorage: false, fetchRows: fetchRows() });
+    const d = decideSourceRemove("path-managed", process.env, {
+      keepStorage: false,
+      fetchRows: fetchRows(),
+    });
     expect(d.allow).toBe(true);
   });
 
   test("sources unreadable → FAIL CLOSED", () => {
     const d = decideSourceRemove("user-managed", process.env, {
       keepStorage: false,
-      fetchRows: () => { throw new Error("boom"); },
+      fetchRows: () => {
+        throw new Error("boom");
+      },
     });
     expect(d.allow).toBe(false);
     expect(d.reason).toContain("fail closed");
@@ -140,7 +189,11 @@ describe("decideSourceRemove", () => {
 // ── #1734 reclone guard (E-level: require --allow-reclone for URL-managed) ───
 describe("decideCodeSync", () => {
   const rows: GbrainSourceRow[] = [
-    { id: "url-managed", local_path: "/tmp/u", config: { remote_url: "https://x/r.git" } },
+    {
+      id: "url-managed",
+      local_path: "/tmp/u",
+      config: { remote_url: "https://x/r.git" },
+    },
     { id: "plain", local_path: "/tmp/p" },
   ];
   const fetch = () => rows;
@@ -162,7 +215,9 @@ describe("decideCodeSync", () => {
   });
 
   test("sources unreadable → fail OPEN (sync read is non-destructive)", () => {
-    const d = decideCodeSync("url-managed", process.env, false, () => { throw new Error("boom"); });
+    const d = decideCodeSync("url-managed", process.env, false, () => {
+      throw new Error("boom");
+    });
     expect(d.allow).toBe(true);
   });
 });

@@ -28,15 +28,23 @@
  *   size.
  */
 
-import { describe, test, expect } from 'bun:test';
-import * as fs from 'fs';
-import * as path from 'path';
-import { captureBaseline, type ParityBaseline } from './helpers/capture-parity-baseline';
-import { logBudgetOverride } from './helpers/budget-override';
-import { CARVED_SKILLS } from './helpers/carve-guards';
+import { describe, test, expect } from "bun:test";
+import * as fs from "fs";
+import * as path from "path";
+import {
+  captureBaseline,
+  type ParityBaseline,
+} from "./helpers/capture-parity-baseline";
+import { logBudgetOverride } from "./helpers/budget-override";
+import { CARVED_SKILLS } from "./helpers/carve-guards";
 
-const REPO_ROOT = path.resolve(import.meta.dir, '..');
-const BASELINE_PATH = path.join(REPO_ROOT, 'test', 'fixtures', 'parity-baseline-v1.47.0.0.json');
+const REPO_ROOT = path.resolve(import.meta.dir, "..");
+const BASELINE_PATH = path.join(
+  REPO_ROOT,
+  "test",
+  "fixtures",
+  "parity-baseline-v1.47.0.0.json",
+);
 
 // Default per-skill ratio is 1.50 (50% growth tolerance). Adjusted v1.52.0.0
 // (cathedral cap audit) from 1.05 → 1.50: a 5% ratio tripped on legitimate
@@ -45,7 +53,7 @@ const BASELINE_PATH = path.join(REPO_ROOT, 'test', 'fixtures', 'parity-baseline-
 // surfaces). Real bloat is 2-3×; this catches that while not tripping on
 // normal feature scope. The always-loaded catalog cost is enforced
 // separately with a hard ceiling.
-const DEFAULT_RATIO = 1.50;
+const DEFAULT_RATIO = 1.5;
 const RATIO = Number(process.env.GSTACK_SIZE_BUDGET_RATIO) || DEFAULT_RATIO;
 
 interface Regression {
@@ -55,13 +63,15 @@ interface Regression {
   growth: number;
 }
 
-describe('SKILL.md size budget regression (gate, free)', () => {
-  test('parity-baseline-v1.47.0.0.json exists', () => {
+describe("SKILL.md size budget regression (gate, free)", () => {
+  test("parity-baseline-v1.47.0.0.json exists", () => {
     expect(fs.existsSync(BASELINE_PATH)).toBe(true);
   });
 
-  test('no skill exceeds v1.47.0.0 baseline size × ratio', () => {
-    const baseline: ParityBaseline = JSON.parse(fs.readFileSync(BASELINE_PATH, 'utf-8'));
+  test("no skill exceeds v1.47.0.0 baseline size × ratio", () => {
+    const baseline: ParityBaseline = JSON.parse(
+      fs.readFileSync(BASELINE_PATH, "utf-8"),
+    );
     const current = captureBaseline({ repoRoot: REPO_ROOT });
 
     const regressions: Regression[] = [];
@@ -79,10 +89,11 @@ describe('SKILL.md size budget regression (gate, free)', () => {
 
     if (regressions.length === 0) return;
 
-    const overrideReason = process.env.GSTACK_SIZE_BUDGET_OVERRIDE_REASON?.trim();
+    const overrideReason =
+      process.env.GSTACK_SIZE_BUDGET_OVERRIDE_REASON?.trim();
     if (overrideReason) {
       logBudgetOverride({
-        scope: 'skill-size-budget',
+        scope: "skill-size-budget",
         reason: overrideReason,
         details: { ratio: RATIO, regressions },
       });
@@ -92,22 +103,29 @@ describe('SKILL.md size budget regression (gate, free)', () => {
       );
       for (const r of regressions) {
         // eslint-disable-next-line no-console
-        console.warn(`  ${r.skill}: ${r.beforeBytes} → ${r.afterBytes} bytes (×${r.growth.toFixed(2)})`);
+        console.warn(
+          `  ${r.skill}: ${r.beforeBytes} → ${r.afterBytes} bytes (×${r.growth.toFixed(2)})`,
+        );
       }
       return;
     }
 
-    const msg = regressions.map(r =>
-      `  ${r.skill}: ${r.beforeBytes} → ${r.afterBytes} bytes (×${r.growth.toFixed(2)})`,
-    ).join('\n');
+    const msg = regressions
+      .map(
+        (r) =>
+          `  ${r.skill}: ${r.beforeBytes} → ${r.afterBytes} bytes (×${r.growth.toFixed(2)})`,
+      )
+      .join("\n");
     throw new Error(
       `${regressions.length} skill(s) regressed past v1.47.0.0 baseline × ${RATIO}:\n${msg}\n` +
-      `Override: set GSTACK_SIZE_BUDGET_OVERRIDE_REASON="why this is OK" to allow and audit-log.`,
+        `Override: set GSTACK_SIZE_BUDGET_OVERRIDE_REASON="why this is OK" to allow and audit-log.`,
     );
   });
 
-  test('total corpus byte count does not regress past baseline × ratio', () => {
-    const baseline: ParityBaseline = JSON.parse(fs.readFileSync(BASELINE_PATH, 'utf-8'));
+  test("total corpus byte count does not regress past baseline × ratio", () => {
+    const baseline: ParityBaseline = JSON.parse(
+      fs.readFileSync(BASELINE_PATH, "utf-8"),
+    );
     const current = captureBaseline({ repoRoot: REPO_ROOT });
     const ratio = current.totalCorpusBytes / baseline.totalCorpusBytes;
     if (current.totalCorpusBytes <= baseline.totalCorpusBytes * RATIO) {
@@ -117,19 +135,25 @@ describe('SKILL.md size budget regression (gate, free)', () => {
       );
       return;
     }
-    const overrideReason = process.env.GSTACK_SIZE_BUDGET_OVERRIDE_REASON?.trim();
+    const overrideReason =
+      process.env.GSTACK_SIZE_BUDGET_OVERRIDE_REASON?.trim();
     if (overrideReason) {
       logBudgetOverride({
-        scope: 'skill-size-budget-corpus',
+        scope: "skill-size-budget-corpus",
         reason: overrideReason,
-        details: { ratio: RATIO, observed: ratio, before: baseline.totalCorpusBytes, after: current.totalCorpusBytes },
+        details: {
+          ratio: RATIO,
+          observed: ratio,
+          before: baseline.totalCorpusBytes,
+          after: current.totalCorpusBytes,
+        },
       });
       return;
     }
     throw new Error(
       `Total corpus regressed past v1.47.0.0 baseline × ${RATIO}: ` +
-      `${baseline.totalCorpusBytes} → ${current.totalCorpusBytes} bytes (×${ratio.toFixed(3)}). ` +
-      `Override: set GSTACK_SIZE_BUDGET_OVERRIDE_REASON to allow.`,
+        `${baseline.totalCorpusBytes} → ${current.totalCorpusBytes} bytes (×${ratio.toFixed(3)}). ` +
+        `Override: set GSTACK_SIZE_BUDGET_OVERRIDE_REASON to allow.`,
     );
   });
 
@@ -156,10 +180,12 @@ describe('SKILL.md size budget regression (gate, free)', () => {
    * sectioned invariant in parity-harness.ts (minBytes on skeleton+sections).
    * Add the remaining three here as they carve.
    */
-  test('no skill shrinks past 80% of v1.47.0.0 baseline (catches accidental body strip)', () => {
-    const baseline: ParityBaseline = JSON.parse(fs.readFileSync(BASELINE_PATH, 'utf-8'));
+  test("no skill shrinks past 80% of v1.47.0.0 baseline (catches accidental body strip)", () => {
+    const baseline: ParityBaseline = JSON.parse(
+      fs.readFileSync(BASELINE_PATH, "utf-8"),
+    );
     const current = captureBaseline({ repoRoot: REPO_ROOT });
-    const MIN_RATIO = 0.80; // a skill at <80% of its v1.44 size signals mass-deletion
+    const MIN_RATIO = 0.8; // a skill at <80% of its v1.44 size signals mass-deletion
     // Carved skills (v2 plan T9): the skeleton SKILL.md intentionally shrinks
     // because prose moved into sections/*.md. The union size is guarded instead
     // by the sectioned invariant in parity-harness.ts (minBytes on the
@@ -168,7 +194,10 @@ describe('SKILL.md size budget regression (gate, free)', () => {
     const SECTIONS_EXTRACTED = new Set<string>(CARVED_SKILLS);
 
     const undershoots: Array<{
-      skill: string; beforeBytes: number; afterBytes: number; ratio: number;
+      skill: string;
+      beforeBytes: number;
+      afterBytes: number;
+      ratio: number;
     }> = [];
     for (const [skill, before] of Object.entries(baseline.skills)) {
       if (SECTIONS_EXTRACTED.has(skill)) continue;
@@ -177,17 +206,21 @@ describe('SKILL.md size budget regression (gate, free)', () => {
       const ratio = after.skillMdBytes / before.skillMdBytes;
       if (ratio < MIN_RATIO) {
         undershoots.push({
-          skill, beforeBytes: before.skillMdBytes, afterBytes: after.skillMdBytes, ratio,
+          skill,
+          beforeBytes: before.skillMdBytes,
+          afterBytes: after.skillMdBytes,
+          ratio,
         });
       }
     }
 
     if (undershoots.length === 0) return;
 
-    const overrideReason = process.env.GSTACK_SIZE_BUDGET_OVERRIDE_REASON?.trim();
+    const overrideReason =
+      process.env.GSTACK_SIZE_BUDGET_OVERRIDE_REASON?.trim();
     if (overrideReason) {
       logBudgetOverride({
-        scope: 'skill-size-budget-floor',
+        scope: "skill-size-budget-floor",
         reason: overrideReason,
         details: { min_ratio: MIN_RATIO, undershoots },
       });
@@ -198,38 +231,47 @@ describe('SKILL.md size budget regression (gate, free)', () => {
       return;
     }
 
-    const msg = undershoots.map(u =>
-      `  ${u.skill}: ${u.beforeBytes} → ${u.afterBytes} bytes (×${u.ratio.toFixed(2)} — below ${MIN_RATIO} floor)`,
-    ).join('\n');
+    const msg = undershoots
+      .map(
+        (u) =>
+          `  ${u.skill}: ${u.beforeBytes} → ${u.afterBytes} bytes (×${u.ratio.toFixed(2)} — below ${MIN_RATIO} floor)`,
+      )
+      .join("\n");
     throw new Error(
       `${undershoots.length} skill(s) shrunk past v1.47.0.0 × ${MIN_RATIO} floor:\n${msg}\n` +
-      `This usually signals accidental body strip (e.g., a resolver returning empty, a ` +
-      `template losing a section). If the shrinkage is intentional (e.g., the skill moved ` +
-      `to the sections/ pattern), add it to SECTIONS_EXTRACTED in this test. Override: ` +
-      `GSTACK_SIZE_BUDGET_OVERRIDE_REASON="why" allows + audit-logs.`,
+        `This usually signals accidental body strip (e.g., a resolver returning empty, a ` +
+        `template losing a section). If the shrinkage is intentional (e.g., the skill moved ` +
+        `to the sections/ pattern), add it to SECTIONS_EXTRACTED in this test. Override: ` +
+        `GSTACK_SIZE_BUDGET_OVERRIDE_REASON="why" allows + audit-logs.`,
     );
   });
 
-  test('catalog token estimate stays compressed (v1.45 target ≤ 7000)', () => {
+  test("catalog token estimate stays compressed (v1.45 target ≤ 7000)", () => {
     const current = captureBaseline({ repoRoot: REPO_ROOT });
     const v145Target = 7000;
     if (current.estTotalCatalogTokens <= v145Target) {
       // eslint-disable-next-line no-console
-      console.log(`[skill-size-budget] catalog OK: ~${current.estTotalCatalogTokens} tokens (target ≤${v145Target})`);
+      console.log(
+        `[skill-size-budget] catalog OK: ~${current.estTotalCatalogTokens} tokens (target ≤${v145Target})`,
+      );
       return;
     }
-    const overrideReason = process.env.GSTACK_SIZE_BUDGET_OVERRIDE_REASON?.trim();
+    const overrideReason =
+      process.env.GSTACK_SIZE_BUDGET_OVERRIDE_REASON?.trim();
     if (overrideReason) {
       logBudgetOverride({
-        scope: 'skill-size-budget-catalog',
+        scope: "skill-size-budget-catalog",
         reason: overrideReason,
-        details: { target: v145Target, observed: current.estTotalCatalogTokens },
+        details: {
+          target: v145Target,
+          observed: current.estTotalCatalogTokens,
+        },
       });
       return;
     }
     throw new Error(
       `Catalog token estimate regressed past v1.45 target: ${current.estTotalCatalogTokens} tokens > ${v145Target}. ` +
-      `T4 catalog trim should keep this under control. Override: set GSTACK_SIZE_BUDGET_OVERRIDE_REASON to allow.`,
+        `T4 catalog trim should keep this under control. Override: set GSTACK_SIZE_BUDGET_OVERRIDE_REASON to allow.`,
     );
   });
 });

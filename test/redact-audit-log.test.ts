@@ -90,7 +90,15 @@ describe("CLI", () => {
     fs.writeFileSync(bodyFile, "some draft content");
     const r = spawnSync(
       "bun",
-      [LIB, JSON.stringify({ repo_visibility: "public", outcome: "flagged", categories_flagged: ["pii"] }), bodyFile],
+      [
+        LIB,
+        JSON.stringify({
+          repo_visibility: "public",
+          outcome: "flagged",
+          categories_flagged: ["pii"],
+        }),
+        bodyFile,
+      ],
       { env: { ...process.env, GSTACK_HOME: home }, encoding: "utf8" },
     );
     expect(r.status).toBe(0);

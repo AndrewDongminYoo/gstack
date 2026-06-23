@@ -99,7 +99,10 @@ exit 0
  * the shell here is updated too. That's the point — keep the test and the
  * skill template aligned.
  */
-function runRollbackSequence(env: RollbackEnv): { exitCode: number; stderr: string } {
+function runRollbackSequence(env: RollbackEnv): {
+  exitCode: number;
+  stderr: string;
+} {
   const script = `
 set -u
 BACKUP="${env.configPath}.gstack-bak-$(date +%s)-$$"

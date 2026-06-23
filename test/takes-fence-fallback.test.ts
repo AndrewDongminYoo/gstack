@@ -12,61 +12,64 @@
  * Gate-tier, free, pure import + render.
  */
 
-import { describe, test, expect } from 'bun:test';
-import { generateBrainWriteBack } from '../scripts/resolvers/gbrain';
-import { SKILL_DIGEST_SUBSETS, SKILL_CALIBRATION_WEIGHTS } from '../scripts/brain-cache-spec';
-import { HOST_PATHS } from '../scripts/resolvers/types';
-import type { TemplateContext } from '../scripts/resolvers/types';
+import { describe, test, expect } from "bun:test";
+import { generateBrainWriteBack } from "../scripts/resolvers/gbrain";
+import {
+  SKILL_DIGEST_SUBSETS,
+  SKILL_CALIBRATION_WEIGHTS,
+} from "../scripts/brain-cache-spec";
+import { HOST_PATHS } from "../scripts/resolvers/types";
+import type { TemplateContext } from "../scripts/resolvers/types";
 
 function buildCtx(skillName: string): TemplateContext {
   return {
     skillName,
     tmplPath: `/tmp/${skillName}/SKILL.md.tmpl`,
-    host: 'claude',
+    host: "claude",
     paths: HOST_PATHS.claude,
   };
 }
 
-describe('Phase 2 write-back fence-block fallback', () => {
-  test('every preflight skill emits write-back with fallback path documented', () => {
+describe("Phase 2 write-back fence-block fallback", () => {
+  test("every preflight skill emits write-back with fallback path documented", () => {
     for (const skill of Object.keys(SKILL_DIGEST_SUBSETS)) {
       const out = generateBrainWriteBack(buildCtx(skill));
       // Mentions takes_add (preferred)
-      expect(out).toContain('takes_add');
+      expect(out).toContain("takes_add");
       // Mentions put_page fallback
-      expect(out).toContain('put_page');
+      expect(out).toContain("put_page");
       // Mentions the takes fence-block syntax
-      expect(out).toContain('takes');
+      expect(out).toContain("takes");
     }
   });
 
-  test('write-back guidance gates on BRAIN_CALIBRATION_WRITEBACK feature flag', () => {
+  test("write-back guidance gates on BRAIN_CALIBRATION_WRITEBACK feature flag", () => {
     for (const skill of Object.keys(SKILL_DIGEST_SUBSETS)) {
       const out = generateBrainWriteBack(buildCtx(skill));
-      expect(out).toContain('BRAIN_CALIBRATION_WRITEBACK');
+      expect(out).toContain("BRAIN_CALIBRATION_WRITEBACK");
     }
   });
 
-  test('write-back guidance gates on brain_trust_policy == personal', () => {
+  test("write-back guidance gates on brain_trust_policy == personal", () => {
     for (const skill of Object.keys(SKILL_DIGEST_SUBSETS)) {
       const out = generateBrainWriteBack(buildCtx(skill));
-      expect(out).toContain('personal');
-      expect(out).toContain('brain_trust_policy');
+      expect(out).toContain("personal");
+      expect(out).toContain("brain_trust_policy");
     }
   });
 
-  test('write-back emits the kind=bet take frontmatter shape', () => {
-    const out = generateBrainWriteBack(buildCtx('plan-ceo-review'));
-    expect(out).toContain('kind: bet');
-    expect(out).toContain('holder:');
-    expect(out).toContain('claim:');
-    expect(out).toContain('weight:');
-    expect(out).toContain('since_date:');
-    expect(out).toContain('expected_resolution:');
-    expect(out).toContain('source_skill:');
+  test("write-back emits the kind=bet take frontmatter shape", () => {
+    const out = generateBrainWriteBack(buildCtx("plan-ceo-review"));
+    expect(out).toContain("kind: bet");
+    expect(out).toContain("holder:");
+    expect(out).toContain("claim:");
+    expect(out).toContain("weight:");
+    expect(out).toContain("since_date:");
+    expect(out).toContain("expected_resolution:");
+    expect(out).toContain("source_skill:");
   });
 
-  test('per-skill weight matches SKILL_CALIBRATION_WEIGHTS', () => {
+  test("per-skill weight matches SKILL_CALIBRATION_WEIGHTS", () => {
     for (const skill of Object.keys(SKILL_DIGEST_SUBSETS)) {
       const weight = SKILL_CALIBRATION_WEIGHTS[skill];
       if (weight == null) continue;
@@ -75,13 +78,13 @@ describe('Phase 2 write-back fence-block fallback', () => {
     }
   });
 
-  test('write-back invalidates affected cache digests after write', () => {
-    const out = generateBrainWriteBack(buildCtx('plan-ceo-review'));
-    expect(out).toContain('gstack-brain-cache invalidate');
+  test("write-back invalidates affected cache digests after write", () => {
+    const out = generateBrainWriteBack(buildCtx("plan-ceo-review"));
+    expect(out).toContain("gstack-brain-cache invalidate");
   });
 
-  test('non-preflight skill gets empty write-back (no Phase 2 path)', () => {
-    expect(generateBrainWriteBack(buildCtx('ship'))).toBe('');
-    expect(generateBrainWriteBack(buildCtx('qa'))).toBe('');
+  test("non-preflight skill gets empty write-back (no Phase 2 path)", () => {
+    expect(generateBrainWriteBack(buildCtx("ship"))).toBe("");
+    expect(generateBrainWriteBack(buildCtx("qa"))).toBe("");
   });
 });

@@ -18,13 +18,19 @@
  * generation against the real repo; --host claude scopes to one host).
  */
 
-import { describe, test, expect, beforeAll, afterAll } from 'bun:test';
-import { execFileSync } from 'child_process';
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'fs';
-import { tmpdir } from 'os';
-import { join } from 'path';
+import { describe, test, expect, beforeAll, afterAll } from "bun:test";
+import { execFileSync } from "child_process";
+import {
+  mkdtempSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "fs";
+import { tmpdir } from "os";
+import { join } from "path";
 
-const REPO_ROOT = join(import.meta.dir, '..');
+const REPO_ROOT = join(import.meta.dir, "..");
 
 interface FixtureEnv {
   tmpHome: string;
@@ -32,9 +38,9 @@ interface FixtureEnv {
 }
 
 function makeFixture(detectionJson: string | null): FixtureEnv {
-  const tmpHome = mkdtempSync(join(tmpdir(), 'gbrain-detect-test-'));
+  const tmpHome = mkdtempSync(join(tmpdir(), "gbrain-detect-test-"));
   if (detectionJson !== null) {
-    writeFileSync(join(tmpHome, 'gbrain-detection.json'), detectionJson);
+    writeFileSync(join(tmpHome, "gbrain-detection.json"), detectionJson);
   }
   return {
     tmpHome,
@@ -68,29 +74,24 @@ function regenAndSnapshot(opts: {
   // Save committed content so we can restore after snapshotting.
   const original = new Map<string, string>();
   for (const f of opts.files) {
-    original.set(f, readFileSync(join(REPO_ROOT, f), 'utf-8'));
+    original.set(f, readFileSync(join(REPO_ROOT, f), "utf-8"));
   }
 
-  const args = [
-    'run',
-    'scripts/gen-skill-docs.ts',
-    '--host',
-    'claude',
-  ];
-  if (opts.respectDetection) args.push('--respect-detection');
+  const args = ["run", "scripts/gen-skill-docs.ts", "--host", "claude"];
+  if (opts.respectDetection) args.push("--respect-detection");
 
   try {
-    execFileSync('bun', args, {
+    execFileSync("bun", args, {
       cwd: REPO_ROOT,
       env: { ...process.env, GSTACK_HOME: opts.tmpHome },
-      stdio: ['ignore', 'pipe', 'pipe'],
+      stdio: ["ignore", "pipe", "pipe"],
       timeout: 30_000,
     });
 
     // Snapshot the regenerated content.
     const snapshot = new Map<string, string>();
     for (const f of opts.files) {
-      snapshot.set(f, readFileSync(join(REPO_ROOT, f), 'utf-8'));
+      snapshot.set(f, readFileSync(join(REPO_ROOT, f), "utf-8"));
     }
     return snapshot;
   } finally {
@@ -101,20 +102,29 @@ function regenAndSnapshot(opts: {
   }
 }
 
-describe('gbrain detection override → gen-skill-docs', () => {
+describe("gbrain detection override → gen-skill-docs", () => {
   // Single skill probe is enough to assert the override pipeline. The
   // resolver unit test (test/resolvers-gbrain-save-results.test.ts) covers
   // per-skill metadata correctness already.
   // office-hours is carved (v2 plan T9): GBRAIN_CONTEXT_LOAD stays in the
   // skeleton, GBRAIN_SAVE_RESULTS moved into sections/design-and-handoff.md.
   // Probe the union so the detection override is asserted wherever the blocks land.
-  const PROBE_FILES = ['office-hours/SKILL.md', 'office-hours/sections/design-and-handoff.md'];
+  const PROBE_FILES = [
+    "office-hours/SKILL.md",
+    "office-hours/sections/design-and-handoff.md",
+  ];
   const probeUnion = (snap: Map<string, string>): string =>
-    (snap.get('office-hours/SKILL.md') ?? '') + '\n' + (snap.get('office-hours/sections/design-and-handoff.md') ?? '');
+    (snap.get("office-hours/SKILL.md") ?? "") +
+    "\n" +
+    (snap.get("office-hours/sections/design-and-handoff.md") ?? "");
 
-  test('with detected:true, Claude-host SKILL.md gains brain-aware blocks', () => {
+  test("with detected:true, Claude-host SKILL.md gains brain-aware blocks", () => {
     const { tmpHome, cleanup } = makeFixture(
-      JSON.stringify({ gbrain_local_status: 'ok', gbrain_on_path: true, gbrain_version: 'test-0.41.0' }),
+      JSON.stringify({
+        gbrain_local_status: "ok",
+        gbrain_on_path: true,
+        gbrain_version: "test-0.41.0",
+      }),
     );
     try {
       const snap = regenAndSnapshot({
@@ -125,12 +135,14 @@ describe('gbrain detection override → gen-skill-docs', () => {
       const content = probeUnion(snap);
 
       // GBRAIN_SAVE_RESULTS un-suppressed → resolver output rendered.
-      expect(content).toContain('## Save Results to Brain');
+      expect(content).toContain("## Save Results to Brain");
       expect(content).toContain('gbrain put "office-hours/');
-      expect(content).toContain('Skip this entire section if `gbrain` is not on PATH');
+      expect(content).toContain(
+        "Skip this entire section if `gbrain` is not on PATH",
+      );
 
       // GBRAIN_CONTEXT_LOAD also un-suppressed (D6 bundling).
-      expect(content).toContain('## Brain Context Load');
+      expect(content).toContain("## Brain Context Load");
     } finally {
       cleanup();
     }
@@ -138,7 +150,11 @@ describe('gbrain detection override → gen-skill-docs', () => {
 
   test('with status "timeout" (slow-but-healthy, #1964), brain blocks render like "ok"', () => {
     const { tmpHome, cleanup } = makeFixture(
-      JSON.stringify({ gbrain_local_status: 'timeout', gbrain_on_path: true, gbrain_version: 'test-0.41.0' }),
+      JSON.stringify({
+        gbrain_local_status: "timeout",
+        gbrain_on_path: true,
+        gbrain_version: "test-0.41.0",
+      }),
     );
     try {
       const snap = regenAndSnapshot({
@@ -150,7 +166,7 @@ describe('gbrain detection override → gen-skill-docs', () => {
 
       // A slow engine must not silently suppress brain features — same
       // treatment as "ok" (matches gstack-gbrain-detect --is-ok).
-      expect(content).toContain('## Save Results to Brain');
+      expect(content).toContain("## Save Results to Brain");
       expect(content).toContain('gbrain put "office-hours/');
     } finally {
       cleanup();
@@ -159,7 +175,11 @@ describe('gbrain detection override → gen-skill-docs', () => {
 
   test('with detected:false (status != "ok"), brain blocks stay suppressed', () => {
     const { tmpHome, cleanup } = makeFixture(
-      JSON.stringify({ gbrain_local_status: 'no-cli', gbrain_on_path: false, gbrain_version: null }),
+      JSON.stringify({
+        gbrain_local_status: "no-cli",
+        gbrain_on_path: false,
+        gbrain_version: null,
+      }),
     );
     try {
       const snap = regenAndSnapshot({
@@ -180,7 +200,7 @@ describe('gbrain detection override → gen-skill-docs', () => {
     }
   });
 
-  test('with NO detection file, brain blocks stay suppressed (same as detected:false)', () => {
+  test("with NO detection file, brain blocks stay suppressed (same as detected:false)", () => {
     const { tmpHome, cleanup } = makeFixture(null);
     try {
       const snap = regenAndSnapshot({
@@ -195,13 +215,17 @@ describe('gbrain detection override → gen-skill-docs', () => {
     }
   });
 
-  test('without --respect-detection flag, detection file is IGNORED (CI canonical path)', () => {
+  test("without --respect-detection flag, detection file is IGNORED (CI canonical path)", () => {
     // Even if a detection file exists with detected:true, the default
     // `bun run gen:skill-docs` (CI) must produce no-gbrain output so the
     // committed SKILL.md stays reproducible regardless of any developer's
     // local gbrain install state.
     const { tmpHome, cleanup } = makeFixture(
-      JSON.stringify({ gbrain_local_status: 'ok', gbrain_on_path: true, gbrain_version: 'test-0.41.0' }),
+      JSON.stringify({
+        gbrain_local_status: "ok",
+        gbrain_on_path: true,
+        gbrain_version: "test-0.41.0",
+      }),
     );
     try {
       const snap = regenAndSnapshot({
@@ -211,7 +235,7 @@ describe('gbrain detection override → gen-skill-docs', () => {
       });
       const content = probeUnion(snap);
       expect(content).not.toContain('gbrain put "office-hours/');
-      expect(content).not.toContain('## Save Results to Brain');
+      expect(content).not.toContain("## Save Results to Brain");
     } finally {
       cleanup();
     }

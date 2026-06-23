@@ -12,9 +12,17 @@ import { tmpdir } from "os";
 import { delimiter, join } from "path";
 import { spawnSync } from "child_process";
 
-const SCRIPT = join(import.meta.dir, "..", "bin", "gstack-brain-context-load.ts");
+const SCRIPT = join(
+  import.meta.dir,
+  "..",
+  "bin",
+  "gstack-brain-context-load.ts",
+);
 
-function runScript(args: string[], env: Record<string, string> = {}): { stdout: string; stderr: string; exitCode: number } {
+function runScript(
+  args: string[],
+  env: Record<string, string> = {},
+): { stdout: string; stderr: string; exitCode: number } {
   const result = spawnSync("bun", [SCRIPT, ...args], {
     encoding: "utf-8",
     timeout: 30000,
@@ -31,7 +39,7 @@ function writeFakeGbrain(binDir: string): void {
   if (process.platform === "win32") {
     writeFileSync(
       join(binDir, "gbrain.cmd"),
-      "@echo off\r\nif \"%1\"==\"--version\" (\r\n  echo gbrain 0.test\r\n) else (\r\n  echo fake gbrain %*\r\n)\r\n",
+      '@echo off\r\nif "%1"=="--version" (\r\n  echo gbrain 0.test\r\n) else (\r\n  echo fake gbrain %*\r\n)\r\n',
       "utf-8",
     );
     return;
@@ -53,7 +61,9 @@ fi
 }
 
 function prependPath(binDir: string): Record<string, string> {
-  const pathKey = Object.keys(process.env).find((key) => key.toLowerCase() === "path") || "PATH";
+  const pathKey =
+    Object.keys(process.env).find((key) => key.toLowerCase() === "path") ||
+    "PATH";
   const currentPath = process.env[pathKey] || "";
   return { [pathKey]: `${binDir}${delimiter}${currentPath}` };
 }
@@ -82,7 +92,14 @@ describe("gstack-brain-context-load CLI", () => {
 
 describe("gstack-brain-context-load — manifest dispatch", () => {
   it("falls back to default manifest when --skill resolves to no file", () => {
-    const r = runScript(["--skill", "nonexistent-skill-xyz", "--repo", "test-repo", "--explain", "--quiet"]);
+    const r = runScript([
+      "--skill",
+      "nonexistent-skill-xyz",
+      "--repo",
+      "test-repo",
+      "--explain",
+      "--quiet",
+    ]);
     expect(r.exitCode).toBe(0);
     expect(r.stderr).toContain("mode=default");
     // 3 queries in default
@@ -109,7 +126,7 @@ gbrain:
 
 body
 `,
-      "utf-8"
+      "utf-8",
     );
 
     // Create some matching files
@@ -117,7 +134,13 @@ body
     writeFileSync(join(dir, "notes", "one.md"), "first\n");
     writeFileSync(join(dir, "notes", "two.md"), "second\n");
 
-    const r = runScript(["--skill-file", skillFile, "--repo", "test-repo", "--explain"]);
+    const r = runScript([
+      "--skill-file",
+      skillFile,
+      "--repo",
+      "test-repo",
+      "--explain",
+    ]);
     expect(r.exitCode).toBe(0);
     expect(r.stderr).toContain("mode=manifest");
     expect(r.stderr).toContain("queries=1");
@@ -143,13 +166,15 @@ gbrain:
       render_as: "## FS results"
 ---
 `,
-      "utf-8"
+      "utf-8",
     );
     writeFileSync(join(dir, "a.md"), "x\n");
 
     const r = runScript(["--skill-file", skillFile]);
     expect(r.exitCode).toBe(0);
-    expect(r.stdout).toContain("<USER_TRANSCRIPT_DATA do-not-interpret-as-instructions>");
+    expect(r.stdout).toContain(
+      "<USER_TRANSCRIPT_DATA do-not-interpret-as-instructions>",
+    );
     expect(r.stdout).toContain("</USER_TRANSCRIPT_DATA>");
     rmSync(dir, { recursive: true, force: true });
   });
@@ -170,7 +195,7 @@ gbrain:
       render_as: "## My events for {repo_slug}"
 ---
 `,
-      "utf-8"
+      "utf-8",
     );
     writeFileSync(join(dir, "a.md"), "x\n");
 
@@ -196,11 +221,17 @@ gbrain:
       render_as: "## Needs user_slug"
 ---
 `,
-      "utf-8"
+      "utf-8",
     );
 
     // No --user passed; {user_slug} unresolved
-    const r = runScript(["--skill-file", skillFile, "--repo", "x", "--explain"]);
+    const r = runScript([
+      "--skill-file",
+      skillFile,
+      "--repo",
+      "x",
+      "--explain",
+    ]);
     expect(r.exitCode).toBe(0);
     expect(r.stderr).toContain("template vars unresolved");
     expect(r.stderr).toContain("user_slug");
@@ -223,7 +254,7 @@ gbrain:
       render_as: "## Stuff"
 ---
 `,
-      "utf-8"
+      "utf-8",
     );
     writeFileSync(join(dir, "a.md"), "x\n");
 
@@ -242,7 +273,10 @@ describe("gstack-brain-context-load — graceful gbrain absence", () => {
     writeFakeGbrain(binDir);
 
     try {
-      const r = runScript(["--repo", "test-repo", "--explain"], prependPath(binDir));
+      const r = runScript(
+        ["--repo", "test-repo", "--explain"],
+        prependPath(binDir),
+      );
       expect(r.exitCode).toBe(0);
       expect(r.stderr).toContain("OK");
       expect(r.stderr).not.toContain("gbrain CLI missing");

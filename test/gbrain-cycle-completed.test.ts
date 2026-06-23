@@ -27,7 +27,10 @@ interface FakeSetup {
  *   anything else          → exit 1
  * The doctor payload is baked into the script so each test gets its own shim.
  */
-function makeFakeGbrain(opts: { doctorJson?: string; doctorExit?: number }): FakeSetup {
+function makeFakeGbrain(opts: {
+  doctorJson?: string;
+  doctorExit?: number;
+}): FakeSetup {
   const tmp = mkdtempSync(join(tmpdir(), "gbrain-cycle-test-"));
   const bindir = join(tmp, "bin");
   mkdirSync(bindir, { recursive: true });
@@ -50,20 +53,29 @@ exit 1
   writeFileSync(fakePath, fake);
   chmodSync(fakePath, 0o755);
 
-  const env: NodeJS.ProcessEnv = { ...process.env, PATH: `${bindir}:${process.env.PATH || ""}` };
+  const env: NodeJS.ProcessEnv = {
+    ...process.env,
+    PATH: `${bindir}:${process.env.PATH || ""}`,
+  };
   return { env, cleanup: () => rmSync(tmp, { recursive: true, force: true }) };
 }
 
 const SRC = "gstack-code-gstack-c5994d95";
 
-function doctor(check: { name: string; status: string; message?: string } | null): string {
+function doctor(
+  check: { name: string; status: string; message?: string } | null,
+): string {
   return JSON.stringify({ checks: check ? [check] : [] });
 }
 
 describe("cycleCompleted", () => {
   it("returns 'completed' when cycle_freshness is ok", () => {
     const fake = makeFakeGbrain({
-      doctorJson: doctor({ name: "cycle_freshness", status: "ok", message: "all sources fresh" }),
+      doctorJson: doctor({
+        name: "cycle_freshness",
+        status: "ok",
+        message: "all sources fresh",
+      }),
     });
     expect(cycleCompleted(SRC, fake.env)).toBe("completed");
     fake.cleanup();
