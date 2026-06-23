@@ -15,7 +15,7 @@
  * means new tests don't have to remember the dance, and the bug class
  * stays dead.
  */
-import { afterEach, beforeAll } from 'bun:test';
+import { afterEach, beforeAll } from "bun:test";
 
 // Narrowly restore PATH after every test. Defends against the recurring
 // pollution class where one test sets `process.env.PATH = '/test/bin:/usr/bin'`
@@ -34,7 +34,7 @@ import { afterEach, beforeAll } from 'bun:test';
 //
 // If a future test pollutes a different variable in the same broken way,
 // add it to RESTORE_KEYS rather than widening the snapshot scope.
-const RESTORE_KEYS = ['PATH', 'Path'] as const;
+const RESTORE_KEYS = ["PATH", "Path"] as const;
 const baseline: Record<string, string | undefined> = {};
 
 beforeAll(() => {

@@ -66,7 +66,13 @@ The daemon model means:
 The server writes `.gstack/browse.json` (atomic write via tmp + rename, mode 0o600):
 
 ```json
-{ "pid": 12345, "port": 34567, "token": "uuid-v4", "startedAt": "...", "binaryVersion": "abc123" }
+{
+  "pid": 12345,
+  "port": 34567,
+  "token": "uuid-v4",
+  "startedAt": "...",
+  "binaryVersion": "abc123"
+}
 ```
 
 The CLI reads this file to find the server. If the file is missing or the server fails an HTTP health check, the CLI spawns a new server. On Windows, PID-based process detection is unreliable in Bun binaries, so the health check (GET /health) is the primary liveness signal on all platforms.
@@ -96,23 +102,23 @@ The fix is **two HTTP listeners**, not one:
 
 ngrok forwards only the tunnel port. The security property comes from **physical port separation**: a tunnel caller cannot reach `/health` or `/cookie-picker` because those paths don't exist on that TCP socket. Header inference (check `x-forwarded-for`, check origin) is unreliable (ngrok header behavior changes; local proxies can add these headers); socket separation isn't.
 
-| Endpoint | Local listener | Tunnel listener | Notes |
-|---|---|---|---|
-| `GET /health` | public (no token unless headed/extension) | 404 | Token bootstrap for extension happens locally only |
-| `GET /connect` | public (`{alive:true}`) | public (`{alive:true}`) | Probe path for tunnel liveness |
-| `POST /connect` | public (rate-limited 300/min) | public (rate-limited) | Setup-key exchange for pair-agent |
-| `POST /command` | auth (Bearer root OR scoped) | auth (scoped only, allowlisted commands) | Root token on tunnel = 403 |
-| `POST /sidebar-chat` | auth | auth | Lets remote agent post into local sidebar |
-| `POST /pair` | root-only | 404 | Pairing mint — local operator action |
-| `POST /tunnel/{start,stop}` | root-only | 404 | Daemon configuration |
-| `POST /token`, `DELETE /token/:id` | root-only | 404 | Scoped token mint/revoke |
-| `GET /cookie-picker`, `GET /cookie-picker/*` | public UI, auth API | 404 | Local-only — reads local browser DBs |
-| `GET /inspector`, `/inspector/events`, etc. | auth | 404 | Extension callback, local-only |
-| `GET /welcome` | public | 404 | GStack Browser landing page, local-only |
-| `GET /refs` | auth | 404 | Ref map — internal state |
-| `GET /activity/stream` | Bearer OR HttpOnly `gstack_sse` cookie | 404 | SSE. ?token= query param no longer accepted |
-| `GET /inspector/events` | Bearer OR HttpOnly `gstack_sse` cookie | 404 | SSE. Same cookie as /activity/stream |
-| `POST /sse-session` | auth (Bearer) | 404 | Mints the view-only 30-min SSE session cookie |
+| Endpoint                                     | Local listener                            | Tunnel listener                          | Notes                                              |
+| -------------------------------------------- | ----------------------------------------- | ---------------------------------------- | -------------------------------------------------- |
+| `GET /health`                                | public (no token unless headed/extension) | 404                                      | Token bootstrap for extension happens locally only |
+| `GET /connect`                               | public (`{alive:true}`)                   | public (`{alive:true}`)                  | Probe path for tunnel liveness                     |
+| `POST /connect`                              | public (rate-limited 300/min)             | public (rate-limited)                    | Setup-key exchange for pair-agent                  |
+| `POST /command`                              | auth (Bearer root OR scoped)              | auth (scoped only, allowlisted commands) | Root token on tunnel = 403                         |
+| `POST /sidebar-chat`                         | auth                                      | auth                                     | Lets remote agent post into local sidebar          |
+| `POST /pair`                                 | root-only                                 | 404                                      | Pairing mint — local operator action               |
+| `POST /tunnel/{start,stop}`                  | root-only                                 | 404                                      | Daemon configuration                               |
+| `POST /token`, `DELETE /token/:id`           | root-only                                 | 404                                      | Scoped token mint/revoke                           |
+| `GET /cookie-picker`, `GET /cookie-picker/*` | public UI, auth API                       | 404                                      | Local-only — reads local browser DBs               |
+| `GET /inspector`, `/inspector/events`, etc.  | auth                                      | 404                                      | Extension callback, local-only                     |
+| `GET /welcome`                               | public                                    | 404                                      | GStack Browser landing page, local-only            |
+| `GET /refs`                                  | auth                                      | 404                                      | Ref map — internal state                           |
+| `GET /activity/stream`                       | Bearer OR HttpOnly `gstack_sse` cookie    | 404                                      | SSE. ?token= query param no longer accepted        |
+| `GET /inspector/events`                      | Bearer OR HttpOnly `gstack_sse` cookie    | 404                                      | SSE. Same cookie as /activity/stream               |
+| `POST /sse-session`                          | auth (Bearer)                             | 404                                      | Mints the view-only 30-min SSE session cookie      |
 
 **Tunnel surface denial logs.** Every rejection on the tunnel listener (`path_not_on_tunnel`, `root_token_on_tunnel`, `missing_scoped_token`, `disallowed_command:*`) is recorded asynchronously to `~/.gstack/security/attempts.jsonl` with timestamp, source IP (from `x-forwarded-for`), path, and method. Rate-capped at 60 writes/min globally to prevent log-flood DoS. Shares the attempt log with the prompt-injection scanner.
 
@@ -148,12 +154,12 @@ The browser registry (Comet, Chrome, Arc, Brave, Edge) is hardcoded. Database pa
 
 Page content harvested by CDP can contain lone UTF-16 surrogate halves (orphaned high or low surrogates from broken JavaScript string handling on the page). When those reach `JSON.stringify`, Bun emits them as `\uD800`-style escape sequences that the downstream consumer's `JSON.parse` accepts, but the Anthropic API rejects with a 400 — turning a single weird page into a session-killing error. Defense is single-point, applied at every server egress that ships page-derived strings.
 
-| Egress path | Module | Sanitization point |
-|---|---|---|
-| `POST /command` (HTTP) | `browse/src/server.ts` | `handleCommandInternal` wrapper (sanitizes the result of `handleCommandInternalImpl`) |
-| `POST /command/batch` | `browse/src/server.ts` | Same wrapper — batch consumers inherit it |
-| `GET /activity/stream` (SSE) | `browse/src/server.ts` | `sanitizeReplacer` passed to `JSON.stringify` |
-| `GET /inspector/events` (SSE) | `browse/src/server.ts` | `sanitizeReplacer` passed to `JSON.stringify` |
+| Egress path                   | Module                 | Sanitization point                                                                    |
+| ----------------------------- | ---------------------- | ------------------------------------------------------------------------------------- |
+| `POST /command` (HTTP)        | `browse/src/server.ts` | `handleCommandInternal` wrapper (sanitizes the result of `handleCommandInternalImpl`) |
+| `POST /command/batch`         | `browse/src/server.ts` | Same wrapper — batch consumers inherit it                                             |
+| `GET /activity/stream` (SSE)  | `browse/src/server.ts` | `sanitizeReplacer` passed to `JSON.stringify`                                         |
+| `GET /inspector/events` (SSE) | `browse/src/server.ts` | `sanitizeReplacer` passed to `JSON.stringify`                                         |
 
 `sanitizeReplacer` is a `JSON.stringify` replacer function that cleans every string value during encoding. Post-stringify regex doesn't work here — `JSON.stringify` has already converted `\uD800` into the literal escape sequence `"\\ud800"` before the regex could match, so the replacer must run inside the encoding pipeline. The pure-string helper `sanitizeLoneSurrogates` is used directly for `text/plain` responses.
 
@@ -264,23 +270,23 @@ SKILL.md               (committed, auto-generated sections)
 
 Templates contain the workflows, tips, and examples that require human judgment. Placeholders are filled from source code at build time:
 
-| Placeholder | Source | What it generates |
-|-------------|--------|-------------------|
-| `{{COMMAND_REFERENCE}}` | `commands.ts` | Categorized command table |
-| `{{SNAPSHOT_FLAGS}}` | `snapshot.ts` | Flag reference with examples |
-| `{{PREAMBLE}}` | `gen-skill-docs.ts` | Startup block: update check, session tracking, contributor mode, AskUserQuestion format |
-| `{{BROWSE_SETUP}}` | `gen-skill-docs.ts` | Binary discovery + setup instructions |
-| `{{BASE_BRANCH_DETECT}}` | `gen-skill-docs.ts` | Dynamic base branch detection for PR-targeting skills (ship, review, qa, plan-ceo-review) |
-| `{{QA_METHODOLOGY}}` | `gen-skill-docs.ts` | Shared QA methodology block for /qa and /qa-only |
-| `{{DESIGN_METHODOLOGY}}` | `gen-skill-docs.ts` | Shared design audit methodology for /plan-design-review and /design-review |
-| `{{REVIEW_DASHBOARD}}` | `gen-skill-docs.ts` | Review Readiness Dashboard for /ship pre-flight |
-| `{{TEST_BOOTSTRAP}}` | `gen-skill-docs.ts` | Test framework detection, bootstrap, CI/CD setup for /qa, /ship, /design-review |
-| `{{CODEX_PLAN_REVIEW}}` | `gen-skill-docs.ts` | Optional cross-model plan review (Codex or Claude subagent fallback) for /plan-ceo-review and /plan-eng-review |
-| `{{DESIGN_SETUP}}` | `resolvers/design.ts` | Discovery pattern for `$D` design binary, mirrors `{{BROWSE_SETUP}}` |
-| `{{DESIGN_SHOTGUN_LOOP}}` | `resolvers/design.ts` | Shared comparison board feedback loop for /design-shotgun, /plan-design-review, /design-consultation |
-| `{{UX_PRINCIPLES}}` | `resolvers/design.ts` | User behavioral foundations (scanning, satisficing, goodwill reservoir, trunk test) for /design-html, /design-shotgun, /design-review, /plan-design-review |
+| Placeholder               | Source                | What it generates                                                                                                                                                    |
+| ------------------------- | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `{{COMMAND_REFERENCE}}`   | `commands.ts`         | Categorized command table                                                                                                                                            |
+| `{{SNAPSHOT_FLAGS}}`      | `snapshot.ts`         | Flag reference with examples                                                                                                                                         |
+| `{{PREAMBLE}}`            | `gen-skill-docs.ts`   | Startup block: update check, session tracking, contributor mode, AskUserQuestion format                                                                              |
+| `{{BROWSE_SETUP}}`        | `gen-skill-docs.ts`   | Binary discovery + setup instructions                                                                                                                                |
+| `{{BASE_BRANCH_DETECT}}`  | `gen-skill-docs.ts`   | Dynamic base branch detection for PR-targeting skills (ship, review, qa, plan-ceo-review)                                                                            |
+| `{{QA_METHODOLOGY}}`      | `gen-skill-docs.ts`   | Shared QA methodology block for /qa and /qa-only                                                                                                                     |
+| `{{DESIGN_METHODOLOGY}}`  | `gen-skill-docs.ts`   | Shared design audit methodology for /plan-design-review and /design-review                                                                                           |
+| `{{REVIEW_DASHBOARD}}`    | `gen-skill-docs.ts`   | Review Readiness Dashboard for /ship pre-flight                                                                                                                      |
+| `{{TEST_BOOTSTRAP}}`      | `gen-skill-docs.ts`   | Test framework detection, bootstrap, CI/CD setup for /qa, /ship, /design-review                                                                                      |
+| `{{CODEX_PLAN_REVIEW}}`   | `gen-skill-docs.ts`   | Optional cross-model plan review (Codex or Claude subagent fallback) for /plan-ceo-review and /plan-eng-review                                                       |
+| `{{DESIGN_SETUP}}`        | `resolvers/design.ts` | Discovery pattern for `$D` design binary, mirrors `{{BROWSE_SETUP}}`                                                                                                 |
+| `{{DESIGN_SHOTGUN_LOOP}}` | `resolvers/design.ts` | Shared comparison board feedback loop for /design-shotgun, /plan-design-review, /design-consultation                                                                 |
+| `{{UX_PRINCIPLES}}`       | `resolvers/design.ts` | User behavioral foundations (scanning, satisficing, goodwill reservoir, trunk test) for /design-html, /design-shotgun, /design-review, /plan-design-review           |
 | `{{GBRAIN_CONTEXT_LOAD}}` | `resolvers/gbrain.ts` | Brain-first context search with keyword extraction, health awareness, and data-research routing. Injected into 10 brain-aware skills. Suppressed on non-brain hosts. |
-| `{{GBRAIN_SAVE_RESULTS}}` | `resolvers/gbrain.ts` | Post-skill brain persistence with entity enrichment, throttle handling, and per-skill save instructions. 8 skill-specific save formats. |
+| `{{GBRAIN_SAVE_RESULTS}}` | `resolvers/gbrain.ts` | Post-skill brain persistence with entity enrichment, throttle handling, and per-skill save instructions. 8 skill-specific save formats.                              |
 
 This is structurally sound — if a command exists in code, it appears in docs. If it doesn't exist, it can't appear.
 
@@ -304,11 +310,11 @@ Three reasons:
 
 ### Template test tiers
 
-| Tier | What | Cost | Speed |
-|------|------|------|-------|
-| 1 — Static validation | Parse every `$B` command in SKILL.md, validate against registry | Free | <2s |
-| 2 — E2E via `claude -p` | Spawn real Claude session, run each skill, check for errors | ~$3.85 | ~20min |
-| 3 — LLM-as-judge | Sonnet scores docs on clarity/completeness/actionability | ~$0.15 | ~30s |
+| Tier                    | What                                                            | Cost   | Speed  |
+| ----------------------- | --------------------------------------------------------------- | ------ | ------ |
+| 1 — Static validation   | Parse every `$B` command in SKILL.md, validate against registry | Free   | <2s    |
+| 2 — E2E via `claude -p` | Spawn real Claude session, run each skill, check for errors     | ~$3.85 | ~20min |
+| 3 — LLM-as-judge        | Sonnet scores docs on clarity/completeness/actionability        | ~$0.15 | ~30s   |
 
 Tier 1 runs on every `bun test`. Tiers 2+3 are gated behind `EVALS=1`. The idea is: catch 95% of issues for free, use LLMs only for judgment calls.
 
@@ -403,6 +409,7 @@ The `parseNDJSON()` function is pure — no I/O, no side effects — making it i
 **Non-fatal everything:** All observability I/O is wrapped in try/catch. A write failure never causes a test to fail. The tests themselves are the source of truth; observability is best-effort.
 
 **Machine-readable diagnostics:** Each test result includes `exit_reason` (success, timeout, error_max_turns, error_api, exit_code_N), `timeout_at_turn`, and `last_tool_call`. This enables `jq` queries like:
+
 ```bash
 jq '.tests[] | select(.exit_reason == "timeout") | .last_tool_call' ~/.gstack-dev/evals/_partial-e2e.json
 ```
@@ -418,11 +425,11 @@ The `EvalCollector` accumulates test results and writes them in two ways:
 
 ### Test tiers
 
-| Tier | What | Cost | Speed |
-|------|------|------|-------|
-| 1 — Static validation | Parse `$B` commands, validate against registry, observability unit tests | Free | <5s |
-| 2 — E2E via `claude -p` | Spawn real Claude session, run each skill, scan for errors | ~$3.85 | ~20min |
-| 3 — LLM-as-judge | Sonnet scores docs on clarity/completeness/actionability | ~$0.15 | ~30s |
+| Tier                    | What                                                                     | Cost   | Speed  |
+| ----------------------- | ------------------------------------------------------------------------ | ------ | ------ |
+| 1 — Static validation   | Parse `$B` commands, validate against registry, observability unit tests | Free   | <5s    |
+| 2 — E2E via `claude -p` | Spawn real Claude session, run each skill, scan for errors               | ~$3.85 | ~20min |
+| 3 — LLM-as-judge        | Sonnet scores docs on clarity/completeness/actionability                 | ~$0.15 | ~30s   |
 
 Tier 1 runs on every `bun test`. Tiers 2+3 are gated behind `EVALS=1`. The idea: catch 95% of issues for free, use LLMs only for judgment calls and integration testing.
 

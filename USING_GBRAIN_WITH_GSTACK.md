@@ -41,7 +41,7 @@ Best for: you (or a teammate's cloud agent) already provisioned a Supabase brain
 
 Best for: fresh Supabase account, you want a clean new project with zero clicking.
 
-**What happens:** You paste a Supabase Personal Access Token (PAT). The skill shows you the scope disclosure first — *the token grants full access to every project in your Supabase account, not just the one we're about to create*. It lists your organizations, asks which one and which region (default `us-east-1`), generates a database password, calls `POST /v1/projects`, polls `GET /v1/projects/{ref}` every 5 seconds until the project is `ACTIVE_HEALTHY` (180s timeout), fetches the pooler URL, hands it to `gbrain init`. End-to-end: ~90 seconds.
+**What happens:** You paste a Supabase Personal Access Token (PAT). The skill shows you the scope disclosure first — _the token grants full access to every project in your Supabase account, not just the one we're about to create_. It lists your organizations, asks which one and which region (default `us-east-1`), generates a database password, calls `POST /v1/projects`, polls `GET /v1/projects/{ref}` every 5 seconds until the project is `ACTIVE_HEALTHY` (180s timeout), fetches the pooler URL, hands it to `gbrain init`. End-to-end: ~90 seconds.
 
 At the end: explicit reminder to revoke the PAT at https://supabase.com/dashboard/account/tokens. The skill already discarded it from memory.
 
@@ -188,78 +188,78 @@ If you Ctrl-C'd mid-provision, tried three different names before settling on on
 /setup-gbrain --cleanup-orphans
 ```
 
-The skill re-collects a PAT (one-time, discarded after), lists every project in your Supabase account whose name starts with `gbrain` and whose ref doesn't match your active `~/.gbrain/config.json` pooler URL. For each orphan it asks per-project: *"Delete orphan project `<ref>` (`<name>`, created `<date>`)?"* — no batching, no "delete all" shortcut. The active brain is never offered for deletion.
+The skill re-collects a PAT (one-time, discarded after), lists every project in your Supabase account whose name starts with `gbrain` and whose ref doesn't match your active `~/.gbrain/config.json` pooler URL. For each orphan it asks per-project: _"Delete orphan project `<ref>` (`<name>`, created `<date>`)?"_ — no batching, no "delete all" shortcut. The active brain is never offered for deletion.
 
 ## Command + flag reference
 
 ### `/setup-gbrain` entry modes
 
-| Invocation | What it does |
-|---|---|
-| `/setup-gbrain` | Full flow: detect state, pick path, install, init, MCP, policy, optional memory-sync |
-| `/setup-gbrain --repo` | Flip the per-remote trust policy for the current repo only |
-| `/setup-gbrain --switch` | Migrate engine (PGLite ↔ Supabase) without re-running the other steps |
-| `/setup-gbrain --resume-provision <ref>` | Resume a path-2a auto-provision that was interrupted during polling |
-| `/setup-gbrain --cleanup-orphans` | List + per-project delete of orphan Supabase projects |
+| Invocation                               | What it does                                                                         |
+| ---------------------------------------- | ------------------------------------------------------------------------------------ |
+| `/setup-gbrain`                          | Full flow: detect state, pick path, install, init, MCP, policy, optional memory-sync |
+| `/setup-gbrain --repo`                   | Flip the per-remote trust policy for the current repo only                           |
+| `/setup-gbrain --switch`                 | Migrate engine (PGLite ↔ Supabase) without re-running the other steps                |
+| `/setup-gbrain --resume-provision <ref>` | Resume a path-2a auto-provision that was interrupted during polling                  |
+| `/setup-gbrain --cleanup-orphans`        | List + per-project delete of orphan Supabase projects                                |
 
 ### Bin helpers (for scripting)
 
-| Bin | Purpose |
-|---|---|
-| `gstack-gbrain-detect` | Emit current state as JSON: gbrain on PATH, version, config engine, doctor status, sync mode |
-| `gstack-gbrain-install` | Detect-first installer (probes `~/git/gbrain`, `~/gbrain`, then fresh clone). Has `--dry-run` and `--validate-only` flags. PATH-shadow check exits 3 with remediation menu. |
-| `gstack-gbrain-lib.sh` | Sourced, not executed. Provides `read_secret_to_env VARNAME "prompt" [--echo-redacted "<sed-expr>"]` |
-| `gstack-gbrain-supabase-verify` | Structural URL check. Rejects direct-connection URLs (`db.*.supabase.co:5432`) with exit 3 |
-| `gstack-gbrain-supabase-provision` | Management API wrapper. Subcommands: `list-orgs`, `create`, `wait`, `pooler-url`, `list-orphans`, `delete-project`. All require `SUPABASE_ACCESS_TOKEN` in env. `create` and `pooler-url` also require `DB_PASS`. `--json` mode available on every subcommand. |
-| `gstack-gbrain-repo-policy` | Per-remote trust triad. Subcommands: `get`, `set`, `list`, `normalize` |
-| `gstack-gbrain-source-wireup` | Registers your `~/.gstack/` brain repo with gbrain as a federated source via `gbrain sources add` + `git worktree`, then runs an initial `gbrain sync`. Idempotent. Replaces the dead `consumers.json + /ingest-repo` HTTP wireup from v1.12.x. Flags: `--strict`, `--source-id <id>`, `--no-pull`, `--uninstall`, `--probe`. |
+| Bin                                | Purpose                                                                                                                                                                                                                                                                                                                       |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `gstack-gbrain-detect`             | Emit current state as JSON: gbrain on PATH, version, config engine, doctor status, sync mode                                                                                                                                                                                                                                  |
+| `gstack-gbrain-install`            | Detect-first installer (probes `~/git/gbrain`, `~/gbrain`, then fresh clone). Has `--dry-run` and `--validate-only` flags. PATH-shadow check exits 3 with remediation menu.                                                                                                                                                   |
+| `gstack-gbrain-lib.sh`             | Sourced, not executed. Provides `read_secret_to_env VARNAME "prompt" [--echo-redacted "<sed-expr>"]`                                                                                                                                                                                                                          |
+| `gstack-gbrain-supabase-verify`    | Structural URL check. Rejects direct-connection URLs (`db.*.supabase.co:5432`) with exit 3                                                                                                                                                                                                                                    |
+| `gstack-gbrain-supabase-provision` | Management API wrapper. Subcommands: `list-orgs`, `create`, `wait`, `pooler-url`, `list-orphans`, `delete-project`. All require `SUPABASE_ACCESS_TOKEN` in env. `create` and `pooler-url` also require `DB_PASS`. `--json` mode available on every subcommand.                                                                |
+| `gstack-gbrain-repo-policy`        | Per-remote trust triad. Subcommands: `get`, `set`, `list`, `normalize`                                                                                                                                                                                                                                                        |
+| `gstack-gbrain-source-wireup`      | Registers your `~/.gstack/` brain repo with gbrain as a federated source via `gbrain sources add` + `git worktree`, then runs an initial `gbrain sync`. Idempotent. Replaces the dead `consumers.json + /ingest-repo` HTTP wireup from v1.12.x. Flags: `--strict`, `--source-id <id>`, `--no-pull`, `--uninstall`, `--probe`. |
 
 ### gbrain CLI (upstream tool)
 
 Gbrain itself ships with these that gstack wraps:
 
-| Command | Purpose |
-|---|---|
-| `gbrain init --pglite` | Initialize a local PGLite brain |
-| `gbrain init --non-interactive` | Initialize via env (`GBRAIN_DATABASE_URL` or `DATABASE_URL`). Never pass a URL as argv — it'll leak to shell history. |
-| `gbrain doctor --json` | Health check. Returns `{status: "ok"|"warnings"|"error", health_score: 0-100, checks: [...]}` |
-| `gbrain migrate --to supabase --url ...` | Move a PGLite brain to Supabase (lossless, preserves source as backup) |
-| `gbrain migrate --to pglite` | Reverse migration |
-| `gbrain search "query"` | Search the brain |
-| `gbrain put "<slug>" --content "<markdown-with-frontmatter>"` | Write a page (title/tags go in YAML frontmatter inside `--content`) |
-| `gbrain get "<slug>"` | Fetch a page |
-| `gbrain serve` | Start the MCP stdio server (used by `claude mcp add`) |
+| Command                                                       | Purpose                                                                                                               |
+| ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ---------- | --------------------------------------------- |
+| `gbrain init --pglite`                                        | Initialize a local PGLite brain                                                                                       |
+| `gbrain init --non-interactive`                               | Initialize via env (`GBRAIN_DATABASE_URL` or `DATABASE_URL`). Never pass a URL as argv — it'll leak to shell history. |
+| `gbrain doctor --json`                                        | Health check. Returns `{status: "ok"                                                                                  | "warnings" | "error", health_score: 0-100, checks: [...]}` |
+| `gbrain migrate --to supabase --url ...`                      | Move a PGLite brain to Supabase (lossless, preserves source as backup)                                                |
+| `gbrain migrate --to pglite`                                  | Reverse migration                                                                                                     |
+| `gbrain search "query"`                                       | Search the brain                                                                                                      |
+| `gbrain put "<slug>" --content "<markdown-with-frontmatter>"` | Write a page (title/tags go in YAML frontmatter inside `--content`)                                                   |
+| `gbrain get "<slug>"`                                         | Fetch a page                                                                                                          |
+| `gbrain serve`                                                | Start the MCP stdio server (used by `claude mcp add`)                                                                 |
 
 ### Config files + state
 
-| Path | What lives there |
-|---|---|
-| `~/.gbrain/config.json` | Engine (pglite/postgres), database URL or path, API keys. Mode 0600. Written by `gbrain init`. |
-| `~/.gstack/gbrain-repo-policy.json` | Per-remote trust triad. Schema v2. Mode 0600. |
-| `~/.gstack/.setup-gbrain.lock.d` | Concurrent-run lock (atomic mkdir). Released on normal exit + SIGINT. |
-| `~/.gstack/.brain-queue.jsonl` | Pending sync entries for gstack memory sync |
-| `~/.gstack/.brain-last-push` | Timestamp of last sync push (for `/health` scoring) |
-| `~/.gstack-brain-remote.txt` | URL of your gstack memory sync remote (safe to copy between machines) |
-| `~/.gstack/.setup-gbrain-inflight.json` | Reserved for future `--resume-provision` persisted state |
+| Path                                    | What lives there                                                                               |
+| --------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `~/.gbrain/config.json`                 | Engine (pglite/postgres), database URL or path, API keys. Mode 0600. Written by `gbrain init`. |
+| `~/.gstack/gbrain-repo-policy.json`     | Per-remote trust triad. Schema v2. Mode 0600.                                                  |
+| `~/.gstack/.setup-gbrain.lock.d`        | Concurrent-run lock (atomic mkdir). Released on normal exit + SIGINT.                          |
+| `~/.gstack/.brain-queue.jsonl`          | Pending sync entries for gstack memory sync                                                    |
+| `~/.gstack/.brain-last-push`            | Timestamp of last sync push (for `/health` scoring)                                            |
+| `~/.gstack-brain-remote.txt`            | URL of your gstack memory sync remote (safe to copy between machines)                          |
+| `~/.gstack/.setup-gbrain-inflight.json` | Reserved for future `--resume-provision` persisted state                                       |
 
 ### Environment variables
 
-| Var | Where it's read | What it does |
-|---|---|---|
-| `SUPABASE_ACCESS_TOKEN` | `gstack-gbrain-supabase-provision` | PAT for Management API calls. Discarded after each setup run. |
-| `DB_PASS` | `gstack-gbrain-supabase-provision` (create, pooler-url) | Generated DB password. Never in argv. |
-| `GBRAIN_DATABASE_URL` | `gbrain init`, `gbrain doctor`, etc. | Postgres connection string (Supabase pooler URL for us). Env takes precedence over `~/.gbrain/config.json`. |
-| `DATABASE_URL` | `gbrain init` (fallback) | Same semantics as `GBRAIN_DATABASE_URL`; checked second. |
-| `SUPABASE_API_BASE` | `gstack-gbrain-supabase-provision` | Override the Management API host. Used by tests to point at a mock server. |
-| `GBRAIN_INSTALL_DIR` | `gstack-gbrain-install` | Override default install path (`~/gbrain`) |
-| `GSTACK_HOME` | every bin helper | Override `~/.gstack` state dir. Heavy test use. |
-| `VOYAGE_API_KEY` | `gbrain embed` subprocess; gstack PGLite init | When set, gstack inits PGLite with `voyage-code-3` (1024-dim), Voyage's code-specialized embedding model. Beats `voyage-4-large` and OpenAI `text-embedding-3-large` head-to-head on this codebase's symbol queries. See CHANGELOG v1.43.1.0 for the A/B numbers. |
-| `OPENAI_API_KEY` | `gbrain embed` subprocess | Used for embeddings during `gbrain sync` / `/sync-gbrain` when `VOYAGE_API_KEY` is not set (gbrain's auto-selected fallback, `text-embedding-3-large` 1536-dim). Without either key, pages are imported structurally (symbol tables, chunks) but semantic search degrades — you'll see `[gbrain] embedding failed for code file ...` in the sync log. |
-| `ANTHROPIC_API_KEY` | `claude-agent-sdk`, paid evals | Required for `bun run test:evals` and any direct `query()` call against Claude. |
-| `GSTACK_OPENAI_API_KEY` | `lib/conductor-env-shim.ts` | Conductor-injected fallback. Promoted to `OPENAI_API_KEY` when the canonical name is empty. |
-| `GSTACK_ANTHROPIC_API_KEY` | `lib/conductor-env-shim.ts` | Same pattern as above for Anthropic. |
+| Var                        | Where it's read                                         | What it does                                                                                                                                                                                                                                                                                                                                          |
+| -------------------------- | ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SUPABASE_ACCESS_TOKEN`    | `gstack-gbrain-supabase-provision`                      | PAT for Management API calls. Discarded after each setup run.                                                                                                                                                                                                                                                                                         |
+| `DB_PASS`                  | `gstack-gbrain-supabase-provision` (create, pooler-url) | Generated DB password. Never in argv.                                                                                                                                                                                                                                                                                                                 |
+| `GBRAIN_DATABASE_URL`      | `gbrain init`, `gbrain doctor`, etc.                    | Postgres connection string (Supabase pooler URL for us). Env takes precedence over `~/.gbrain/config.json`.                                                                                                                                                                                                                                           |
+| `DATABASE_URL`             | `gbrain init` (fallback)                                | Same semantics as `GBRAIN_DATABASE_URL`; checked second.                                                                                                                                                                                                                                                                                              |
+| `SUPABASE_API_BASE`        | `gstack-gbrain-supabase-provision`                      | Override the Management API host. Used by tests to point at a mock server.                                                                                                                                                                                                                                                                            |
+| `GBRAIN_INSTALL_DIR`       | `gstack-gbrain-install`                                 | Override default install path (`~/gbrain`)                                                                                                                                                                                                                                                                                                            |
+| `GSTACK_HOME`              | every bin helper                                        | Override `~/.gstack` state dir. Heavy test use.                                                                                                                                                                                                                                                                                                       |
+| `VOYAGE_API_KEY`           | `gbrain embed` subprocess; gstack PGLite init           | When set, gstack inits PGLite with `voyage-code-3` (1024-dim), Voyage's code-specialized embedding model. Beats `voyage-4-large` and OpenAI `text-embedding-3-large` head-to-head on this codebase's symbol queries. See CHANGELOG v1.43.1.0 for the A/B numbers.                                                                                     |
+| `OPENAI_API_KEY`           | `gbrain embed` subprocess                               | Used for embeddings during `gbrain sync` / `/sync-gbrain` when `VOYAGE_API_KEY` is not set (gbrain's auto-selected fallback, `text-embedding-3-large` 1536-dim). Without either key, pages are imported structurally (symbol tables, chunks) but semantic search degrades — you'll see `[gbrain] embedding failed for code file ...` in the sync log. |
+| `ANTHROPIC_API_KEY`        | `claude-agent-sdk`, paid evals                          | Required for `bun run test:evals` and any direct `query()` call against Claude.                                                                                                                                                                                                                                                                       |
+| `GSTACK_OPENAI_API_KEY`    | `lib/conductor-env-shim.ts`                             | Conductor-injected fallback. Promoted to `OPENAI_API_KEY` when the canonical name is empty.                                                                                                                                                                                                                                                           |
+| `GSTACK_ANTHROPIC_API_KEY` | `lib/conductor-env-shim.ts`                             | Same pattern as above for Anthropic.                                                                                                                                                                                                                                                                                                                  |
 
-## Conductor + GSTACK_* env vars
+## Conductor + GSTACK\_\* env vars
 
 If you run gstack inside a [Conductor](https://conductor.build) workspace, **Conductor explicitly strips `ANTHROPIC_API_KEY` and `OPENAI_API_KEY` from the workspace env.** Setting them in `~/.zshrc` or `.env` won't help — the strip happens after env inheritance. To get a usable API key into a workspace, set `GSTACK_ANTHROPIC_API_KEY` and `GSTACK_OPENAI_API_KEY` in Conductor's workspace env config instead. Conductor passes those through untouched.
 

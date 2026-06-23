@@ -112,7 +112,7 @@ One entry point for pulling page data. Three paths under the hood:
 2. **Prototype path (~30s)** — no match, agent drives the page with `$B goto`,
    `$B text`, `$B html`, `$B links`, etc., returns the JSON, and appends a
    one-line "say `/skillify`" suggestion.
-3. **Mutating-intent refusal** — verbs like *submit*, *click*, *fill* route
+3. **Mutating-intent refusal** — verbs like _submit_, _click_, _fill_ route
    to `/automate` (Phase 2b, P0 in `TODOS.md`). `/scrape` is read-only by
    contract.
 
@@ -184,8 +184,8 @@ Each project root (detected via `git rev-parse --show-toplevel`) gets its
 own daemon, port, state file, cookies, and logs. No cross-workspace
 collisions. State at `<project>/.gstack/browse.json`.
 
-| Workspace | State file | Port |
-|-----------|-----------|------|
+| Workspace         | State file                            | Port                 |
+| ----------------- | ------------------------------------- | -------------------- |
 | `/code/project-a` | `/code/project-a/.gstack/browse.json` | random (10000–60000) |
 | `/code/project-b` | `/code/project-b/.gstack/browse.json` | random (10000–60000) |
 
@@ -198,156 +198,156 @@ from `snapshot`, or `@c` refs from `snapshot -C`. Full table:
 
 ### Reading
 
-| Command | Description |
-|---------|-------------|
-| `text [sel]` | Clean page text (or scoped to a selector) |
-| `html [sel]` | innerHTML, or full page HTML if no selector |
-| `links` | All links as `text → href` |
-| `forms` | Form fields as JSON |
-| `accessibility` | Full ARIA tree |
-| `media [--images\|--videos\|--audio] [sel]` | Media elements with URLs, dimensions, types |
-| `data [--jsonld\|--og\|--meta\|--twitter]` | Structured data: JSON-LD, OG, Twitter Cards, meta tags |
+| Command                                     | Description                                            |
+| ------------------------------------------- | ------------------------------------------------------ |
+| `text [sel]`                                | Clean page text (or scoped to a selector)              |
+| `html [sel]`                                | innerHTML, or full page HTML if no selector            |
+| `links`                                     | All links as `text → href`                             |
+| `forms`                                     | Form fields as JSON                                    |
+| `accessibility`                             | Full ARIA tree                                         |
+| `media [--images\|--videos\|--audio] [sel]` | Media elements with URLs, dimensions, types            |
+| `data [--jsonld\|--og\|--meta\|--twitter]`  | Structured data: JSON-LD, OG, Twitter Cards, meta tags |
 
 ### Inspection
 
-| Command | Description |
-|---------|-------------|
-| `js <expr> [--out <file>] [--raw]` | Run inline JavaScript expression in page context, return as string. With `--out <file>` the result is written to disk instead of returned (a `data:*;base64,...` result is decoded to raw bytes unless `--raw`). `--out` makes the invocation a WRITE (needs `write` scope, never allowed over the tunnel). |
-| `eval <file> [--out <file>] [--raw]` | Run JS from a file (path under /tmp or cwd; same sandbox as `js`). `--out`/`--raw` behave as for `js`. |
-| `css <sel> <prop>` | Computed CSS value |
-| `attrs <sel\|@ref>` | Element attributes as JSON |
-| `is <prop> <sel\|@ref>` | State check: visible, hidden, enabled, disabled, checked, editable, focused |
-| `console [--clear\|--errors]` | Captured console messages |
-| `network [--clear]` | Captured network requests |
-| `dialog [--clear]` | Captured dialog messages |
-| `cookies` | All cookies as JSON |
-| `storage` / `storage set <key> <val>` | Read both localStorage + sessionStorage; set localStorage |
-| `perf` | Page load timings |
-| `inspect [sel] [--all] [--history]` | Deep CSS via CDP — full rule cascade, box model, computed styles |
-| `ux-audit` | Page structure for behavioral analysis: site ID, nav, headings, text blocks, interactive elements |
-| `cdp <Domain.method> [json-params]` | Raw CDP method dispatch (deny-default; allowlist in `cdp-allowlist.ts`) |
+| Command                               | Description                                                                                                                                                                                                                                                                                                 |
+| ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `js <expr> [--out <file>] [--raw]`    | Run inline JavaScript expression in page context, return as string. With `--out <file>` the result is written to disk instead of returned (a `data:*;base64,...` result is decoded to raw bytes unless `--raw`). `--out` makes the invocation a WRITE (needs `write` scope, never allowed over the tunnel). |
+| `eval <file> [--out <file>] [--raw]`  | Run JS from a file (path under /tmp or cwd; same sandbox as `js`). `--out`/`--raw` behave as for `js`.                                                                                                                                                                                                      |
+| `css <sel> <prop>`                    | Computed CSS value                                                                                                                                                                                                                                                                                          |
+| `attrs <sel\|@ref>`                   | Element attributes as JSON                                                                                                                                                                                                                                                                                  |
+| `is <prop> <sel\|@ref>`               | State check: visible, hidden, enabled, disabled, checked, editable, focused                                                                                                                                                                                                                                 |
+| `console [--clear\|--errors]`         | Captured console messages                                                                                                                                                                                                                                                                                   |
+| `network [--clear]`                   | Captured network requests                                                                                                                                                                                                                                                                                   |
+| `dialog [--clear]`                    | Captured dialog messages                                                                                                                                                                                                                                                                                    |
+| `cookies`                             | All cookies as JSON                                                                                                                                                                                                                                                                                         |
+| `storage` / `storage set <key> <val>` | Read both localStorage + sessionStorage; set localStorage                                                                                                                                                                                                                                                   |
+| `perf`                                | Page load timings                                                                                                                                                                                                                                                                                           |
+| `inspect [sel] [--all] [--history]`   | Deep CSS via CDP — full rule cascade, box model, computed styles                                                                                                                                                                                                                                            |
+| `ux-audit`                            | Page structure for behavioral analysis: site ID, nav, headings, text blocks, interactive elements                                                                                                                                                                                                           |
+| `cdp <Domain.method> [json-params]`   | Raw CDP method dispatch (deny-default; allowlist in `cdp-allowlist.ts`)                                                                                                                                                                                                                                     |
 
 ### Navigation
 
-| Command | Description |
-|---------|-------------|
-| `goto <url>` | Navigate to URL (`http://`, `https://`, `file://`) |
-| `load-html <file>` | Load local HTML in memory (no `file://` URL; survives viewport scale changes) |
-| `back`, `forward`, `reload` | Standard nav |
-| `url` | Current page URL |
-| `wait <sel\|--networkidle\|--load>` | Wait for element, network idle, or page load (15s timeout) |
+| Command                             | Description                                                                   |
+| ----------------------------------- | ----------------------------------------------------------------------------- |
+| `goto <url>`                        | Navigate to URL (`http://`, `https://`, `file://`)                            |
+| `load-html <file>`                  | Load local HTML in memory (no `file://` URL; survives viewport scale changes) |
+| `back`, `forward`, `reload`         | Standard nav                                                                  |
+| `url`                               | Current page URL                                                              |
+| `wait <sel\|--networkidle\|--load>` | Wait for element, network idle, or page load (15s timeout)                    |
 
 ### Interaction
 
-| Command | Description |
-|---------|-------------|
-| `click <sel\|@ref>` | Click element |
-| `fill <sel> <val>` | Fill input |
-| `select <sel> <val>` | Select dropdown option (value, label, or visible text) |
-| `hover <sel>` | Hover element |
-| `type <text>` | Type into focused element |
-| `press <key>` | Playwright keyboard key (case-sensitive: Enter, Tab, ArrowUp, Shift+Enter, Control+A, ...) |
-| `scroll [sel\|@ref]` | Scroll element into view, or jump to page bottom if no selector |
-| `viewport [<WxH>] [--scale <n>]` | Set viewport size + optional `deviceScaleFactor` 1-3 (retina screenshots) |
-| `upload <sel> <file> [...]` | Upload file(s) |
-| `dialog-accept [text]` | Auto-accept next alert/confirm/prompt; text is sent for prompts |
-| `dialog-dismiss` | Auto-dismiss next dialog |
+| Command                          | Description                                                                                |
+| -------------------------------- | ------------------------------------------------------------------------------------------ |
+| `click <sel\|@ref>`              | Click element                                                                              |
+| `fill <sel> <val>`               | Fill input                                                                                 |
+| `select <sel> <val>`             | Select dropdown option (value, label, or visible text)                                     |
+| `hover <sel>`                    | Hover element                                                                              |
+| `type <text>`                    | Type into focused element                                                                  |
+| `press <key>`                    | Playwright keyboard key (case-sensitive: Enter, Tab, ArrowUp, Shift+Enter, Control+A, ...) |
+| `scroll [sel\|@ref]`             | Scroll element into view, or jump to page bottom if no selector                            |
+| `viewport [<WxH>] [--scale <n>]` | Set viewport size + optional `deviceScaleFactor` 1-3 (retina screenshots)                  |
+| `upload <sel> <file> [...]`      | Upload file(s)                                                                             |
+| `dialog-accept [text]`           | Auto-accept next alert/confirm/prompt; text is sent for prompts                            |
+| `dialog-dismiss`                 | Auto-dismiss next dialog                                                                   |
 
 ### Style + cleanup
 
-| Command | Description |
-|---------|-------------|
-| `style <sel> <prop> <val>` | Modify CSS property (with undo support) |
-| `style --undo [N]` | Undo last N style changes |
-| `cleanup [--ads\|--cookies\|--sticky\|--social\|--all]` | Remove page clutter |
+| Command                                                                           | Description                                          |
+| --------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| `style <sel> <prop> <val>`                                                        | Modify CSS property (with undo support)              |
+| `style --undo [N]`                                                                | Undo last N style changes                            |
+| `cleanup [--ads\|--cookies\|--sticky\|--social\|--all]`                           | Remove page clutter                                  |
 | `prettyscreenshot [--scroll-to <sel\|text>] [--cleanup] [--hide <sel>...] [path]` | Clean screenshot with optional cleanup, scroll, hide |
 
 ### Visual
 
-| Command | Description |
-|---------|-------------|
-| `screenshot [--selector <css>] [--viewport] [--clip x,y,w,h] [--base64] [sel\|@ref] [path]` | Five modes: full page, viewport, element crop, region clip, base64 |
-| `pdf [path] [--format letter\|a4\|legal] [...]` | PDF with full layout: format, width/height, margins, header/footer templates, page numbers, --tagged for accessibility, --toc waits for Paged.js |
-| `responsive [prefix]` | Three screenshots: mobile (375x812), tablet (768x1024), desktop (1280x720) |
-| `diff <url1> <url2>` | Text diff between two URLs |
+| Command                                                                                     | Description                                                                                                                                      |
+| ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `screenshot [--selector <css>] [--viewport] [--clip x,y,w,h] [--base64] [sel\|@ref] [path]` | Five modes: full page, viewport, element crop, region clip, base64                                                                               |
+| `pdf [path] [--format letter\|a4\|legal] [...]`                                             | PDF with full layout: format, width/height, margins, header/footer templates, page numbers, --tagged for accessibility, --toc waits for Paged.js |
+| `responsive [prefix]`                                                                       | Three screenshots: mobile (375x812), tablet (768x1024), desktop (1280x720)                                                                       |
+| `diff <url1> <url2>`                                                                        | Text diff between two URLs                                                                                                                       |
 
 ### Cookies + headers
 
-| Command | Description |
-|---------|-------------|
-| `cookie <name>=<value>` | Set cookie on current page domain |
-| `cookie-import <json>` | Import cookies from JSON file |
+| Command                                        | Description                                                                                   |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `cookie <name>=<value>`                        | Set cookie on current page domain                                                             |
+| `cookie-import <json>`                         | Import cookies from JSON file                                                                 |
 | `cookie-import-browser [browser] [--domain d]` | Import from installed Chromium browsers (interactive picker, or `--domain` for direct import) |
-| `header <name>:<value>` | Set custom request header (sensitive values auto-redacted) |
-| `useragent <string>` | Set user agent (triggers context recreation, invalidates refs) |
+| `header <name>:<value>`                        | Set custom request header (sensitive values auto-redacted)                                    |
+| `useragent <string>`                           | Set user agent (triggers context recreation, invalidates refs)                                |
 
 ### Tabs + frames
 
-| Command | Description |
-|---------|-------------|
-| `tabs` | List open tabs |
-| `tab <id>` | Switch to tab |
-| `newtab [url] [--json]` | Open new tab; `--json` returns `{tabId, url}` for programmatic use |
-| `closetab [id]` | Close tab |
-| `tab-each <command> [args...]` | Fan out a command across every open tab; returns JSON |
-| `frame <sel\|@ref\|--name n\|--url pattern\|main>` | Switch to iframe context (or back to main); clears refs |
+| Command                                            | Description                                                        |
+| -------------------------------------------------- | ------------------------------------------------------------------ |
+| `tabs`                                             | List open tabs                                                     |
+| `tab <id>`                                         | Switch to tab                                                      |
+| `newtab [url] [--json]`                            | Open new tab; `--json` returns `{tabId, url}` for programmatic use |
+| `closetab [id]`                                    | Close tab                                                          |
+| `tab-each <command> [args...]`                     | Fan out a command across every open tab; returns JSON              |
+| `frame <sel\|@ref\|--name n\|--url pattern\|main>` | Switch to iframe context (or back to main); clears refs            |
 
 ### Extraction
 
-| Command | Description |
-|---------|-------------|
-| `download <url\|@ref> [path] [--base64]` | Download URL or media element using browser cookies |
+| Command                                                         | Description                                               |
+| --------------------------------------------------------------- | --------------------------------------------------------- |
+| `download <url\|@ref> [path] [--base64]`                        | Download URL or media element using browser cookies       |
 | `scrape <images\|videos\|media> [--selector] [--dir] [--limit]` | Bulk download all media from page; writes `manifest.json` |
-| `archive [path]` | Save complete page as MHTML via CDP |
+| `archive [path]`                                                | Save complete page as MHTML via CDP                       |
 
 ### Snapshot
 
-| Command | Description |
-|---------|-------------|
+| Command                                                       | Description                                                                                                                                                                           |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `snapshot [-i] [-c] [-d N] [-s sel] [-D] [-a] [-o path] [-C]` | Accessibility tree with `@e` refs; `-i` interactive only, `-c` compact, `-d N` depth, `-s` scope, `-D` diff vs previous, `-a` annotated screenshot, `-C` cursor-interactive `@c` refs |
 
 ### Server lifecycle
 
-| Command | Description |
-|---------|-------------|
-| `status` | Daemon health + mode (headless / headed / cdp) |
-| `stop` | Shut down daemon |
-| `restart` | Restart daemon |
-| `connect` | Launch headed GStack Browser with Side Panel extension |
-| `disconnect` | Close headed Chrome, return to headless |
-| `focus [@ref]` | Bring headed Chrome to foreground (macOS); `@ref` also scrolls into view |
-| `state save\|load <name>` | Save or load browser state (cookies + URLs) |
-| `memory [--json]` | Snapshot Bun heap + per-tab JS heap + Chromium process tree + bounded buffer sizes. Use `--json` for programmatic consumers; text mode renders sorted top-10 tabs with "and N more" tail. |
+| Command                   | Description                                                                                                                                                                               |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `status`                  | Daemon health + mode (headless / headed / cdp)                                                                                                                                            |
+| `stop`                    | Shut down daemon                                                                                                                                                                          |
+| `restart`                 | Restart daemon                                                                                                                                                                            |
+| `connect`                 | Launch headed GStack Browser with Side Panel extension                                                                                                                                    |
+| `disconnect`              | Close headed Chrome, return to headless                                                                                                                                                   |
+| `focus [@ref]`            | Bring headed Chrome to foreground (macOS); `@ref` also scrolls into view                                                                                                                  |
+| `state save\|load <name>` | Save or load browser state (cookies + URLs)                                                                                                                                               |
+| `memory [--json]`         | Snapshot Bun heap + per-tab JS heap + Chromium process tree + bounded buffer sizes. Use `--json` for programmatic consumers; text mode renders sorted top-10 tabs with "and N more" tail. |
 
 ### Handoff
 
-| Command | Description |
-|---------|-------------|
+| Command            | Description                                                                        |
+| ------------------ | ---------------------------------------------------------------------------------- |
 | `handoff [reason]` | Open visible Chrome at current page for user takeover (CAPTCHA, MFA, complex auth) |
-| `resume` | Re-snapshot after user takeover, return control to AI |
+| `resume`           | Re-snapshot after user takeover, return control to AI                              |
 
 ### Meta + chains
 
-| Command | Description |
-|---------|-------------|
+| Command                  | Description                                                                                      |
+| ------------------------ | ------------------------------------------------------------------------------------------------ |
 | `chain` (JSON via stdin) | Run a sequence of commands. Pipe `[["cmd","arg1",...],...]` to `$B chain`. Stops at first error. |
-| `inbox [--clear]` | List messages from sidebar scout inbox |
-| `watch [stop]` | Passive observation — periodic snapshots while user browses; `stop` returns summary |
+| `inbox [--clear]`        | List messages from sidebar scout inbox                                                           |
+| `watch [stop]`           | Passive observation — periodic snapshots while user browses; `stop` returns summary              |
 
 ### Browser-skills runtime
 
-| Command | Description |
-|---------|-------------|
-| `skill list` | List all browser-skills with resolved tier (project > global > bundled) |
-| `skill show <name>` | Print SKILL.md |
-| `skill run <name> [--arg k=v...] [--timeout=Ns]` | Spawn the skill script with a per-spawn scoped token |
-| `skill test <name>` | Run the skill's `script.test.ts` against bundled fixtures |
-| `skill rm <name> [--global]` | Tombstone a user-tier skill |
+| Command                                          | Description                                                             |
+| ------------------------------------------------ | ----------------------------------------------------------------------- |
+| `skill list`                                     | List all browser-skills with resolved tier (project > global > bundled) |
+| `skill show <name>`                              | Print SKILL.md                                                          |
+| `skill run <name> [--arg k=v...] [--timeout=Ns]` | Spawn the skill script with a per-spawn scoped token                    |
+| `skill test <name>`                              | Run the skill's `script.test.ts` against bundled fixtures               |
+| `skill rm <name> [--global]`                     | Tombstone a user-tier skill                                             |
 
 ### Domain-skills
 
-| Command | Description |
-|---------|-------------|
+| Command                                                                        | Description                                                                                                                                                          |
+| ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `domain-skill save\|list\|show\|edit\|promote-to-global\|rollback\|rm <host?>` | Per-site agent notes (host derived from active tab). Lifecycle: quarantined → active (after N=3 successful uses without classifier flag) → global (explicit promote) |
 
 Aliases: `setcontent`, `set-content`, `setContent` → `load-html` (canonicalized
@@ -425,21 +425,21 @@ $B skill test hackernews-frontpage       # runs script.test.ts against fixture
 `$B skill list` walks all three in priority order; first hit wins. Resolved
 tier is printed inline next to each skill name:
 
-| Tier | Path | When |
-|------|------|------|
+| Tier        | Path                                       | When                                              |
+| ----------- | ------------------------------------------ | ------------------------------------------------- |
 | **Project** | `<project>/.gstack/browser-skills/<name>/` | Project-specific skills (committed or gitignored) |
-| **Global** | `~/.gstack/browser-skills/<name>/` | Per-user skills, all projects |
-| **Bundled** | `<gstack-install>/browser-skills/<name>/` | Ships with gstack, read-only |
+| **Global**  | `~/.gstack/browser-skills/<name>/`         | Per-user skills, all projects                     |
+| **Bundled** | `<gstack-install>/browser-skills/<name>/`  | Ships with gstack, read-only                      |
 
 ### Trust model
 
 Two orthogonal axes — daemon-side capability and process-side env — independently
 configured.
 
-| Axis | Mechanism | Default |
-|------|-----------|---------|
-| **Daemon-side capability** | Per-spawn scoped token bound to read+write scope (browser-driving commands minus admin: `eval`, `js`, `cookies`, `storage`). Single-use clientId encodes skill name + spawn id. Revoked when spawn exits. | Always scoped — never the daemon root token |
-| **Process-side env** | `trusted: true` frontmatter passes `process.env` minus `GSTACK_TOKEN`. `trusted: false` (default) drops everything except a minimal allowlist (LANG, LC_ALL, TERM, TZ) and pattern-strips secrets (TOKEN/KEY/SECRET/PASSWORD, AWS_*, ANTHROPIC_*, OPENAI_*, GITHUB_*, etc.) | Untrusted (must opt in) |
+| Axis                       | Mechanism                                                                                                                                                                                                                                                                        | Default                                     |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| **Daemon-side capability** | Per-spawn scoped token bound to read+write scope (browser-driving commands minus admin: `eval`, `js`, `cookies`, `storage`). Single-use clientId encodes skill name + spawn id. Revoked when spawn exits.                                                                        | Always scoped — never the daemon root token |
+| **Process-side env**       | `trusted: true` frontmatter passes `process.env` minus `GSTACK_TOKEN`. `trusted: false` (default) drops everything except a minimal allowlist (LANG, LC*ALL, TERM, TZ) and pattern-strips secrets (TOKEN/KEY/SECRET/PASSWORD, AWS*\_, ANTHROPIC\_\_, OPENAI*\*, GITHUB*\*, etc.) | Untrusted (must opt in)                     |
 
 `GSTACK_PORT` and `GSTACK_SKILL_TOKEN` are injected last, so a parent process
 can't override them.
@@ -480,7 +480,7 @@ for the full design rationale.
 
 ## Domain-skills
 
-Different mental model from browser-skills: agent-authored *notes* about a
+Different mental model from browser-skills: agent-authored _notes_ about a
 site (not deterministic scripts). One per hostname. Lifecycle:
 
 1. `domain-skill save <host>` — agent writes a note about the site (e.g.,
@@ -496,6 +496,7 @@ The classifier flag is set automatically by the L4 prompt-injection scan;
 agents do not set it manually.
 
 Storage:
+
 - Per-project: `<project>/.gstack/domain-skills/<host>.md`
 - Global: `~/.gstack/domain-skills/<host>.md`
 
@@ -680,13 +681,13 @@ The "Send to Code" button injects a description into the Claude PTY.
 
 ### Sidebar architecture
 
-| Component | Where it lives | Notes |
-|-----------|----------------|-------|
-| Side Panel UI | `extension/sidepanel.js`, `sidepanel-terminal.js` | Chrome extension surface |
-| Background SW | `extension/background.js` | Manages tab events, port management |
-| Content script | `extension/content.js` | Page overlays, `gstack` pill |
-| Terminal agent | `browse/src/terminal-agent.ts` | PTY spawn, lifecycle, auth |
-| Sidebar utilities | `browse/src/sidebar-utils.ts` | URL sanitization, helpers |
+| Component         | Where it lives                                    | Notes                               |
+| ----------------- | ------------------------------------------------- | ----------------------------------- |
+| Side Panel UI     | `extension/sidepanel.js`, `sidepanel-terminal.js` | Chrome extension surface            |
+| Background SW     | `extension/background.js`                         | Manages tab events, port management |
+| Content script    | `extension/content.js`                            | Page overlays, `gstack` pill        |
+| Terminal agent    | `browse/src/terminal-agent.ts`                    | PTY spawn, lifecycle, auth          |
+| Sidebar utilities | `browse/src/sidebar-utils.ts`                     | URL sanitization, helpers           |
 
 Before modifying any of these, read the comment block in `CLAUDE.md` under
 "Sidebar architecture" — silent failures here usually trace to not understanding
@@ -755,8 +756,9 @@ remote agent that tries them gets a 403 plus a fresh entry in the denial log.
 ### Tunnel denial log
 
 `~/.gstack/security/attempts.jsonl` — append-only, salted SHA-256 of source
-+ domain only (no raw IP, no full request body), rotates at 10MB with 5
-generations. Per-device salt at `~/.gstack/security/device-salt` (mode 0600).
+
+- domain only (no raw IP, no full request body), rotates at 10MB with 5
+  generations. Per-device salt at `~/.gstack/security/device-salt` (mode 0600).
 
 See [`docs/REMOTE_BROWSER_ACCESS.md`](docs/REMOTE_BROWSER_ACCESS.md) for the
 full operator guide.
@@ -775,11 +777,11 @@ of unowned tabs is blocked by ownership checks.
 
 Three token types, three lifetimes, three scopes.
 
-| Token | Generated by | Lifetime | Scope |
-|-------|--------------|----------|-------|
-| **Root token** | Daemon startup (random UUID) | Daemon process lifetime | Full command surface, local listener only — 403 over tunnel |
-| **Setup key** | `POST /pair` | 5 minutes, one-time use | Single redemption: present at `/connect`, get a scoped token |
-| **Scoped token** | `POST /connect` (with setup key) | 24 hours | Per-client, allowlist-bound, optionally tab-scoped |
+| Token            | Generated by                     | Lifetime                | Scope                                                        |
+| ---------------- | -------------------------------- | ----------------------- | ------------------------------------------------------------ |
+| **Root token**   | Daemon startup (random UUID)     | Daemon process lifetime | Full command surface, local listener only — 403 over tunnel  |
+| **Setup key**    | `POST /pair`                     | 5 minutes, one-time use | Single redemption: present at `/connect`, get a scoped token |
+| **Scoped token** | `POST /connect` (with setup key) | 24 hours                | Per-client, allowlist-bound, optionally tab-scoped           |
 
 The root token is written to `<project>/.gstack/browse.json` with chmod 600.
 Every command that mutates browser state must include
@@ -815,15 +817,15 @@ Layered defense against prompt injection. Every layer runs synchronously on
 every user message and every tool output that could carry untrusted content
 (Read, Glob, Grep, WebFetch, page text from `$B`).
 
-| Layer | Module | Lives in |
-|-------|--------|----------|
-| **L1** Datamarking | `content-security.ts` | both server + sidebar agent |
-| **L2** Hidden-element strip | `content-security.ts` | both |
-| **L3** ARIA + URL blocklist + envelope wrapping | `content-security.ts` | both |
-| **L4** TestSavantAI ML classifier (22MB ONNX) | `security-classifier.ts` | sidebar-agent only* |
-| **L4b** Claude Haiku transcript check | `security-classifier.ts` | sidebar-agent only |
-| **L5** Canary token (session-exfil detection) | `security.ts` | both — inject in compiled, check in agent |
-| **L6** `combineVerdict` ensemble | `security.ts` | both |
+| Layer                                           | Module                   | Lives in                                  |
+| ----------------------------------------------- | ------------------------ | ----------------------------------------- |
+| **L1** Datamarking                              | `content-security.ts`    | both server + sidebar agent               |
+| **L2** Hidden-element strip                     | `content-security.ts`    | both                                      |
+| **L3** ARIA + URL blocklist + envelope wrapping | `content-security.ts`    | both                                      |
+| **L4** TestSavantAI ML classifier (22MB ONNX)   | `security-classifier.ts` | sidebar-agent only\*                      |
+| **L4b** Claude Haiku transcript check           | `security-classifier.ts` | sidebar-agent only                        |
+| **L5** Canary token (session-exfil detection)   | `security.ts`            | both — inject in compiled, check in agent |
+| **L6** `combineVerdict` ensemble                | `security.ts`            | both                                      |
 
 \* `security-classifier.ts` cannot be imported from the compiled browse
 binary — `@huggingface/transformers` v4 requires `onnxruntime-node` which
@@ -870,13 +872,13 @@ ARCHITECTURE.md § "Prompt injection defense" for the full threat model.
 
 ### Screenshot modes
 
-| Mode | Syntax | Playwright API |
-|------|--------|----------------|
-| Full page (default) | `screenshot [path]` | `page.screenshot({ fullPage: true })` |
-| Viewport only | `screenshot --viewport [path]` | `page.screenshot({ fullPage: false })` |
-| Element crop (flag) | `screenshot --selector <css> [path]` | `locator.screenshot()` |
-| Element crop (positional) | `screenshot "#sel" [path]` or `screenshot @e3 [path]` | `locator.screenshot()` |
-| Region clip | `screenshot --clip x,y,w,h [path]` | `page.screenshot({ clip })` |
+| Mode                      | Syntax                                                | Playwright API                         |
+| ------------------------- | ----------------------------------------------------- | -------------------------------------- |
+| Full page (default)       | `screenshot [path]`                                   | `page.screenshot({ fullPage: true })`  |
+| Viewport only             | `screenshot --viewport [path]`                        | `page.screenshot({ fullPage: false })` |
+| Element crop (flag)       | `screenshot --selector <css> [path]`                  | `locator.screenshot()`                 |
+| Element crop (positional) | `screenshot "#sel" [path]` or `screenshot @e3 [path]` | `locator.screenshot()`                 |
+| Region clip               | `screenshot --clip x,y,w,h [path]`                    | `page.screenshot({ clip })`            |
 
 Element crop accepts CSS selectors (`.class`, `#id`, `[attr]`) or `@e`/`@c`
 refs. **Tag selectors like `button` aren't caught by the positional
@@ -938,11 +940,11 @@ $B prettyscreenshot --cleanup --scroll-to "hero section" --hide ".cookie-banner"
 
 Two ways to render HTML that isn't on a web server:
 
-| Approach | When | URL after | Relative assets |
-|----------|------|-----------|-----------------|
-| `goto file://<abs-path>` | File already on disk | `file:///...` | Resolve against file's directory |
-| `goto file://./<rel>`, `goto file://~/<rel>` | Smart-parsed to absolute | `file:///...` | Same |
-| `load-html <file>` | HTML generated in memory, no parent-dir context needed | `about:blank` | Broken (self-contained HTML only) |
+| Approach                                     | When                                                   | URL after     | Relative assets                   |
+| -------------------------------------------- | ------------------------------------------------------ | ------------- | --------------------------------- |
+| `goto file://<abs-path>`                     | File already on disk                                   | `file:///...` | Resolve against file's directory  |
+| `goto file://./<rel>`, `goto file://~/<rel>` | Smart-parsed to absolute                               | `file:///...` | Same                              |
+| `load-html <file>`                           | HTML generated in memory, no parent-dir context needed | `about:blank` | Broken (self-contained HTML only) |
 
 Both are scoped to files under cwd or `$TMPDIR` via the same safe-dirs
 policy as `eval`. `file://` URLs preserve query strings and fragments (SPA
@@ -1138,12 +1140,12 @@ for cheap coverage maps.
 
 ## Performance
 
-| Tool | First call | Subsequent calls | Context overhead per call |
-|------|-----------|------------------|---------------------------|
-| Chrome MCP | ~5s | ~2-5s | ~2000 tokens (schema + protocol) |
-| Playwright MCP | ~3s | ~1-3s | ~1500 tokens (schema + protocol) |
-| **gstack browse** | **~3s** | **~100-200ms** | **0 tokens** (plain text stdout) |
-| **gstack browse + codified skill** | **~3s** | **~200ms** | **0 tokens** (single skill invocation) |
+| Tool                               | First call | Subsequent calls | Context overhead per call              |
+| ---------------------------------- | ---------- | ---------------- | -------------------------------------- |
+| Chrome MCP                         | ~5s        | ~2-5s            | ~2000 tokens (schema + protocol)       |
+| Playwright MCP                     | ~3s        | ~1-3s            | ~1500 tokens (schema + protocol)       |
+| **gstack browse**                  | **~3s**    | **~100-200ms**   | **0 tokens** (plain text stdout)       |
+| **gstack browse + codified skill** | **~3s**    | **~200ms**       | **0 tokens** (single skill invocation) |
 
 In a 20-command browser session, MCP tools burn 30,000–40,000 tokens on
 protocol framing alone. gstack burns zero. The codified-skill path takes a
@@ -1172,8 +1174,8 @@ Each project root (detected via `git rev-parse --show-toplevel`) gets its
 own daemon, port, state file, cookies, and logs. No cross-workspace
 collisions.
 
-| Workspace | State file | Port |
-|-----------|-----------|------|
+| Workspace         | State file                            | Port                 |
+| ----------------- | ------------------------------------- | -------------------- |
 | `/code/project-a` | `/code/project-a/.gstack/browse.json` | random (10000–60000) |
 | `/code/project-b` | `/code/project-b/.gstack/browse.json` | random (10000–60000) |
 
@@ -1185,25 +1187,25 @@ the global `~/.gstack/browser-skills/foo/` only inside project-a.
 
 ## Environment variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `BROWSE_PORT` | 0 (random 10000–60000) | Fixed port for the HTTP server (debug override) |
-| `BROWSE_IDLE_TIMEOUT` | 1800000 (30 min) | Idle shutdown timeout in ms |
-| `BROWSE_STATE_FILE` | `.gstack/browse.json` | Path to state file |
-| `BROWSE_SERVER_SCRIPT` | auto-detected | Path to `server.ts` |
-| `BROWSE_CDP_URL` | (none) | Set to `channel:chrome` for real-browser mode |
-| `BROWSE_CDP_PORT` | 0 | CDP port (used internally) |
-| `BROWSE_HEADLESS_SKIP` | 0 | Skip Chromium launch entirely (test harness only) |
-| `BROWSE_TUNNEL` | 0 | Activate the dual-listener tunnel architecture (requires `NGROK_AUTHTOKEN`) |
-| `BROWSE_TUNNEL_LOCAL_ONLY` | 0 | Test-only — bind both listeners locally without ngrok |
-| `GSTACK_BROWSE_MAX_HTML_BYTES` | 52428800 (50MB) | `load-html` size cap |
-| `GSTACK_SECURITY_OFF` | unset | Emergency kill switch — disable ML classifier |
-| `GSTACK_SECURITY_ENSEMBLE` | unset | Set to `deberta` for 3-classifier ensemble (721MB download) |
-| `GSTACK_STEALTH` | unset | Set to `extended` (also accepts `1`/`true`) to layer six aggressive patches (WebGL spoof, faked plugins, mediaDevices) on top of Layer C. Actively lies; can break sites. |
-| `GSTACK_CDP_STEALTH` | unset | Set to `on`/`1`/`true` to emit `--gstack-suppress-prepare-stack-trace` (gbrowser Pack 2 / B11 C++ patch only; no-op on stock Chromium) |
-| `GSTACK_GPU_VENDOR`, `GSTACK_GPU_RENDERER`, `GSTACK_GPU_CHIPSET` | unset | Per-install GPU spoof fed to the Pack 1 WebGL/UA-CH C++ patches. Set by gbd from the host profile; emitted as `--gstack-gpu-vendor` / `--gstack-gpu-renderer` / `--gstack-ua-model` cmdline switches only when present. |
-| `GSTACK_PLATFORM` | unset | Host platform classification (`MacARM`/`MacIntel` → `macOS`, `Win32` → `Windows`, `Linux*` → `Linux`) emitted as `--gstack-ua-platform` |
-| `GSTACK_HW_CONCURRENCY`, `GSTACK_DEVICE_MEMORY` | host profile (fallback 8) | Per-install `hardwareConcurrency`/`deviceMemory` reported by Layer C and emitted as `--gstack-hw-concurrency` / `--gstack-device-memory` for the worker-navigator C++ patch |
+| Variable                                                         | Default                   | Description                                                                                                                                                                                                             |
+| ---------------------------------------------------------------- | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `BROWSE_PORT`                                                    | 0 (random 10000–60000)    | Fixed port for the HTTP server (debug override)                                                                                                                                                                         |
+| `BROWSE_IDLE_TIMEOUT`                                            | 1800000 (30 min)          | Idle shutdown timeout in ms                                                                                                                                                                                             |
+| `BROWSE_STATE_FILE`                                              | `.gstack/browse.json`     | Path to state file                                                                                                                                                                                                      |
+| `BROWSE_SERVER_SCRIPT`                                           | auto-detected             | Path to `server.ts`                                                                                                                                                                                                     |
+| `BROWSE_CDP_URL`                                                 | (none)                    | Set to `channel:chrome` for real-browser mode                                                                                                                                                                           |
+| `BROWSE_CDP_PORT`                                                | 0                         | CDP port (used internally)                                                                                                                                                                                              |
+| `BROWSE_HEADLESS_SKIP`                                           | 0                         | Skip Chromium launch entirely (test harness only)                                                                                                                                                                       |
+| `BROWSE_TUNNEL`                                                  | 0                         | Activate the dual-listener tunnel architecture (requires `NGROK_AUTHTOKEN`)                                                                                                                                             |
+| `BROWSE_TUNNEL_LOCAL_ONLY`                                       | 0                         | Test-only — bind both listeners locally without ngrok                                                                                                                                                                   |
+| `GSTACK_BROWSE_MAX_HTML_BYTES`                                   | 52428800 (50MB)           | `load-html` size cap                                                                                                                                                                                                    |
+| `GSTACK_SECURITY_OFF`                                            | unset                     | Emergency kill switch — disable ML classifier                                                                                                                                                                           |
+| `GSTACK_SECURITY_ENSEMBLE`                                       | unset                     | Set to `deberta` for 3-classifier ensemble (721MB download)                                                                                                                                                             |
+| `GSTACK_STEALTH`                                                 | unset                     | Set to `extended` (also accepts `1`/`true`) to layer six aggressive patches (WebGL spoof, faked plugins, mediaDevices) on top of Layer C. Actively lies; can break sites.                                               |
+| `GSTACK_CDP_STEALTH`                                             | unset                     | Set to `on`/`1`/`true` to emit `--gstack-suppress-prepare-stack-trace` (gbrowser Pack 2 / B11 C++ patch only; no-op on stock Chromium)                                                                                  |
+| `GSTACK_GPU_VENDOR`, `GSTACK_GPU_RENDERER`, `GSTACK_GPU_CHIPSET` | unset                     | Per-install GPU spoof fed to the Pack 1 WebGL/UA-CH C++ patches. Set by gbd from the host profile; emitted as `--gstack-gpu-vendor` / `--gstack-gpu-renderer` / `--gstack-ua-model` cmdline switches only when present. |
+| `GSTACK_PLATFORM`                                                | unset                     | Host platform classification (`MacARM`/`MacIntel` → `macOS`, `Win32` → `Windows`, `Linux*` → `Linux`) emitted as `--gstack-ua-platform`                                                                                 |
+| `GSTACK_HW_CONCURRENCY`, `GSTACK_DEVICE_MEMORY`                  | host profile (fallback 8) | Per-install `hardwareConcurrency`/`deviceMemory` reported by Layer C and emitted as `--gstack-hw-concurrency` / `--gstack-device-memory` for the worker-navigator C++ patch                                             |
 
 ---
 
