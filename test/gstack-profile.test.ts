@@ -61,3 +61,67 @@ describe("gstack-profile list", () => {
     }
   });
 });
+
+function writeProfile(projectRoot: string, enabled: string[]) {
+  fs.mkdirSync(path.join(projectRoot, ".gstack"), { recursive: true });
+  const body = `version: 1\nskills:\n  enabled:\n${enabled.map((s) => `    - ${s}`).join("\n")}\n`;
+  fs.writeFileSync(path.join(projectRoot, ".gstack", "profile.yaml"), body);
+}
+
+function materialized(projectRoot: string): string[] {
+  const dir = path.join(projectRoot, ".claude", "skills");
+  if (!fs.existsSync(dir)) return [];
+  return fs.readdirSync(dir).sort();
+}
+
+describe("gstack-profile sync", () => {
+  test("materializes exactly the enabled skills", () => {
+    const src = makeSource();
+    const proj = fs.mkdtempSync(path.join(os.tmpdir(), "gsk-proj-"));
+    try {
+      writeProfile(proj, ["ship", "review"]);
+      const r = run(["sync"], proj, src);
+      expect(r.status).toBe(0);
+      expect(materialized(proj)).toEqual(["review", "ship"]);
+      // symlink points into the source checkout
+      const target = fs.readlinkSync(
+        path.join(proj, ".claude", "skills", "ship", "SKILL.md"),
+      );
+      expect(target).toBe(path.join(src, "ship", "SKILL.md"));
+    } finally {
+      fs.rmSync(src, { recursive: true, force: true });
+      fs.rmSync(proj, { recursive: true, force: true });
+    }
+  });
+
+  test("is idempotent and removes skills dropped from the profile", () => {
+    const src = makeSource();
+    const proj = fs.mkdtempSync(path.join(os.tmpdir(), "gsk-proj-"));
+    try {
+      writeProfile(proj, ["ship", "review"]);
+      run(["sync"], proj, src);
+      run(["sync"], proj, src); // twice — no error, no dupes
+      expect(materialized(proj)).toEqual(["review", "ship"]);
+      writeProfile(proj, ["ship"]); // drop review
+      run(["sync"], proj, src);
+      expect(materialized(proj)).toEqual(["ship"]);
+    } finally {
+      fs.rmSync(src, { recursive: true, force: true });
+      fs.rmSync(proj, { recursive: true, force: true });
+    }
+  });
+
+  test("errors on an enabled skill not in the superset", () => {
+    const src = makeSource();
+    const proj = fs.mkdtempSync(path.join(os.tmpdir(), "gsk-proj-"));
+    try {
+      writeProfile(proj, ["nonesuch"]);
+      const r = run(["sync"], proj, src);
+      expect(r.status).not.toBe(0);
+      expect(r.stderr).toContain("nonesuch");
+    } finally {
+      fs.rmSync(src, { recursive: true, force: true });
+      fs.rmSync(proj, { recursive: true, force: true });
+    }
+  });
+});
