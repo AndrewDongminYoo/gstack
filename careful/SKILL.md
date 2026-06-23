@@ -17,9 +17,9 @@ hooks:
           command: "bash $HOME/.claude/skills/gstack/careful/bin/check-careful.sh"
           statusMessage: "Checking for destructive commands..."
 ---
+
 <!-- AUTO-GENERATED from SKILL.md.tmpl — do not edit directly -->
 <!-- Regenerate: bun run gen:skill-docs -->
-
 
 ## When to invoke this skill
 
@@ -42,20 +42,21 @@ echo '{"skill":"careful","ts":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","repo":"'$(base
 
 ## What's protected
 
-| Pattern | Example | Risk |
-|---------|---------|------|
-| `rm -rf` / `rm -r` / `rm --recursive` | `rm -rf /var/data` | Recursive delete |
-| `DROP TABLE` / `DROP DATABASE` | `DROP TABLE users;` | Data loss |
-| `TRUNCATE` | `TRUNCATE orders;` | Data loss |
-| `git push --force` / `-f` | `git push -f origin main` | History rewrite |
-| `git reset --hard` | `git reset --hard HEAD~3` | Uncommitted work loss |
-| `git checkout .` / `git restore .` | `git checkout .` | Uncommitted work loss |
-| `kubectl delete` | `kubectl delete pod` | Production impact |
-| `docker rm -f` / `docker system prune` | `docker system prune -a` | Container/image loss |
+| Pattern                                | Example                   | Risk                  |
+| -------------------------------------- | ------------------------- | --------------------- |
+| `rm -rf` / `rm -r` / `rm --recursive`  | `rm -rf /var/data`        | Recursive delete      |
+| `DROP TABLE` / `DROP DATABASE`         | `DROP TABLE users;`       | Data loss             |
+| `TRUNCATE`                             | `TRUNCATE orders;`        | Data loss             |
+| `git push --force` / `-f`              | `git push -f origin main` | History rewrite       |
+| `git reset --hard`                     | `git reset --hard HEAD~3` | Uncommitted work loss |
+| `git checkout .` / `git restore .`     | `git checkout .`          | Uncommitted work loss |
+| `kubectl delete`                       | `kubectl delete pod`      | Production impact     |
+| `docker rm -f` / `docker system prune` | `docker system prune -a`  | Container/image loss  |
 
 ## Safe exceptions
 
 These patterns are allowed without warning:
+
 - `rm -rf node_modules` / `.next` / `dist` / `__pycache__` / `.cache` / `build` / `.turbo` / `coverage`
 
 ## How it works
