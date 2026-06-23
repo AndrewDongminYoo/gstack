@@ -51,7 +51,9 @@ describe("smartypants", () => {
   });
 
   test("does NOT touch URLs", () => {
-    const out = smartypants(`<p>Visit https://example.com/it's-page for "details".</p>`);
+    const out = smartypants(
+      `<p>Visit https://example.com/it's-page for "details".</p>`,
+    );
     expect(out).toContain("https://example.com/it's-page");
     expect(out).toContain("\u201cdetails\u201d");
   });
@@ -91,7 +93,7 @@ describe("sanitizeUntrustedHtml", () => {
     const input = `<a href="#" onclick="alert(1)">click</a>`;
     const out = sanitizeUntrustedHtml(input);
     expect(out).not.toContain("onclick");
-    expect(out).toContain("href=\"#\"");
+    expect(out).toContain('href="#"');
   });
 
   test("strips event handlers with mixed case (onClick, ONCLICK)", () => {
@@ -267,7 +269,11 @@ describe("printCss", () => {
   test("per-side margins reach the CSS @page rule (preferCSSPageSize parity)", () => {
     // Under a landscape promotion Chromium honors the CSS margins, not the
     // CDP per-side options — render() must compose them into the shorthand.
-    const r = render({ markdown: "# T", marginLeft: "0.5in", marginRight: "0.5in" });
+    const r = render({
+      markdown: "# T",
+      marginLeft: "0.5in",
+      marginRight: "0.5in",
+    });
     expect(r.printCss).toContain("margin: 1in 0.5in 1in 0.5in");
   });
 
@@ -283,7 +289,9 @@ describe("printCss", () => {
 
   test("suppresses running header and footer on cover page", () => {
     const css = printCss();
-    expect(css).toMatch(/@page\s*:first\s*\{[\s\S]*?content:\s*none[\s\S]*?content:\s*none/);
+    expect(css).toMatch(
+      /@page\s*:first\s*\{[\s\S]*?content:\s*none[\s\S]*?content:\s*none/,
+    );
   });
 
   test("omits CONFIDENTIAL when confidential=false", () => {
@@ -339,7 +347,9 @@ describe("printCss", () => {
   // wide screenshots run off the page edge — the exact regression this pins.
   test("emits a global img max-width cap (zero truncation invariant)", () => {
     const css = printCss();
-    expect(css).toMatch(/(^|\n)img\s*\{\s*max-width:\s*100%;\s*height:\s*auto;\s*\}/);
+    expect(css).toMatch(
+      /(^|\n)img\s*\{\s*max-width:\s*100%;\s*height:\s*auto;\s*\}/,
+    );
   });
 
   test("typography floor: body 12pt, poster cover, readable TOC", () => {
@@ -364,15 +374,21 @@ describe("printCss", () => {
   test("font stacks include Liberation Sans adjacent to Helvetica", () => {
     const css = printCss({ confidential: true });
     // Body stack
-    expect(css).toMatch(/font-family:\s*Helvetica,\s*"Liberation Sans",\s*Arial/);
+    expect(css).toMatch(
+      /font-family:\s*Helvetica,\s*"Liberation Sans",\s*Arial/,
+    );
     // At least one @page margin box (running header / page number / CONFIDENTIAL)
     // should also have the updated stack.
-    const marginBoxStacks = css.match(/@(top|bottom)-(center|right)\s*\{[^}]*Liberation Sans/g) ?? [];
+    const marginBoxStacks =
+      css.match(/@(top|bottom)-(center|right)\s*\{[^}]*Liberation Sans/g) ?? [];
     expect(marginBoxStacks.length).toBeGreaterThanOrEqual(1);
   });
 
   test("all four original Helvetica stacks now include Liberation Sans", () => {
-    const css = printCss({ runningHeader: "Running Title", confidential: true });
+    const css = printCss({
+      runningHeader: "Running Title",
+      confidential: true,
+    });
     // Count: body (1) + running header (1) + page numbers (1) + confidential (1) = 4
     const occurrences = (css.match(/"Liberation Sans"/g) ?? []).length;
     expect(occurrences).toBeGreaterThanOrEqual(4);
@@ -424,12 +440,16 @@ describe("printCss", () => {
 describe("render() — pageNumbers data flow", () => {
   test("CSS footer renders by default", () => {
     const result = render({ markdown: `# Doc\n\nBody.` });
-    expect(result.printCss).toMatch(/@bottom-center\s*\{\s*content:\s*counter\(page\)/);
+    expect(result.printCss).toMatch(
+      /@bottom-center\s*\{\s*content:\s*counter\(page\)/,
+    );
   });
 
   test("--no-page-numbers reaches the CSS layer", () => {
     const result = render({ markdown: `# Doc\n\nBody.`, pageNumbers: false });
-    expect(result.printCss).not.toMatch(/@bottom-center\s*\{\s*content:\s*counter\(page\)/);
+    expect(result.printCss).not.toMatch(
+      /@bottom-center\s*\{\s*content:\s*counter\(page\)/,
+    );
   });
 
   test("footerTemplate suppresses CSS page numbers (custom footer wins)", () => {
@@ -437,12 +457,16 @@ describe("render() — pageNumbers data flow", () => {
       markdown: `# Doc\n\nBody.`,
       footerTemplate: `<div class="foo">custom</div>`,
     });
-    expect(result.printCss).not.toMatch(/@bottom-center\s*\{\s*content:\s*counter\(page\)/);
+    expect(result.printCss).not.toMatch(
+      /@bottom-center\s*\{\s*content:\s*counter\(page\)/,
+    );
   });
 
   test("pageNumbers=true + no footerTemplate keeps CSS footer", () => {
     const result = render({ markdown: `# Doc`, pageNumbers: true });
-    expect(result.printCss).toMatch(/@bottom-center\s*\{\s*content:\s*counter\(page\)/);
+    expect(result.printCss).toMatch(
+      /@bottom-center\s*\{\s*content:\s*counter\(page\)/,
+    );
   });
 });
 
@@ -478,7 +502,9 @@ describe("render() — no double HTML entity escaping", () => {
       expect(result.html).not.toMatch(/<title>[^<]*&amp;#\d+;/);
       expect(result.html).not.toMatch(/<title>[^<]*&amp;#x[0-9a-fA-F]+;/);
       // Cover block also single-escape.
-      expect(result.html).not.toMatch(/class="cover-title"[^>]*>[^<]*&amp;amp;/);
+      expect(result.html).not.toMatch(
+        /class="cover-title"[^>]*>[^<]*&amp;amp;/,
+      );
     });
   }
 

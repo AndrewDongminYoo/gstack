@@ -89,12 +89,12 @@ function transformText(text: string): string {
 
   // Double quotes: open if preceded by whitespace/bol, close if preceded
   // by word char or punctuation.
-  s = s.replace(/(^|[\s\(\[\{\-])"/g, "$1\u201c");     // opening "
-  s = s.replace(/"/g, "\u201d");                         // remaining " are closing
+  s = s.replace(/(^|[\s\(\[\{\-])"/g, "$1\u201c"); // opening "
+  s = s.replace(/"/g, "\u201d"); // remaining " are closing
 
   // Single quotes (after apostrophe pass):
-  s = s.replace(/(^|[\s\(\[\{\-])'/g, "$1\u2018");      // opening '
-  s = s.replace(/'/g, "\u2019");                         // remaining ' are closing
+  s = s.replace(/(^|[\s\(\[\{\-])'/g, "$1\u2018"); // opening '
+  s = s.replace(/'/g, "\u2019"); // remaining ' are closing
 
   return s;
 }

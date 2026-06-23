@@ -29,14 +29,32 @@ function img(attrs: string): string {
 
 describe("parseDirectives", () => {
   test("width grammar", () => {
-    expect(parseDirectives("width=full")).toEqual({ width: "full", page: undefined });
-    expect(parseDirectives("width=50%")).toEqual({ width: "50%", page: undefined });
-    expect(parseDirectives("width=3in")).toEqual({ width: "3in", page: undefined });
-    expect(parseDirectives("width=2.5cm")).toEqual({ width: "2.5cm", page: undefined });
+    expect(parseDirectives("width=full")).toEqual({
+      width: "full",
+      page: undefined,
+    });
+    expect(parseDirectives("width=50%")).toEqual({
+      width: "50%",
+      page: undefined,
+    });
+    expect(parseDirectives("width=3in")).toEqual({
+      width: "3in",
+      page: undefined,
+    });
+    expect(parseDirectives("width=2.5cm")).toEqual({
+      width: "2.5cm",
+      page: undefined,
+    });
   });
   test("page grammar + combination", () => {
-    expect(parseDirectives("page=landscape")).toEqual({ width: undefined, page: "landscape" });
-    expect(parseDirectives("width=full page=portrait")).toEqual({ width: "full", page: "portrait" });
+    expect(parseDirectives("page=landscape")).toEqual({
+      width: undefined,
+      page: "landscape",
+    });
+    expect(parseDirectives("width=full page=portrait")).toEqual({
+      width: "full",
+      page: "portrait",
+    });
   });
   test("unknown tokens reject the whole group (stays visible text)", () => {
     expect(parseDirectives("widht=full")).toBeNull();
@@ -50,7 +68,9 @@ describe("parseDirectives", () => {
 
 describe("applyImageDirectives", () => {
   test("brace suffix becomes data attrs and is consumed", () => {
-    const out = applyImageDirectives(`<p><img src="x.png" alt="a">{width=50%}</p>`);
+    const out = applyImageDirectives(
+      `<p><img src="x.png" alt="a">{width=50%}</p>`,
+    );
     expect(out).toContain('data-gstack-width="50%"');
     expect(out).not.toContain("{width=50%}");
   });
@@ -68,11 +88,17 @@ describe("applyImageDirectives", () => {
 
 describe("width styles", () => {
   test("width=full → inline 100% style", () => {
-    const { html } = applyImagePolicy(img(`src="x" data-gstack-width="full"`), OPTS);
+    const { html } = applyImagePolicy(
+      img(`src="x" data-gstack-width="full"`),
+      OPTS,
+    );
     expect(html).toContain("width: 100%");
   });
   test("explicit dimension passes through", () => {
-    const { html } = applyImagePolicy(img(`src="x" data-gstack-width="3in"`), OPTS);
+    const { html } = applyImagePolicy(
+      img(`src="x" data-gstack-width="3in"`),
+      OPTS,
+    );
     expect(html).toContain("width: 3in");
   });
   test("width directive merges with an existing style attribute, preserving it", () => {
@@ -84,7 +110,10 @@ describe("width styles", () => {
     expect(html).toContain("width: 50%");
   });
   test("no directive → no inline style (CSS max-width owns the default)", () => {
-    const { html } = applyImagePolicy(img(`src="x" data-gstack-px-width="40" data-gstack-px-height="20"`), OPTS);
+    const { html } = applyImagePolicy(
+      img(`src="x" data-gstack-px-width="40" data-gstack-px-height="20"`),
+      OPTS,
+    );
     expect(html).not.toContain("style=");
   });
 });
@@ -94,7 +123,9 @@ describe("width styles", () => {
 describe("auto-landscape: negative cases (the load-bearing ones)", () => {
   test("wide screenshot with no alt hint stays portrait", () => {
     const r = applyImagePolicy(
-      img(`src="x" alt="screenshot of the app" data-gstack-px-width="3000" data-gstack-px-height="900"`),
+      img(
+        `src="x" alt="screenshot of the app" data-gstack-px-width="3000" data-gstack-px-height="900"`,
+      ),
       OPTS,
     );
     expect(r.hasLandscape).toBe(false);
@@ -102,14 +133,18 @@ describe("auto-landscape: negative cases (the load-bearing ones)", () => {
   });
   test("wide banner with hint but below width threshold stays portrait", () => {
     const r = applyImagePolicy(
-      img(`src="x" alt="chart" data-gstack-px-width="1200" data-gstack-px-height="400"`),
+      img(
+        `src="x" alt="chart" data-gstack-px-width="1200" data-gstack-px-height="400"`,
+      ),
       OPTS,
     );
     expect(r.hasLandscape).toBe(false);
   });
   test("tall diagram (aspect below 1.8) stays portrait", () => {
     const r = applyImagePolicy(
-      img(`src="x" alt="architecture diagram" data-gstack-px-width="2000" data-gstack-px-height="1500"`),
+      img(
+        `src="x" alt="architecture diagram" data-gstack-px-width="2000" data-gstack-px-height="1500"`,
+      ),
       OPTS,
     );
     expect(r.hasLandscape).toBe(false);
@@ -120,7 +155,9 @@ describe("auto-landscape: negative cases (the load-bearing ones)", () => {
   });
   test("page=portrait vetoes everything", () => {
     const r = applyImagePolicy(
-      img(`src="x" alt="diagram" data-gstack-page="portrait" data-gstack-px-width="4000" data-gstack-px-height="1000"`),
+      img(
+        `src="x" alt="diagram" data-gstack-page="portrait" data-gstack-px-width="4000" data-gstack-px-height="1000"`,
+      ),
       OPTS,
     );
     expect(r.hasLandscape).toBe(false);
@@ -128,12 +165,16 @@ describe("auto-landscape: negative cases (the load-bearing ones)", () => {
   test("threshold boundary is deterministic: exactly at threshold stays portrait", () => {
     // threshold = 6.5 × 96 × 2.5 = 1560
     const r = applyImagePolicy(
-      img(`src="x" alt="diagram" data-gstack-px-width="1560" data-gstack-px-height="600"`),
+      img(
+        `src="x" alt="diagram" data-gstack-px-width="1560" data-gstack-px-height="600"`,
+      ),
       OPTS,
     );
     expect(r.hasLandscape).toBe(false);
     const r2 = applyImagePolicy(
-      img(`src="x" alt="diagram" data-gstack-px-width="1561" data-gstack-px-height="600"`),
+      img(
+        `src="x" alt="diagram" data-gstack-px-width="1561" data-gstack-px-height="600"`,
+      ),
       OPTS,
     );
     expect(r2.hasLandscape).toBe(true);
@@ -144,12 +185,20 @@ describe("auto-landscape: positive cases", () => {
   test("wide + alt hint + over threshold promotes, wraps, and vertically centers", () => {
     const warnings: string[] = [];
     const r = applyImagePolicy(
-      img(`src="x" alt="architecture diagram" data-gstack-px-width="2400" data-gstack-px-height="1000"`),
-      { contentWidthIn: 6.5, landscape: LANDSCAPE, warn: (m) => warnings.push(m) },
+      img(
+        `src="x" alt="architecture diagram" data-gstack-px-width="2400" data-gstack-px-height="1000"`,
+      ),
+      {
+        contentWidthIn: 6.5,
+        landscape: LANDSCAPE,
+        warn: (m) => warnings.push(m),
+      },
     );
     expect(r.hasLandscape).toBe(true);
     // placed height = 9in × (1000/2400) = 3.75in → margin-top = (6.5−3.75)/2 ≈ 1.38in
-    expect(r.html).toContain('<div class="page-wide" style="margin-top: 1.38in"><img');
+    expect(r.html).toContain(
+      '<div class="page-wide" style="margin-top: 1.38in"><img',
+    );
     expect(r.html).not.toContain("<p><img");
     expect(warnings[0]).toContain("landscape");
   });
@@ -157,7 +206,9 @@ describe("auto-landscape: positive cases", () => {
   test("directive-forced tall block that fills the page gets no centering margin", () => {
     // aspect 0.9 → placed height 9×0.9 = 8.1in > 6.5in box → margin clamps to 0
     const r = applyImagePolicy(
-      img(`src="x" data-gstack-page="landscape" data-gstack-px-width="1000" data-gstack-px-height="900"`),
+      img(
+        `src="x" data-gstack-page="landscape" data-gstack-px-width="1000" data-gstack-px-height="900"`,
+      ),
       OPTS,
     );
     expect(r.hasLandscape).toBe(true);
@@ -165,14 +216,19 @@ describe("auto-landscape: positive cases", () => {
     expect(r.html).not.toContain("margin-top");
   });
   test("page=landscape forces promotion regardless of size", () => {
-    const r = applyImagePolicy(img(`src="x" data-gstack-page="landscape"`), OPTS);
+    const r = applyImagePolicy(
+      img(`src="x" data-gstack-page="landscape"`),
+      OPTS,
+    );
     expect(r.hasLandscape).toBe(true);
     // no intrinsic dims → no centering guess, top placement
     expect(r.html).toContain('<div class="page-wide"><img');
   });
   test("alt hint matches whole words only", () => {
     const r = applyImagePolicy(
-      img(`src="x" alt="photographic" data-gstack-px-width="2400" data-gstack-px-height="1000"`),
+      img(
+        `src="x" alt="photographic" data-gstack-px-width="2400" data-gstack-px-height="1000"`,
+      ),
       OPTS,
     );
     expect(r.hasLandscape).toBe(false); // "graph" inside "photographic" must not match
@@ -184,10 +240,15 @@ describe("auto-landscape: diagram figures", () => {
     `<figure class="diagram" role="img" aria-label="d"${figAttrs}>\n<svg ${svgAttrs}><g/></svg>\n</figure>`;
 
   test("wide diagram via viewBox promotes and centers (provenance automatic, no alt needed)", () => {
-    const r = applyImagePolicy(fig(`width="100%" viewBox="0 0 2050 600"`), OPTS);
+    const r = applyImagePolicy(
+      fig(`width="100%" viewBox="0 0 2050 600"`),
+      OPTS,
+    );
     expect(r.hasLandscape).toBe(true);
     // placed height = 9 × 600/2050 ≈ 2.63in → margin-top = (6.5−2.63)/2 ≈ 1.93in
-    expect(r.html).toContain('<div class="page-wide" style="margin-top: 1.93in"><figure');
+    expect(r.html).toContain(
+      '<div class="page-wide" style="margin-top: 1.93in"><figure',
+    );
   });
   test("normal flowchart stays portrait", () => {
     const r = applyImagePolicy(fig(`width="100%" viewBox="0 0 800 400"`), OPTS);
@@ -195,14 +256,20 @@ describe("auto-landscape: diagram figures", () => {
   });
   test("fence page=portrait vetoes a wide diagram", () => {
     const r = applyImagePolicy(
-      fig(`width="100%" viewBox="0 0 3000 600"`, ` data-gstack-page="portrait"`),
+      fig(
+        `width="100%" viewBox="0 0 3000 600"`,
+        ` data-gstack-page="portrait"`,
+      ),
       OPTS,
     );
     expect(r.hasLandscape).toBe(false);
   });
   test("fence page=landscape forces a small diagram", () => {
     const r = applyImagePolicy(
-      fig(`width="100%" viewBox="0 0 400 300"`, ` data-gstack-page="landscape"`),
+      fig(
+        `width="100%" viewBox="0 0 400 300"`,
+        ` data-gstack-page="landscape"`,
+      ),
       OPTS,
     );
     expect(r.hasLandscape).toBe(true);

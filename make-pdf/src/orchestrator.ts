@@ -58,7 +58,9 @@ class ProgressReporter {
     const ms = Date.now() - start;
     if (this.quiet) return;
     if (this.verbose) {
-      process.stderr.write(`\r\x1b[K${stage} (${ms}ms)${extra ? ` — ${extra}` : ""}\n`);
+      process.stderr.write(
+        `\r\x1b[K${stage} (${ms}ms)${extra ? ` — ${extra}` : ""}\n`,
+      );
     }
   }
   done(extra: string): void {
@@ -126,7 +128,8 @@ export async function generate(opts: GenerateOptions): Promise<string> {
   // The bundle tab is lazy: image-only documents open it only when a raster
   // actually needs print-resolution downscaling (eng-review D4).
   const warn = (msg: string) => {
-    if (!opts.quiet) process.stderr.write(`\r\x1b[K[make-pdf] warning: ${msg}\n`);
+    if (!opts.quiet)
+      process.stderr.write(`\r\x1b[K[make-pdf] warning: ${msg}\n`);
   };
   let renderTab: RenderTab | null = null;
   let hasLandscape = false;
@@ -135,7 +138,9 @@ export async function generate(opts: GenerateOptions): Promise<string> {
     try {
       renderTab = RenderTab.open();
     } catch (err: any) {
-      warn(`diagram-render tab unavailable: ${String(err?.message ?? err).split("\n")[0]}`);
+      warn(
+        `diagram-render tab unavailable: ${String(err?.message ?? err).split("\n")[0]}`,
+      );
       return null;
     }
     return renderTab;
@@ -155,7 +160,7 @@ export async function generate(opts: GenerateOptions): Promise<string> {
           extraction.fences.map((f) => [
             f.token,
             `<figure class="diagram diagram-error" role="img" aria-label="diagram ${f.ordinal} (not rendered)">` +
-            `<figcaption class="diagram-error-title">Diagram not rendered (${f.lang}) — diagram-render bundle unavailable</figcaption></figure>`,
+              `<figcaption class="diagram-error-title">Diagram not rendered (${f.lang}) — diagram-render bundle unavailable</figcaption></figure>`,
           ]),
         );
         finalHtml = substituteSlots(finalHtml, slots);
@@ -187,12 +192,19 @@ export async function generate(opts: GenerateOptions): Promise<string> {
     // DOCX needs rasters, not inline SVG (Word's SVG support is unreliable) —
     // do it while the render tab is still open.
     if (to === "docx") {
-      const needsRaster = /<figure class="diagram"|data:image\/svg\+xml/.test(finalHtml);
+      const needsRaster = /<figure class="diagram"|data:image\/svg\+xml/.test(
+        finalHtml,
+      );
       if (needsRaster) {
         progress.begin("Rasterizing diagrams for DOCX");
         const tab = getRenderTab();
         if (tab) {
-          finalHtml = rasterizeDiagramFigures(finalHtml, tab, contentWidthIn, warn);
+          finalHtml = rasterizeDiagramFigures(
+            finalHtml,
+            tab,
+            contentWidthIn,
+            warn,
+          );
         } else {
           warn("docx: no render tab — diagrams keep their source text form");
         }
@@ -227,9 +239,18 @@ export async function generate(opts: GenerateOptions): Promise<string> {
     if (opts.headerTemplate) printOnly.push("--header-template");
     if (opts.footerTemplate) printOnly.push("--footer-template");
     if (opts.pageSize) printOnly.push("--page-size");
-    if (opts.margins || opts.marginTop || opts.marginRight || opts.marginBottom || opts.marginLeft) printOnly.push("--margins");
+    if (
+      opts.margins ||
+      opts.marginTop ||
+      opts.marginRight ||
+      opts.marginBottom ||
+      opts.marginLeft
+    )
+      printOnly.push("--margins");
     if (printOnly.length > 0) {
-      warn(`docx is content-fidelity: ${printOnly.join(", ")} do not apply to Word output`);
+      warn(
+        `docx is content-fidelity: ${printOnly.join(", ")} do not apply to Word output`,
+      );
     }
     progress.begin("Converting to DOCX");
     const { default: HTMLtoDOCX } = await import("html-to-docx");
@@ -237,11 +258,16 @@ export async function generate(opts: GenerateOptions): Promise<string> {
       title: rendered.meta.title,
       creator: rendered.meta.author || undefined,
     });
-    const bytes: Uint8Array = buf instanceof Uint8Array ? buf : new Uint8Array(await (buf as Blob).arrayBuffer());
+    const bytes: Uint8Array =
+      buf instanceof Uint8Array
+        ? buf
+        : new Uint8Array(await (buf as Blob).arrayBuffer());
     fs.writeFileSync(outputPath, bytes);
     progress.end("Converting to DOCX");
     const kb = Math.round(fs.statSync(outputPath).size / 1024);
-    progress.done(`${rendered.meta.wordCount} words · ${kb}KB · ${outputPath} (content fidelity — layout is Word's)`);
+    progress.done(
+      `${rendered.meta.wordCount} words · ${kb}KB · ${outputPath} (content fidelity — layout is Word's)`,
+    );
     return outputPath;
   }
 
@@ -310,7 +336,11 @@ export async function generate(opts: GenerateOptions): Promise<string> {
       // best-effort; we already exited the main path
     }
     // Cleanup tmp HTML
-    try { fs.unlinkSync(htmlTmp); } catch { /* best-effort */ }
+    try {
+      fs.unlinkSync(htmlTmp);
+    } catch {
+      /* best-effort */
+    }
   }
 
   return outputPath;
@@ -333,13 +363,15 @@ export async function preview(opts: PreviewOptions): Promise<string> {
   // nobody signs off on a preview that lacks what the PDF will have.
   if (!opts.quiet) {
     const fenceCount = extractDiagramFences(markdown).fences.length;
-    const hasLocalImages = /!\[[^\]]*\]\((?!https?:|data:)[^)]+\)/.test(markdown);
+    const hasLocalImages = /!\[[^\]]*\]\((?!https?:|data:)[^)]+\)/.test(
+      markdown,
+    );
     if (fenceCount > 0 || hasLocalImages) {
       process.stderr.write(
         `[make-pdf] preview note: ${fenceCount > 0 ? `${fenceCount} diagram fence(s) shown as code` : ""}` +
-        `${fenceCount > 0 && hasLocalImages ? "; " : ""}` +
-        `${hasLocalImages ? "local images may not resolve from the preview location" : ""}` +
-        ` — \`generate\` renders them fully.\n`,
+          `${fenceCount > 0 && hasLocalImages ? "; " : ""}` +
+          `${hasLocalImages ? "local images may not resolve from the preview location" : ""}` +
+          ` — \`generate\` renders them fully.\n`,
       );
     }
   }
@@ -358,7 +390,10 @@ export async function preview(opts: PreviewOptions): Promise<string> {
   progress.end("Rendering HTML", `${rendered.meta.wordCount} words`);
 
   // Write to a stable path under /tmp so the user can reload in the same tab.
-  const previewPath = path.join(os.tmpdir(), `make-pdf-preview-${deriveSlug(input)}.html`);
+  const previewPath = path.join(
+    os.tmpdir(),
+    `make-pdf-preview-${deriveSlug(input)}.html`,
+  );
   fs.writeFileSync(previewPath, rendered.html, "utf8");
 
   progress.begin("Opening preview");
@@ -383,10 +418,10 @@ function tmpFile(ext: string): string {
 
 function tryOpen(pathOrUrl: string): void {
   const platform = process.platform;
-  const cmd = platform === "darwin" ? "open" :
-              platform === "win32" ? "cmd" :
-              "xdg-open";
-  const args = platform === "win32" ? ["/c", "start", "", pathOrUrl] : [pathOrUrl];
+  const cmd =
+    platform === "darwin" ? "open" : platform === "win32" ? "cmd" : "xdg-open";
+  const args =
+    platform === "win32" ? ["/c", "start", "", pathOrUrl] : [pathOrUrl];
   try {
     const child = spawn(cmd, args, { detached: true, stdio: "ignore" });
     child.unref();

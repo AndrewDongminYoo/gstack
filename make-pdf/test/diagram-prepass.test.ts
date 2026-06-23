@@ -97,7 +97,11 @@ describe("extractDiagramFences", () => {
 
 describe("parseInfoString", () => {
   test("plain language", () => {
-    expect(parseInfoString("mermaid")).toEqual({ lang: "mermaid", render: true, title: undefined });
+    expect(parseInfoString("mermaid")).toEqual({
+      lang: "mermaid",
+      render: true,
+      title: undefined,
+    });
   });
   test("render=false", () => {
     expect(parseInfoString("mermaid render=false").render).toBe(false);
@@ -122,8 +126,12 @@ describe("substituteSlots", () => {
 
 describe("diagnostic + figure blocks", () => {
   const fence = {
-    lang: "mermaid", source: "graph LR\n  A --> B", render: true,
-    token: "t", ordinal: 3, title: undefined,
+    lang: "mermaid",
+    source: "graph LR\n  A --> B",
+    render: true,
+    token: "t",
+    ordinal: 3,
+    title: undefined,
   };
   test("diagnostic block escapes error content and names the lang", () => {
     const block = buildDiagnosticBlock(fence, 'Parse <error> "quoted"');
@@ -139,11 +147,17 @@ describe("diagnostic + figure blocks", () => {
     expect(fig).toContain("<svg></svg>");
   });
   test("figure strips scripts from SVG (sanitizer second layer)", () => {
-    const fig = buildDiagramFigure(fence, "<svg><script>alert(1)</script><g/></svg>");
+    const fig = buildDiagramFigure(
+      fence,
+      "<svg><script>alert(1)</script><g/></svg>",
+    );
     expect(fig).not.toContain("<script>");
   });
   test("title becomes aria-label and caption", () => {
-    const fig = buildDiagramFigure({ ...fence, title: "Auth flow" }, "<svg></svg>");
+    const fig = buildDiagramFigure(
+      { ...fence, title: "Auth flow" },
+      "<svg></svg>",
+    );
     expect(fig).toContain('aria-label="Auth flow"');
     expect(fig).toContain("diagram-caption");
   });
@@ -154,7 +168,10 @@ describe("diagnostic + figure blocks", () => {
   });
   test("slot substitution is immune to $-replacement patterns in labels", () => {
     const slotHtml = `<figure>label says $' and $& here</figure>`;
-    const out = substituteSlots("<p>tok-x</p><p>tail</p>", new Map([["tok-x", slotHtml]]));
+    const out = substituteSlots(
+      "<p>tok-x</p><p>tail</p>",
+      new Map([["tok-x", slotHtml]]),
+    );
     expect(out).toContain("label says $' and $& here");
     expect(out).toContain("<p>tail</p>");
     expect(out).not.toContain("tailtail"); // $' expansion would duplicate the tail
@@ -175,9 +192,12 @@ function tinyPng(w: number, h: number): Buffer {
   const ihdr = Buffer.alloc(13);
   ihdr.writeUInt32BE(w, 0);
   ihdr.writeUInt32BE(h, 4);
-  ihdr[8] = 8; ihdr[9] = 2;
+  ihdr[8] = 8;
+  ihdr[9] = 2;
   const raw = Buffer.concat(
-    Array.from({ length: h }, () => Buffer.concat([Buffer.from([0]), Buffer.alloc(w * 3, 0x80)])),
+    Array.from({ length: h }, () =>
+      Buffer.concat([Buffer.from([0]), Buffer.alloc(w * 3, 0x80)]),
+    ),
   );
   return Buffer.concat([
     Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
@@ -189,30 +209,68 @@ function tinyPng(w: number, h: number): Buffer {
 
 describe("imageDims", () => {
   test("PNG", () => {
-    expect(imageDims(tinyPng(640, 480))).toEqual({ width: 640, height: 480, mime: "image/png" });
+    expect(imageDims(tinyPng(640, 480))).toEqual({
+      width: 640,
+      height: 480,
+      mime: "image/png",
+    });
   });
   test("GIF", () => {
     const b = Buffer.alloc(13);
     b.write("GIF89a", 0, "ascii");
     b.writeUInt16LE(320, 6);
     b.writeUInt16LE(200, 8);
-    expect(imageDims(b)).toEqual({ width: 320, height: 200, mime: "image/gif" });
+    expect(imageDims(b)).toEqual({
+      width: 320,
+      height: 200,
+      mime: "image/gif",
+    });
   });
   test("JPEG (SOF0)", () => {
     const b = Buffer.from([
-      0xff, 0xd8,                                  // SOI
-      0xff, 0xe0, 0x00, 0x04, 0x00, 0x00,          // APP0 len 4
-      0xff, 0xc0, 0x00, 0x0b, 0x08, 0x01, 0x00, 0x02, 0x00, 0x03, 0x00, 0x00, 0x00, // SOF0 h=256 w=512
+      0xff,
+      0xd8, // SOI
+      0xff,
+      0xe0,
+      0x00,
+      0x04,
+      0x00,
+      0x00, // APP0 len 4
+      0xff,
+      0xc0,
+      0x00,
+      0x0b,
+      0x08,
+      0x01,
+      0x00,
+      0x02,
+      0x00,
+      0x03,
+      0x00,
+      0x00,
+      0x00, // SOF0 h=256 w=512
     ]);
-    expect(imageDims(b)).toEqual({ width: 512, height: 256, mime: "image/jpeg" });
+    expect(imageDims(b)).toEqual({
+      width: 512,
+      height: 256,
+      mime: "image/jpeg",
+    });
   });
   test("SVG via width/height attrs", () => {
     const b = Buffer.from('<svg xmlns="x" width="800" height="400"></svg>');
-    expect(imageDims(b)).toEqual({ width: 800, height: 400, mime: "image/svg+xml" });
+    expect(imageDims(b)).toEqual({
+      width: 800,
+      height: 400,
+      mime: "image/svg+xml",
+    });
   });
   test("SVG via viewBox", () => {
     const b = Buffer.from('<svg viewBox="0 0 1200 600"></svg>');
-    expect(imageDims(b)).toEqual({ width: 1200, height: 600, mime: "image/svg+xml" });
+    expect(imageDims(b)).toEqual({
+      width: 1200,
+      height: 600,
+      mime: "image/svg+xml",
+    });
   });
   test("unknown bytes → null", () => {
     expect(imageDims(Buffer.from("definitely not an image, sorry"))).toBeNull();
@@ -226,7 +284,10 @@ describe("content width", () => {
     expect(contentWidthInches({})).toBeCloseTo(6.5);
   });
   test("a4 with 25mm margins", () => {
-    expect(contentWidthInches({ pageSize: "a4", margins: "25mm" })).toBeCloseTo(8.27 - 50 / 25.4, 2);
+    expect(contentWidthInches({ pageSize: "a4", margins: "25mm" })).toBeCloseTo(
+      8.27 - 50 / 25.4,
+      2,
+    );
   });
   test("dimToInches parses pt/cm/mm/px", () => {
     expect(dimToInches("72pt", 1)).toBeCloseTo(1);
@@ -243,7 +304,11 @@ describe("inlineLocalImages", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "prepass-img-"));
   fs.writeFileSync(path.join(dir, "ok.png"), tinyPng(40, 20));
   afterAll(() => {
-    try { fs.rmSync(dir, { recursive: true, force: true }); } catch { /* best-effort */ }
+    try {
+      fs.rmSync(dir, { recursive: true, force: true });
+    } catch {
+      /* best-effort */
+    }
   });
 
   const base = {
@@ -256,7 +321,10 @@ describe("inlineLocalImages", () => {
 
   test("local image becomes a data URI with probed dimensions", () => {
     const warnings: string[] = [];
-    const out = inlineLocalImages(`<img src="ok.png" alt="x">`, { ...base, warn: (m) => warnings.push(m) });
+    const out = inlineLocalImages(`<img src="ok.png" alt="x">`, {
+      ...base,
+      warn: (m) => warnings.push(m),
+    });
     expect(out).toContain("data:image/png;base64,");
     expect(out).toContain('data-gstack-px-width="40"');
     expect(out).toContain('data-gstack-px-height="20"');
@@ -265,7 +333,10 @@ describe("inlineLocalImages", () => {
 
   test("missing image → visible placeholder + warning", () => {
     const warnings: string[] = [];
-    const out = inlineLocalImages(`<img src="nope.png">`, { ...base, warn: (m) => warnings.push(m) });
+    const out = inlineLocalImages(`<img src="nope.png">`, {
+      ...base,
+      warn: (m) => warnings.push(m),
+    });
     expect(out).toContain("image-missing");
     expect(out).toContain("nope.png");
     expect(warnings.length).toBe(1);
@@ -273,7 +344,11 @@ describe("inlineLocalImages", () => {
 
   test("missing image + --strict → StrictModeError", () => {
     expect(() =>
-      inlineLocalImages(`<img src="nope.png">`, { ...base, strict: true, warn: () => {} }),
+      inlineLocalImages(`<img src="nope.png">`, {
+        ...base,
+        strict: true,
+        warn: () => {},
+      }),
     ).toThrow(StrictModeError);
   });
 
@@ -282,8 +357,11 @@ describe("inlineLocalImages", () => {
     // the offline posture must remove the src, not just warn about it.
     const warnings: string[] = [];
     const tag = `<img src="https://example.com/x.png">`;
-    const out = inlineLocalImages(tag, { ...base, warn: (m) => warnings.push(m) });
-    expect(out).not.toContain("https://example.com/x.png\"");
+    const out = inlineLocalImages(tag, {
+      ...base,
+      warn: (m) => warnings.push(m),
+    });
+    expect(out).not.toContain('https://example.com/x.png"');
     expect(out).toContain("remote image blocked");
     expect(warnings[0]).toContain("offline");
   });
@@ -295,10 +373,19 @@ describe("inlineLocalImages", () => {
     try {
       fs.symlinkSync(path.join(outside, "secret.png"), link);
       const warnings: string[] = [];
-      inlineLocalImages(`<img src="innocent.png">`, { ...base, warn: (m) => warnings.push(m) });
-      expect(warnings.some((w) => w.includes("OUTSIDE the input directory"))).toBe(true);
+      inlineLocalImages(`<img src="innocent.png">`, {
+        ...base,
+        warn: (m) => warnings.push(m),
+      });
+      expect(
+        warnings.some((w) => w.includes("OUTSIDE the input directory")),
+      ).toBe(true);
     } finally {
-      try { fs.unlinkSync(link); } catch { /* ignore */ }
+      try {
+        fs.unlinkSync(link);
+      } catch {
+        /* ignore */
+      }
       fs.rmSync(outside, { recursive: true, force: true });
     }
   });
@@ -307,34 +394,51 @@ describe("inlineLocalImages", () => {
     // Directory masquerading as an image — not a regular file.
     fs.mkdirSync(path.join(dir, "dir.png"), { recursive: true });
     const warnings: string[] = [];
-    const out = inlineLocalImages(`<img src="dir.png">`, { ...base, warn: (m) => warnings.push(m) });
+    const out = inlineLocalImages(`<img src="dir.png">`, {
+      ...base,
+      warn: (m) => warnings.push(m),
+    });
     expect(out).toContain("image-missing");
     expect(warnings.some((w) => w.includes("not a regular file"))).toBe(true);
   });
 
   test("malformed percent-encoding degrades to missing-image, never throws", () => {
     const warnings: string[] = [];
-    const out = inlineLocalImages(`<img src="foo%zz.png">`, { ...base, warn: (m) => warnings.push(m) });
+    const out = inlineLocalImages(`<img src="foo%zz.png">`, {
+      ...base,
+      warn: (m) => warnings.push(m),
+    });
     expect(out).toContain("image-missing");
   });
 
   test("remote image + --allow-network passes silently", () => {
     const warnings: string[] = [];
     const tag = `<img src="https://example.com/x.png">`;
-    const out = inlineLocalImages(tag, { ...base, allowNetwork: true, warn: (m) => warnings.push(m) });
+    const out = inlineLocalImages(tag, {
+      ...base,
+      allowNetwork: true,
+      warn: (m) => warnings.push(m),
+    });
     expect(out).toBe(tag);
     expect(warnings).toHaveLength(0);
   });
 
   test("remote image + --strict → StrictModeError", () => {
     expect(() =>
-      inlineLocalImages(`<img src="https://example.com/x.png">`, { ...base, strict: true, warn: () => {} }),
+      inlineLocalImages(`<img src="https://example.com/x.png">`, {
+        ...base,
+        strict: true,
+        warn: () => {},
+      }),
     ).toThrow(StrictModeError);
   });
 
   test("existing data URI gets dimension annotations only", () => {
     const uri = `data:image/png;base64,${tinyPng(33, 44).toString("base64")}`;
-    const out = inlineLocalImages(`<img src="${uri}">`, { ...base, warn: () => {} });
+    const out = inlineLocalImages(`<img src="${uri}">`, {
+      ...base,
+      warn: () => {},
+    });
     expect(out).toContain('data-gstack-px-width="33"');
     expect(out).toContain('data-gstack-px-height="44"');
   });
@@ -344,11 +448,17 @@ describe("inlineLocalImages", () => {
     fs.writeFileSync(path.join(outside, "ext.png"), tinyPng(10, 10));
     try {
       const warnings: string[] = [];
-      const out = inlineLocalImages(`<img src="${path.join(outside, "ext.png")}">`, {
-        ...base, warn: (m) => warnings.push(m),
-      });
+      const out = inlineLocalImages(
+        `<img src="${path.join(outside, "ext.png")}">`,
+        {
+          ...base,
+          warn: (m) => warnings.push(m),
+        },
+      );
       expect(out).toContain("data:image/png;base64,");
-      expect(warnings.some((w) => w.includes("OUTSIDE the input directory"))).toBe(true);
+      expect(
+        warnings.some((w) => w.includes("OUTSIDE the input directory")),
+      ).toBe(true);
     } finally {
       fs.rmSync(outside, { recursive: true, force: true });
     }
@@ -360,7 +470,9 @@ describe("inlineLocalImages", () => {
     try {
       expect(() =>
         inlineLocalImages(`<img src="${path.join(outside, "ext.png")}">`, {
-          ...base, strict: true, warn: () => {},
+          ...base,
+          strict: true,
+          warn: () => {},
         }),
       ).toThrow(StrictModeError);
     } finally {
@@ -373,7 +485,10 @@ describe("inlineLocalImages", () => {
     // local-path branch (and the missing-file placeholder), never silently
     // pass through as an unknown URL.
     const warnings: string[] = [];
-    const out = inlineLocalImages(`<img src="C:/missing/x.png">`, { ...base, warn: (m) => warnings.push(m) });
+    const out = inlineLocalImages(`<img src="C:/missing/x.png">`, {
+      ...base,
+      warn: (m) => warnings.push(m),
+    });
     expect(out).toContain("image-missing");
     // Two warnings: it's out-of-tree (resolved outside inputDir) AND missing.
     expect(warnings.some((w) => w.includes("image not found"))).toBe(true);
@@ -397,7 +512,10 @@ describe("inlineLocalImages", () => {
     // 6000px-wide PNG header (body irrelevant for probing; file must exist)
     fs.writeFileSync(path.join(dir, "wide.png"), tinyPng(6000, 100));
     const warnings: string[] = [];
-    const out = inlineLocalImages(`<img src="wide.png">`, { ...base, warn: (m) => warnings.push(m) });
+    const out = inlineLocalImages(`<img src="wide.png">`, {
+      ...base,
+      warn: (m) => warnings.push(m),
+    });
     expect(out).toContain('data-gstack-px-width="6000"');
   });
 });

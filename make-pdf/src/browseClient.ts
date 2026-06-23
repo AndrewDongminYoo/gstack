@@ -32,7 +32,7 @@ import * as crypto from "node:crypto";
 import { BrowseClientError } from "./types";
 
 export interface LoadHtmlOptions {
-  html: string;                   // raw HTML string
+  html: string; // raw HTML string
   waitUntil?: "load" | "domcontentloaded" | "networkidle";
   tabId: number;
 }
@@ -59,7 +59,7 @@ export interface PdfOptions {
 
 export interface JsOptions {
   tabId: number;
-  expression: string;             // JS expression to evaluate
+  expression: string; // JS expression to evaluate
 }
 
 /**
@@ -70,11 +70,14 @@ export interface JsOptions {
  * Returns null if nothing resolves; callers degrade with a typed error rather
  * than throwing here.
  */
-function resolveOverride(value: string | undefined, env: NodeJS.ProcessEnv): string | null {
+function resolveOverride(
+  value: string | undefined,
+  env: NodeJS.ProcessEnv,
+): string | null {
   if (!value?.trim()) return null;
-  const trimmed = value.trim().replace(/^"(.*)"$/, '$1');
+  const trimmed = value.trim().replace(/^"(.*)"$/, "$1");
   if (path.isAbsolute(trimmed)) return findExecutable(trimmed);
-  const PATH = env.PATH ?? env.Path ?? '';
+  const PATH = env.PATH ?? env.Path ?? "";
   return Bun.which(trimmed, { PATH }) ?? null;
 }
 
@@ -121,14 +124,17 @@ export function resolveBrowseBin(env: NodeJS.ProcessEnv = process.env): string {
 
   // 4: global install.
   const home = os.homedir();
-  const globalPath = path.join(home, ".claude/skills/gstack/browse/dist/browse");
+  const globalPath = path.join(
+    home,
+    ".claude/skills/gstack/browse/dist/browse",
+  );
   const globalFound = findExecutable(globalPath);
   if (globalFound) return globalFound;
 
   // 5: PATH lookup via Bun.which — handles Windows PATHEXT natively (no `which`
   // dependency on cmd.exe / PowerShell, no `where`-vs-`which` branch).
-  const PATH = env.PATH ?? env.Path ?? '';
-  const onPath = Bun.which('browse', { PATH });
+  const PATH = env.PATH ?? env.Path ?? "";
+  const onPath = Bun.which("browse", { PATH });
   if (onPath) return onPath;
 
   throw new BrowseClientError(
@@ -174,7 +180,7 @@ function runBrowse(args: string[]): string {
   try {
     return execFileSync(bin, args, {
       encoding: "utf8",
-      maxBuffer: 16 * 1024 * 1024,    // 16MB; tab content can be large
+      maxBuffer: 16 * 1024 * 1024, // 16MB; tab content can be large
       stdio: ["ignore", "pipe", "pipe"],
       // A wedged daemon (or a hostile mermaid source spinning the renderer)
       // must fail the run, not hang it forever.
@@ -182,9 +188,10 @@ function runBrowse(args: string[]): string {
     });
   } catch (err: any) {
     const exitCode = typeof err.status === "number" ? err.status : 1;
-    const stderr = typeof err.stderr === "string"
-      ? err.stderr
-      : (err.stderr?.toString() ?? "");
+    const stderr =
+      typeof err.stderr === "string"
+        ? err.stderr
+        : (err.stderr?.toString() ?? "");
     throw new BrowseClientError(exitCode, args[0] || "unknown", stderr);
   }
 }
@@ -202,17 +209,25 @@ function runBrowse(args: string[]): string {
 const PAYLOAD_TMP_DIR = process.platform === "win32" ? os.tmpdir() : "/tmp";
 
 function writePayloadFile(payload: Record<string, unknown>): string {
-  const hash = crypto.createHash("sha256")
+  const hash = crypto
+    .createHash("sha256")
     .update(JSON.stringify(payload))
     .digest("hex")
     .slice(0, 12);
-  const tmpPath = path.join(PAYLOAD_TMP_DIR, `make-pdf-browse-${process.pid}-${hash}.json`);
+  const tmpPath = path.join(
+    PAYLOAD_TMP_DIR,
+    `make-pdf-browse-${process.pid}-${hash}.json`,
+  );
   fs.writeFileSync(tmpPath, JSON.stringify(payload), "utf8");
   return tmpPath;
 }
 
 function cleanupPayloadFile(p: string): void {
-  try { fs.unlinkSync(p); } catch { /* best-effort */ }
+  try {
+    fs.unlinkSync(p);
+  } catch {
+    /* best-effort */
+  }
 }
 
 // ─── Public API ─────────────────────────────────────────────────
@@ -236,7 +251,12 @@ export function newtab(url?: string): number {
   }
   const out = runBrowse(args);
   const m = out.match(/tab\s+(\d+)/i);
-  if (!m) throw new BrowseClientError(1, "newtab", `could not parse tab id from: ${out}`);
+  if (!m)
+    throw new BrowseClientError(
+      1,
+      "newtab",
+      `could not parse tab id from: ${out}`,
+    );
   return parseInt(m[1], 10);
 }
 
@@ -263,8 +283,10 @@ export function loadHtml(opts: LoadHtmlOptions): void {
   try {
     runBrowse([
       "load-html",
-      "--from-file", payloadFile,
-      "--tab-id", String(opts.tabId),
+      "--from-file",
+      payloadFile,
+      "--tab-id",
+      String(opts.tabId),
     ]);
   } finally {
     cleanupPayloadFile(payloadFile);
@@ -276,7 +298,11 @@ export function loadHtml(opts: LoadHtmlOptions): void {
  * by path. Cheaper than loadHtml for large pages — no JSON payload round-trip;
  * browse reads the file directly (diagram-render bundle is ~9MB).
  */
-export function loadHtmlFile(opts: { file: string; tabId: number; waitUntil?: "load" | "domcontentloaded" | "networkidle" }): void {
+export function loadHtmlFile(opts: {
+  file: string;
+  tabId: number;
+  waitUntil?: "load" | "domcontentloaded" | "networkidle";
+}): void {
   const args = ["load-html", opts.file, "--tab-id", String(opts.tabId)];
   if (opts.waitUntil) args.push("--wait-until", opts.waitUntil);
   runBrowse(args);
@@ -289,7 +315,8 @@ export function js(opts: JsOptions): string {
   return runBrowse([
     "js",
     opts.expression,
-    "--tab-id", String(opts.tabId),
+    "--tab-id",
+    String(opts.tabId),
   ]).trim();
 }
 
@@ -299,11 +326,7 @@ export function js(opts: JsOptions): string {
  * under browse's safe dirs (/tmp or cwd).
  */
 export function evalFile(opts: { file: string; tabId: number }): string {
-  return runBrowse([
-    "eval",
-    opts.file,
-    "--tab-id", String(opts.tabId),
-  ]).trim();
+  return runBrowse(["eval", opts.file, "--tab-id", String(opts.tabId)]).trim();
 }
 
 /**
@@ -376,25 +399,43 @@ function optionsToPdfFlags(opts: PdfOptions): Record<string, unknown> {
   if (opts.marginRight) out.marginRight = opts.marginRight;
   if (opts.marginBottom) out.marginBottom = opts.marginBottom;
   if (opts.marginLeft) out.marginLeft = opts.marginLeft;
-  if (opts.headerTemplate !== undefined) out.headerTemplate = opts.headerTemplate;
-  if (opts.footerTemplate !== undefined) out.footerTemplate = opts.footerTemplate;
+  if (opts.headerTemplate !== undefined)
+    out.headerTemplate = opts.headerTemplate;
+  if (opts.footerTemplate !== undefined)
+    out.footerTemplate = opts.footerTemplate;
   if (opts.pageNumbers !== undefined) out.pageNumbers = opts.pageNumbers;
   if (opts.tagged !== undefined) out.tagged = opts.tagged;
   if (opts.outline !== undefined) out.outline = opts.outline;
-  if (opts.printBackground !== undefined) out.printBackground = opts.printBackground;
-  if (opts.preferCSSPageSize !== undefined) out.preferCSSPageSize = opts.preferCSSPageSize;
+  if (opts.printBackground !== undefined)
+    out.printBackground = opts.printBackground;
+  if (opts.preferCSSPageSize !== undefined)
+    out.preferCSSPageSize = opts.preferCSSPageSize;
   if (opts.toc !== undefined) out.toc = opts.toc;
   return out;
 }
 
 function pushFlagsFromOptions(args: string[], opts: PdfOptions): void {
-  if (opts.format) { args.push("--format", opts.format); }
-  if (opts.width) { args.push("--width", opts.width); }
-  if (opts.height) { args.push("--height", opts.height); }
-  if (opts.marginTop) { args.push("--margin-top", opts.marginTop); }
-  if (opts.marginRight) { args.push("--margin-right", opts.marginRight); }
-  if (opts.marginBottom) { args.push("--margin-bottom", opts.marginBottom); }
-  if (opts.marginLeft) { args.push("--margin-left", opts.marginLeft); }
+  if (opts.format) {
+    args.push("--format", opts.format);
+  }
+  if (opts.width) {
+    args.push("--width", opts.width);
+  }
+  if (opts.height) {
+    args.push("--height", opts.height);
+  }
+  if (opts.marginTop) {
+    args.push("--margin-top", opts.marginTop);
+  }
+  if (opts.marginRight) {
+    args.push("--margin-right", opts.marginRight);
+  }
+  if (opts.marginBottom) {
+    args.push("--margin-bottom", opts.marginBottom);
+  }
+  if (opts.marginLeft) {
+    args.push("--margin-left", opts.marginLeft);
+  }
   if (opts.headerTemplate !== undefined) {
     args.push("--header-template", opts.headerTemplate);
   }

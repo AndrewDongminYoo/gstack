@@ -73,7 +73,8 @@ export interface PrintCssOptions {
 export function printCss(opts: PrintCssOptions = {}): string {
   const size = opts.pageSize ?? "letter";
   const margin = opts.margins ?? "1in";
-  const hasWatermark = typeof opts.watermark === "string" && opts.watermark.length > 0;
+  const hasWatermark =
+    typeof opts.watermark === "string" && opts.watermark.length > 0;
 
   return [
     pageRules(size, margin, opts),
@@ -91,10 +92,16 @@ export function printCss(opts: PrintCssOptions = {}): string {
     footnoteRules(),
     hasWatermark ? watermarkRules() : "",
     breakAvoidRules(),
-  ].filter(Boolean).join("\n\n");
+  ]
+    .filter(Boolean)
+    .join("\n\n");
 }
 
-function pageRules(size: string, margin: string, opts: PrintCssOptions): string {
+function pageRules(
+  size: string,
+  margin: string,
+  opts: PrintCssOptions,
+): string {
   const runningHeader = escapeCssString(opts.runningHeader ?? "");
   const showConfidential = opts.confidential !== false;
   const showPageNumbers = opts.pageNumbers !== false;
@@ -147,7 +154,9 @@ function pageRules(size: string, margin: string, opts: PrintCssOptions): string 
     // and a directive-forced small image is the user's explicit call.
     `.page-wide img, .page-wide svg { width: 100%; height: auto; max-width: none; }`,
     `.page-wide figure.diagram > svg { max-width: none; }`,
-  ].filter(line => line !== "").join("\n");
+  ]
+    .filter((line) => line !== "")
+    .join("\n");
 }
 
 /**
@@ -448,5 +457,5 @@ function breakAvoidRules(): string {
 }
 
 function escapeCssString(s: string): string {
-  return s.replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
+  return s.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
 }

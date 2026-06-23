@@ -115,8 +115,12 @@ export function extractDiagramFences(markdown: string): FenceExtraction {
 
   let i = 0;
   let openFence: {
-    char: string; len: number; indent: number; info: string;
-    rawOpener: string; body: string[];
+    char: string;
+    len: number;
+    indent: number;
+    info: string;
+    rawOpener: string;
+    body: string[];
   } | null = null;
   let ordinal = 0;
 
@@ -125,9 +129,18 @@ export function extractDiagramFences(markdown: string): FenceExtraction {
 
     if (openFence) {
       const close = matchFenceLine(line);
-      if (close && close.char === openFence.char && close.len >= openFence.len && close.info === "") {
+      if (
+        close &&
+        close.char === openFence.char &&
+        close.len >= openFence.len &&
+        close.info === ""
+      ) {
         const info = parseInfoString(openFence.info);
-        if (DIAGRAM_LANGS.has(info.lang) && info.render && openFence.indent === 0) {
+        if (
+          DIAGRAM_LANGS.has(info.lang) &&
+          info.render &&
+          openFence.indent === 0
+        ) {
           ordinal++;
           const token = `gstack-diagram-slot-${runId}-${ordinal}`;
           fences.push({
@@ -172,7 +185,13 @@ export function extractDiagramFences(markdown: string): FenceExtraction {
         const close = matchFenceLine(l);
         out.push(l);
         i++;
-        if (close && close.char === open.char && close.len >= open.len && close.info === "") break;
+        if (
+          close &&
+          close.char === open.char &&
+          close.len >= open.len &&
+          close.info === ""
+        )
+          break;
       }
       continue;
     }
@@ -190,10 +209,17 @@ export function extractDiagramFences(markdown: string): FenceExtraction {
   return { markdown: out.join("\n"), fences };
 }
 
-function matchFenceLine(line: string): { char: string; len: number; indent: number; info: string } | null {
+function matchFenceLine(
+  line: string,
+): { char: string; len: number; indent: number; info: string } | null {
   const m = line.match(/^( {0,3})(`{3,}|~{3,})\s*(.*)$/);
   if (!m) return null;
-  return { indent: m[1].length, char: m[2][0], len: m[2].length, info: m[3].trim() };
+  return {
+    indent: m[1].length,
+    char: m[2][0],
+    len: m[2].length,
+    info: m[3].trim(),
+  };
 }
 
 /** Remove a render=false flag from a raw opener line, preserving everything else. */
@@ -204,14 +230,21 @@ function stripRenderFalse(rawOpener: string): string {
 /** Parse a fence info string: `mermaid`, `mermaid render=false`,
  *  `mermaid title="Auth flow"`, `mermaid page=landscape`. */
 export function parseInfoString(info: string): {
-  lang: string; render: boolean; title?: string; page?: "landscape" | "portrait";
+  lang: string;
+  render: boolean;
+  title?: string;
+  page?: "landscape" | "portrait";
 } {
   const lang = (info.match(/^\S+/)?.[0] ?? "").toLowerCase();
   const render = !/\brender\s*=\s*false\b/i.test(info);
-  const title = info.match(/\btitle\s*=\s*"([^"]*)"/i)?.[1]
-    ?? info.match(/\btitle\s*=\s*'([^']*)'/i)?.[1];
-  const pageRaw = info.match(/\bpage\s*=\s*(landscape|portrait)\b/i)?.[1]?.toLowerCase();
-  const page = pageRaw === "landscape" || pageRaw === "portrait" ? pageRaw : undefined;
+  const title =
+    info.match(/\btitle\s*=\s*"([^"]*)"/i)?.[1] ??
+    info.match(/\btitle\s*=\s*'([^']*)'/i)?.[1];
+  const pageRaw = info
+    .match(/\bpage\s*=\s*(landscape|portrait)\b/i)?.[1]
+    ?.toLowerCase();
+  const page =
+    pageRaw === "landscape" || pageRaw === "portrait" ? pageRaw : undefined;
   return { lang, render, title, page };
 }
 
@@ -222,7 +255,10 @@ export function parseInfoString(info: string): {
  * marked wraps the bare token line in <p>…</p>; replace the wrapper too so
  * the figure isn't nested inside a paragraph.
  */
-export function substituteSlots(html: string, slots: Map<string, string>): string {
+export function substituteSlots(
+  html: string,
+  slots: Map<string, string>,
+): string {
   let s = html;
   for (const [token, slotHtml] of slots) {
     // Function replacement is load-bearing: slot HTML carries user/LLM-authored
@@ -240,7 +276,10 @@ export function substituteSlots(html: string, slots: Map<string, string>): strin
  * (eng-review: explicit error blocks). Sanitizer-safe: all dynamic content is
  * HTML-escaped.
  */
-export function buildDiagnosticBlock(fence: DiagramFence, errorMessage: string): string {
+export function buildDiagnosticBlock(
+  fence: DiagramFence,
+  errorMessage: string,
+): string {
   const excerpt = fence.source.split("\n").slice(0, 8).join("\n");
   const truncated = fence.source.split("\n").length > 8 ? "\n…" : "";
   return [
@@ -314,15 +353,26 @@ export class RenderTab {
   static open(): RenderTab {
     const bundleSrc = resolveBundlePath();
     const html = fs.readFileSync(bundleSrc);
-    const sha = crypto.createHash("sha256").update(html).digest("hex").slice(0, 16);
-    const staged = path.join(PAYLOAD_TMP_DIR, `gstack-diagram-render-${sha}.html`);
+    const sha = crypto
+      .createHash("sha256")
+      .update(html)
+      .digest("hex")
+      .slice(0, 16);
+    const staged = path.join(
+      PAYLOAD_TMP_DIR,
+      `gstack-diagram-render-${sha}.html`,
+    );
     // Never trust an existing file at the predictable shared-/tmp name: verify
     // its content hash and re-stage on mismatch (a pre-planted file would
     // otherwise be loaded into the render tab as the bundle).
     let needsWrite = true;
     if (fs.existsSync(staged)) {
       try {
-        const existing = crypto.createHash("sha256").update(fs.readFileSync(staged)).digest("hex").slice(0, 16);
+        const existing = crypto
+          .createHash("sha256")
+          .update(fs.readFileSync(staged))
+          .digest("hex")
+          .slice(0, 16);
         needsWrite = existing !== sha;
       } catch {
         needsWrite = true;
@@ -335,7 +385,11 @@ export class RenderTab {
       try {
         fs.renameSync(tmp, staged);
       } catch (renameErr) {
-        try { fs.unlinkSync(tmp); } catch { /* best-effort tmp cleanup */ }
+        try {
+          fs.unlinkSync(tmp);
+        } catch {
+          /* best-effort tmp cleanup */
+        }
         // Only swallow the rename failure when the surviving file HASHES to
         // the expected bundle (a concurrent writer won an OS-level race).
         // Sticky-bit /tmp makes rename-over-foreign-file fail EPERM — if the
@@ -343,9 +397,15 @@ export class RenderTab {
         // ride through the exact check added to stop it.
         let survivorOk = false;
         try {
-          const survivor = crypto.createHash("sha256").update(fs.readFileSync(staged)).digest("hex").slice(0, 16);
+          const survivor = crypto
+            .createHash("sha256")
+            .update(fs.readFileSync(staged))
+            .digest("hex")
+            .slice(0, 16);
           survivorOk = survivor === sha;
-        } catch { /* unreadable survivor = not ok */ }
+        } catch {
+          /* unreadable survivor = not ok */
+        }
         if (!survivorOk) throw renameErr;
       }
     }
@@ -357,16 +417,20 @@ export class RenderTab {
 
   /** (Re)load the bundle page — also the reset path after a render error. */
   loadBundle(): void {
-    browseClient.loadHtmlFile({ file: this.stagedBundlePath, tabId: this.tabId });
+    browseClient.loadHtmlFile({
+      file: this.stagedBundlePath,
+      tabId: this.tabId,
+    });
     const ready = browseClient.waitForExpression({
-      expression: "document.getElementById('status') !== null && document.getElementById('status').textContent === 'ready'",
+      expression:
+        "document.getElementById('status') !== null && document.getElementById('status').textContent === 'ready'",
       tabId: this.tabId,
       timeoutMs: READY_TIMEOUT_MS,
     });
     if (!ready) {
       throw new Error(
         "diagram-render bundle did not become ready in the browse tab " +
-        `(${READY_TIMEOUT_MS}ms). Check \`browse js "window.__errors"\` on tab ${this.tabId}.`,
+          `(${READY_TIMEOUT_MS}ms). Check \`browse js "window.__errors"\` on tab ${this.tabId}.`,
       );
     }
   }
@@ -385,7 +449,9 @@ export class RenderTab {
     const result = this.js(expression);
     if (result.startsWith("OK:")) return result.slice(3);
     if (result.startsWith("ERR:")) throw new RenderCallError(result.slice(4));
-    throw new RenderCallError(`unexpected bundle result: ${result.slice(0, 200)}`);
+    throw new RenderCallError(
+      `unexpected bundle result: ${result.slice(0, 200)}`,
+    );
   }
 
   private js(expression: string): string {
@@ -411,7 +477,11 @@ export class RenderTab {
     try {
       return browseClient.evalFile({ file, tabId: this.tabId });
     } finally {
-      try { fs.unlinkSync(file); } catch { /* best-effort tmp cleanup */ }
+      try {
+        fs.unlinkSync(file);
+      } catch {
+        /* best-effort tmp cleanup */
+      }
     }
   }
 
@@ -432,25 +502,36 @@ export class RenderCallError extends Error {
 }
 
 /** Resolve dist/diagram-render.html: env override → repo-relative (dev) → global install. */
-export function resolveBundlePath(env: NodeJS.ProcessEnv = process.env): string {
+export function resolveBundlePath(
+  env: NodeJS.ProcessEnv = process.env,
+): string {
   const candidates = [
     env.GSTACK_DIAGRAM_BUNDLE,
     // dev: make-pdf/src/* → repo root lib/. (In a compiled binary this is the
     // virtual /$bunfs/root and simply never exists — harmless.)
-    path.resolve(import.meta.dir, "../../lib/diagram-render/dist/diagram-render.html"),
+    path.resolve(
+      import.meta.dir,
+      "../../lib/diagram-render/dist/diagram-render.html",
+    ),
     // compiled binary at <root>/make-pdf/dist/pdf → <root>/lib/… — same shape
     // in the repo and in the ~/.claude/skills/gstack global install. argv[0]
     // is the literal string "bun" in compiled binaries; execPath is real.
-    path.resolve(path.dirname(process.execPath), "../../lib/diagram-render/dist/diagram-render.html"),
-    path.join(os.homedir(), ".claude/skills/gstack/lib/diagram-render/dist/diagram-render.html"),
+    path.resolve(
+      path.dirname(process.execPath),
+      "../../lib/diagram-render/dist/diagram-render.html",
+    ),
+    path.join(
+      os.homedir(),
+      ".claude/skills/gstack/lib/diagram-render/dist/diagram-render.html",
+    ),
   ].filter((p): p is string => !!p);
   for (const p of candidates) {
     if (fs.existsSync(p)) return p;
   }
   throw new Error(
     "diagram-render bundle not found. Tried:\n" +
-    candidates.map((c) => `  - ${c}`).join("\n") +
-    "\nRun `bun run build:diagram-render` (repo) or re-run ./setup (install).",
+      candidates.map((c) => `  - ${c}`).join("\n") +
+      "\nRun `bun run build:diagram-render` (repo) or re-run ./setup (install).",
   );
 }
 
@@ -471,7 +552,11 @@ export function renderFenceSlots(
     try {
       let svg: string;
       if (fence.lang === "mermaid") {
-        svg = tab.call("__renderMermaid", `mermaid-fence-${fence.ordinal}`, fence.source);
+        svg = tab.call(
+          "__renderMermaid",
+          `mermaid-fence-${fence.ordinal}`,
+          fence.source,
+        );
       } else {
         JSON.parse(fence.source); // fail fast with a JSON diagnostic, not a bundle stack
         svg = tab.call("__excalidrawToSvg", fence.source);
@@ -479,13 +564,17 @@ export function renderFenceSlots(
       slots.set(fence.token, buildDiagramFigure(fence, svg));
     } catch (err: any) {
       const msg = err?.message ?? String(err);
-      warn(`diagram ${fence.ordinal} (${fence.lang}) failed to render: ${firstLine(msg)}`);
+      warn(
+        `diagram ${fence.ordinal} (${fence.lang}) failed to render: ${firstLine(msg)}`,
+      );
       slots.set(fence.token, buildDiagnosticBlock(fence, msg));
       // Reset contract: a poisoned page must not corrupt the next fence.
       try {
         tab.loadBundle();
       } catch (reloadErr: any) {
-        warn(`bundle reload after render error failed: ${firstLine(reloadErr?.message ?? String(reloadErr))}`);
+        warn(
+          `bundle reload after render error failed: ${firstLine(reloadErr?.message ?? String(reloadErr))}`,
+        );
       }
     }
   }
@@ -514,13 +603,16 @@ export function rasterizeDiagramFigures(
     (figure) => {
       const svgMatch = figure.match(/<svg\b[\s\S]*<\/svg>/i);
       if (!svgMatch) return figure;
-      const label = figure.match(/\baria-label\s*=\s*"([^"]*)"/i)?.[1] ?? "diagram";
+      const label =
+        figure.match(/\baria-label\s*=\s*"([^"]*)"/i)?.[1] ?? "diagram";
       try {
         const png = tab.call("__rasterize", svgMatch[0], targetPx);
         return `<p><img src="${png}" alt="${label}"></p>`;
       } catch (err: any) {
         const reason = firstLine(err?.message ?? String(err));
-        warn(`docx: diagram rasterization failed (${reason}); embedding source text instead`);
+        warn(
+          `docx: diagram rasterization failed (${reason}); embedding source text instead`,
+        );
         // The converter drops <figure>/<svg> entirely, so returning the figure
         // would make the diagram vanish without a trace — the exact invisible
         // failure the diagnostic contract forbids. Surface the source.
@@ -545,7 +637,9 @@ export function rasterizeDiagramFigures(
       // Function replacement: data URIs can contain $-patterns.
       return tag.replace(SRC_RE, () => `src="${png}"`);
     } catch (err: any) {
-      warn(`docx: svg image rasterization failed (${firstLine(err?.message ?? String(err))})`);
+      warn(
+        `docx: svg image rasterization failed (${firstLine(err?.message ?? String(err))})`,
+      );
       return tag;
     }
   });
@@ -562,7 +656,9 @@ export function convertDiagnosticsForDocx(html: string): string {
   return html.replace(
     /<figure class="diagram diagram-error"[^>]*>([\s\S]*?)<\/figure>/gi,
     (_full, body: string) => {
-      const title = body.match(/<figcaption[^>]*>([\s\S]*?)<\/figcaption>/i)?.[1] ?? "Diagram failed to render";
+      const title =
+        body.match(/<figcaption[^>]*>([\s\S]*?)<\/figcaption>/i)?.[1] ??
+        "Diagram failed to render";
       const detail = body.match(/<pre[^>]*>([\s\S]*?)<\/pre>/i)?.[1] ?? "";
       return `<p><strong>${title}</strong></p>\n<pre>${detail}</pre>`;
     },
@@ -581,7 +677,10 @@ const SRC_RE = /\bsrc\s*=\s*("([^"]*)"|'([^']*)')/i;
  * tab. Missing files become visible placeholders (or throw under --strict);
  * remote URLs warn (offline posture) unless --allow-network.
  */
-export function inlineLocalImages(html: string, opts: PrepassImageOptions): string {
+export function inlineLocalImages(
+  html: string,
+  opts: PrepassImageOptions,
+): string {
   const maxPx = Math.round(opts.contentWidthIn * PRINT_DPI * DOWNSCALE_FACTOR);
   const targetPx = Math.round(opts.contentWidthIn * PRINT_DPI);
   // An image referenced N times is read/probed/downscaled once; the same data
@@ -604,7 +703,10 @@ export function inlineLocalImages(html: string, opts: PrepassImageOptions): stri
       if (opts.allowNetwork && /^https?:/i.test(src)) return tag;
       if (/^https?:/i.test(src)) {
         const msg = `remote image blocked (offline posture): ${src}`;
-        if (opts.strict) throw new StrictModeError(msg + " — re-run without --strict or pass --allow-network");
+        if (opts.strict)
+          throw new StrictModeError(
+            msg + " — re-run without --strict or pass --allow-network",
+          );
         opts.warn(msg);
         // Leaving the tag would make Chromium fetch it at print time anyway —
         // the warn would be a lie. Replace with a visible placeholder.
@@ -619,7 +721,9 @@ export function inlineLocalImages(html: string, opts: PrepassImageOptions): stri
     let decodedSrc = src;
     try {
       decodedSrc = decodeURIComponent(src);
-    } catch { /* keep raw src */ }
+    } catch {
+      /* keep raw src */
+    }
 
     const filePath = src.startsWith("file:")
       ? fileURLToPath(src)
@@ -648,7 +752,10 @@ export function inlineLocalImages(html: string, opts: PrepassImageOptions): stri
     const realFilePath = safeRealpath(filePath);
     if (!realFilePath.startsWith(inputRoot)) {
       const msg = `image resolves OUTSIDE the input directory: ${src} → ${realFilePath}`;
-      if (opts.strict) throw new StrictModeError(msg + " — move it under the markdown's directory or drop --strict");
+      if (opts.strict)
+        throw new StrictModeError(
+          msg + " — move it under the markdown's directory or drop --strict",
+        );
       opts.warn(msg);
     }
 
@@ -689,13 +796,19 @@ export function inlineLocalImages(html: string, opts: PrepassImageOptions): stri
           const scaledB64 = scaled.replace(/^data:[^,]*,/, "");
           opts.warn(
             `downscaled ${path.basename(filePath)} ${dims.width}px → ${targetPx}px ` +
-            `(print is ${PRINT_DPI}dpi; original exceeds ${maxPx}px content-box ceiling)`,
+              `(print is ${PRINT_DPI}dpi; original exceeds ${maxPx}px content-box ceiling)`,
           );
           buf = Buffer.from(scaledB64, "base64");
           mime = scaled.slice(5, scaled.indexOf(";"));
-          dims = { ...dims, height: Math.round((dims.height * targetPx) / dims.width), width: targetPx };
+          dims = {
+            ...dims,
+            height: Math.round((dims.height * targetPx) / dims.width),
+            width: targetPx,
+          };
         } catch (err: any) {
-          opts.warn(`downscale failed for ${src}, inlining at full size: ${firstLine(err?.message ?? String(err))}`);
+          opts.warn(
+            `downscale failed for ${src}, inlining at full size: ${firstLine(err?.message ?? String(err))}`,
+          );
         }
       }
     }
@@ -710,7 +823,10 @@ export function inlineLocalImages(html: string, opts: PrepassImageOptions): stri
 }
 
 /** Apply a memoized inline result to an img tag. */
-function rewriteImgTag(tag: string, entry: { dataUri: string; attrs: string }): string {
+function rewriteImgTag(
+  tag: string,
+  entry: { dataUri: string; attrs: string },
+): string {
   // Function replacement: data URIs are user-content-derived; string-form
   // replace() would expand $-patterns inside them.
   let out = tag.replace(SRC_RE, () => `src="${entry.dataUri}"`);
@@ -758,13 +874,19 @@ function safeRealpath(p: string): string {
 
 function mimeFromExtension(p: string): string {
   switch (path.extname(p).toLowerCase()) {
-    case ".png": return "image/png";
+    case ".png":
+      return "image/png";
     case ".jpg":
-    case ".jpeg": return "image/jpeg";
-    case ".gif": return "image/gif";
-    case ".webp": return "image/webp";
-    case ".svg": return "image/svg+xml";
-    default: return "application/octet-stream";
+    case ".jpeg":
+      return "image/jpeg";
+    case ".gif":
+      return "image/gif";
+    case ".webp":
+      return "image/webp";
+    case ".svg":
+      return "image/svg+xml";
+    default:
+      return "application/octet-stream";
   }
 }
 
@@ -778,18 +900,27 @@ const PAGE_WIDTHS_IN: Record<string, number> = {
 };
 
 /** Parse a CSS dimension ("1in" | "72pt" | "25mm" | "2.54cm") to inches. */
-export function dimToInches(dim: string | undefined, fallbackIn: number): number {
+export function dimToInches(
+  dim: string | undefined,
+  fallbackIn: number,
+): number {
   if (!dim) return fallbackIn;
   const m = dim.trim().match(/^([0-9.]+)\s*(in|pt|cm|mm|px)?$/i);
   if (!m) return fallbackIn;
   const v = parseFloat(m[1]);
   switch ((m[2] ?? "in").toLowerCase()) {
-    case "in": return v;
-    case "pt": return v / 72;
-    case "cm": return v / 2.54;
-    case "mm": return v / 25.4;
-    case "px": return v / 96;
-    default: return fallbackIn;
+    case "in":
+      return v;
+    case "pt":
+      return v / 72;
+    case "cm":
+      return v / 2.54;
+    case "mm":
+      return v / 25.4;
+    case "px":
+      return v / 96;
+    default:
+      return fallbackIn;
   }
 }
 

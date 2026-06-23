@@ -46,7 +46,11 @@ export async function runSetup(): Promise<void> {
     process.exit(4);
   } finally {
     if (chromiumTab !== null) {
-      try { browseClient.closetab(chromiumTab); } catch { /* ignore */ }
+      try {
+        browseClient.closetab(chromiumTab);
+      } catch {
+        /* ignore */
+      }
     }
   }
 
@@ -54,15 +58,17 @@ export async function runSetup(): Promise<void> {
   process.stderr.write("  [3/5] Checking pdftotext (optional)...");
   try {
     const info = resolvePdftotext();
-    process.stderr.write(` OK (${info.flavor}, ${info.version.split(" ").slice(-1)[0] || "version unknown"})\n`);
+    process.stderr.write(
+      ` OK (${info.flavor}, ${info.version.split(" ").slice(-1)[0] || "version unknown"})\n`,
+    );
   } catch (err) {
     process.stderr.write(" SKIP\n");
     if (err instanceof PdftotextUnavailableError) {
       process.stderr.write(
         "    pdftotext not installed. This is optional — only the CI\n" +
-        "    copy-paste gate needs it. To enable:\n" +
-        "      macOS:  brew install poppler\n" +
-        "      Ubuntu: sudo apt-get install poppler-utils\n",
+          "    copy-paste gate needs it. To enable:\n" +
+          "      macOS:  brew install poppler\n" +
+          "      Ubuntu: sudo apt-get install poppler-utils\n",
       );
     }
   }
@@ -74,10 +80,13 @@ export async function runSetup(): Promise<void> {
     "",
     "This is a two-paragraph smoke test. If you can read this sentence in the PDF that just opened, the pipeline works end-to-end.",
     "",
-    "The second paragraph contains curly quotes (\"hello\"), an em dash -- like this, and an ellipsis... all of which should render correctly.",
+    'The second paragraph contains curly quotes ("hello"), an em dash -- like this, and an ellipsis... all of which should render correctly.',
     "",
   ].join("\n");
-  const fixturePath = path.join(os.tmpdir(), `make-pdf-smoke-${process.pid}.md`);
+  const fixturePath = path.join(
+    os.tmpdir(),
+    `make-pdf-smoke-${process.pid}.md`,
+  );
   const outPath = path.join(os.tmpdir(), `make-pdf-smoke-${process.pid}.pdf`);
   fs.writeFileSync(fixturePath, fixture, "utf8");
 
@@ -93,18 +102,24 @@ export async function runSetup(): Promise<void> {
     process.stderr.write(`        FAILED: ${err.message}\n`);
     process.exit(2);
   } finally {
-    try { fs.unlinkSync(fixturePath); } catch { /* ignore */ }
+    try {
+      fs.unlinkSync(fixturePath);
+    } catch {
+      /* ignore */
+    }
   }
 
   // 5. Cheatsheet
   process.stderr.write("  [5/5] All checks passed.\n\n");
-  process.stderr.write([
-    "make-pdf is ready. Try:",
-    "  $P generate letter.md                  # default memo mode",
-    "  $P generate --cover --toc essay.md     # full publication",
-    "  $P generate --watermark DRAFT memo.md  # diagonal watermark",
-    "",
-    `Smoke-test PDF: ${outPath}`,
-    "",
-  ].join("\n"));
+  process.stderr.write(
+    [
+      "make-pdf is ready. Try:",
+      "  $P generate letter.md                  # default memo mode",
+      "  $P generate --cover --toc essay.md     # full publication",
+      "  $P generate --watermark DRAFT memo.md  # diagonal watermark",
+      "",
+      `Smoke-test PDF: ${outPath}`,
+      "",
+    ].join("\n"),
+  );
 }

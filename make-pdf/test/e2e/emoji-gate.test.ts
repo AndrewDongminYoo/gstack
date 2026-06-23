@@ -76,13 +76,28 @@ function emojiFontAvailable(): boolean {
   return false;
 }
 
-function prerequisitesAvailable(): { ok: true } | { ok: false; reason: string } {
-  if (!fs.existsSync(PDF_BIN)) return { ok: false, reason: `make-pdf binary missing (${PDF_BIN}). Run bun run build.` };
-  if (!fs.existsSync(BROWSE_BIN)) return { ok: false, reason: `browse binary missing (${BROWSE_BIN}).` };
-  if (!fs.existsSync(FIXTURE)) return { ok: false, reason: `fixture missing (${FIXTURE}).` };
-  if (!resolvePopplerTool("pdffonts")) return { ok: false, reason: "pdffonts not found (install poppler-utils)." };
-  if (!resolvePopplerTool("pdftoppm")) return { ok: false, reason: "pdftoppm not found (install poppler-utils)." };
-  if (!emojiFontAvailable()) return { ok: false, reason: "no color-emoji font installed; run ./setup (Linux) or install one." };
+function prerequisitesAvailable():
+  | { ok: true }
+  | { ok: false; reason: string } {
+  if (!fs.existsSync(PDF_BIN))
+    return {
+      ok: false,
+      reason: `make-pdf binary missing (${PDF_BIN}). Run bun run build.`,
+    };
+  if (!fs.existsSync(BROWSE_BIN))
+    return { ok: false, reason: `browse binary missing (${BROWSE_BIN}).` };
+  if (!fs.existsSync(FIXTURE))
+    return { ok: false, reason: `fixture missing (${FIXTURE}).` };
+  if (!resolvePopplerTool("pdffonts"))
+    return { ok: false, reason: "pdffonts not found (install poppler-utils)." };
+  if (!resolvePopplerTool("pdftoppm"))
+    return { ok: false, reason: "pdftoppm not found (install poppler-utils)." };
+  if (!emojiFontAvailable())
+    return {
+      ok: false,
+      reason:
+        "no color-emoji font installed; run ./setup (Linux) or install one.",
+    };
   return { ok: true };
 }
 
@@ -96,8 +111,13 @@ function countSaturatedPixels(ppmPath: string, delta: number): number {
   let i = 0;
   const skipWhitespaceAndComments = () => {
     for (;;) {
-      while (i < b.length && (b[i] === 0x20 || b[i] === 0x0a || b[i] === 0x09 || b[i] === 0x0d)) i++;
-      if (b[i] === 0x23) { // '#': comment runs to end of line
+      while (
+        i < b.length &&
+        (b[i] === 0x20 || b[i] === 0x0a || b[i] === 0x09 || b[i] === 0x0d)
+      )
+        i++;
+      if (b[i] === 0x23) {
+        // '#': comment runs to end of line
         while (i < b.length && b[i] !== 0x0a) i++;
         continue;
       }
@@ -107,7 +127,14 @@ function countSaturatedPixels(ppmPath: string, delta: number): number {
   const token = (): string => {
     skipWhitespaceAndComments();
     const s = i;
-    while (i < b.length && b[i] !== 0x20 && b[i] !== 0x0a && b[i] !== 0x09 && b[i] !== 0x0d) i++;
+    while (
+      i < b.length &&
+      b[i] !== 0x20 &&
+      b[i] !== 0x0a &&
+      b[i] !== 0x09 &&
+      b[i] !== 0x0d
+    )
+      i++;
     return b.slice(s, i).toString("ascii");
   };
   const magic = token();
@@ -126,12 +153,16 @@ function countSaturatedPixels(ppmPath: string, delta: number): number {
   i++; // single whitespace byte after maxval precedes the pixel block
   const total = w * h;
   if (b.length - i < total * 3) {
-    throw new Error(`PPM pixel buffer too short: have ${b.length - i}, need ${total * 3}`);
+    throw new Error(
+      `PPM pixel buffer too short: have ${b.length - i}, need ${total * 3}`,
+    );
   }
   let sat = 0;
   for (let p = 0; p < total; p++) {
     const o = i + p * 3;
-    const r = b[o], g = b[o + 1], bl = b[o + 2];
+    const r = b[o],
+      g = b[o + 1],
+      bl = b[o + 2];
     if (Math.max(r, g, bl) - Math.min(r, g, bl) > delta) sat++;
   }
   return sat;
@@ -140,56 +171,77 @@ function countSaturatedPixels(ppmPath: string, delta: number): number {
 describe("emoji render gate", () => {
   const avail = prerequisitesAvailable();
 
-  test.skipIf(!avail.ok)("emoji render as color glyphs, not tofu", () => {
-    if (!avail.ok) return; // type narrowing
-    // Private temp dir under /tmp: browse's validateOutputPath only allows
-    // /tmp and /private/tmp (not os.tmpdir()'s /var/folders), and mkdtemp
-    // dodges the predictable-path symlink/collision risk.
-    const workDir = fs.mkdtempSync("/tmp/make-pdf-emoji-gate-");
-    const outputPdf = path.join(workDir, "out.pdf");
-    const ppmPrefix = path.join(workDir, "page");
-    const ppmPath = `${ppmPrefix}.ppm`;
-    try {
-      execFileSync(PDF_BIN, ["generate", FIXTURE, outputPdf, "--quiet"], {
-        encoding: "utf8",
-        env: { ...process.env, BROWSE_BIN },
-        stdio: ["ignore", "pipe", "pipe"],
-        timeout: CHILD_TIMEOUT_MS,
-      });
-      expect(fs.existsSync(outputPdf)).toBe(true);
+  test.skipIf(!avail.ok)(
+    "emoji render as color glyphs, not tofu",
+    () => {
+      if (!avail.ok) return; // type narrowing
+      // Private temp dir under /tmp: browse's validateOutputPath only allows
+      // /tmp and /private/tmp (not os.tmpdir()'s /var/folders), and mkdtemp
+      // dodges the predictable-path symlink/collision risk.
+      const workDir = fs.mkdtempSync("/tmp/make-pdf-emoji-gate-");
+      const outputPdf = path.join(workDir, "out.pdf");
+      const ppmPrefix = path.join(workDir, "page");
+      const ppmPath = `${ppmPrefix}.ppm`;
+      try {
+        execFileSync(PDF_BIN, ["generate", FIXTURE, outputPdf, "--quiet"], {
+          encoding: "utf8",
+          env: { ...process.env, BROWSE_BIN },
+          stdio: ["ignore", "pipe", "pipe"],
+          timeout: CHILD_TIMEOUT_MS,
+        });
+        expect(fs.existsSync(outputPdf)).toBe(true);
 
-      // 1. An emoji family must be embedded — the cascade found a real emoji
-      //    font instead of falling through to .notdef.
-      const pdffonts = resolvePopplerTool("pdffonts")!;
-      const fontList = execFileSync(pdffonts, [outputPdf], { encoding: "utf8", timeout: CHILD_TIMEOUT_MS });
-      if (!/emoji/i.test(fontList)) {
-        process.stderr.write(`\n--- pdffonts ---\n${fontList}\n--- END ---\n`);
-      }
-      expect(/emoji/i.test(fontList)).toBe(true);
+        // 1. An emoji family must be embedded — the cascade found a real emoji
+        //    font instead of falling through to .notdef.
+        const pdffonts = resolvePopplerTool("pdffonts")!;
+        const fontList = execFileSync(pdffonts, [outputPdf], {
+          encoding: "utf8",
+          timeout: CHILD_TIMEOUT_MS,
+        });
+        if (!/emoji/i.test(fontList)) {
+          process.stderr.write(
+            `\n--- pdffonts ---\n${fontList}\n--- END ---\n`,
+          );
+        }
+        expect(/emoji/i.test(fontList)).toBe(true);
 
-      // 2. The page must actually rasterize to color, not a monochrome tofu box.
-      const pdftoppm = resolvePopplerTool("pdftoppm")!;
-      execFileSync(pdftoppm, ["-r", "100", "-singlefile", outputPdf, ppmPrefix], {
-        stdio: ["ignore", "pipe", "pipe"],
-        timeout: CHILD_TIMEOUT_MS,
-      });
-      expect(fs.existsSync(ppmPath)).toBe(true);
-      const saturated = countSaturatedPixels(ppmPath, SATURATION_DELTA);
-      if (saturated < SATURATED_PIXEL_FLOOR) {
-        process.stderr.write(`\n[emoji-gate] saturated pixels: ${saturated} (floor ${SATURATED_PIXEL_FLOOR})\n`);
+        // 2. The page must actually rasterize to color, not a monochrome tofu box.
+        const pdftoppm = resolvePopplerTool("pdftoppm")!;
+        execFileSync(
+          pdftoppm,
+          ["-r", "100", "-singlefile", outputPdf, ppmPrefix],
+          {
+            stdio: ["ignore", "pipe", "pipe"],
+            timeout: CHILD_TIMEOUT_MS,
+          },
+        );
+        expect(fs.existsSync(ppmPath)).toBe(true);
+        const saturated = countSaturatedPixels(ppmPath, SATURATION_DELTA);
+        if (saturated < SATURATED_PIXEL_FLOOR) {
+          process.stderr.write(
+            `\n[emoji-gate] saturated pixels: ${saturated} (floor ${SATURATED_PIXEL_FLOOR})\n`,
+          );
+        }
+        expect(saturated).toBeGreaterThanOrEqual(SATURATED_PIXEL_FLOOR);
+      } finally {
+        try {
+          fs.rmSync(workDir, { recursive: true, force: true });
+        } catch {
+          /* ignore */
+        }
       }
-      expect(saturated).toBeGreaterThanOrEqual(SATURATED_PIXEL_FLOOR);
-    } finally {
-      try { fs.rmSync(workDir, { recursive: true, force: true }); } catch { /* ignore */ }
-    }
-  }, 60000);
+    },
+    60000,
+  );
 
   if (!avail.ok) {
     // In CI, missing prerequisites are a hard failure — a silent skip would let
     // the Linux tofu regression ship behind a green build. Locally, just warn.
     test("emoji gate prerequisites are present (hard-required in CI)", () => {
       if (process.env.CI) {
-        throw new Error(`emoji gate prerequisites missing in CI: ${avail.reason}`);
+        throw new Error(
+          `emoji gate prerequisites missing in CI: ${avail.reason}`,
+        );
       }
       console.warn(`[skip] ${avail.reason}`);
     });

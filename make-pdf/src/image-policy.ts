@@ -64,7 +64,13 @@ const MIN_ASPECT = 1.8;
  */
 const SHRINK_LIMIT = 2.5;
 /** Alt-text tokens that mark a plain image as diagram-like (case-insensitive). */
-const ALT_HINT_TOKENS = ["diagram", "architecture", "flowchart", "chart", "graph"];
+const ALT_HINT_TOKENS = [
+  "diagram",
+  "architecture",
+  "flowchart",
+  "chart",
+  "graph",
+];
 
 // ─── Pass 1: directive suffixes ───────────────────────────────────────
 
@@ -75,17 +81,22 @@ const IMG_WITH_SUFFIX_RE = /(<img\b[^>]*>)\s*\{([^{}<>\n]{1,120})\}/gi;
  * brace groups are left untouched (someone's literal prose).
  */
 export function applyImageDirectives(html: string): string {
-  return html.replace(IMG_WITH_SUFFIX_RE, (full, imgTag: string, body: string) => {
-    const parsed = parseDirectives(body);
-    if (!parsed) return full;
-    let tag = imgTag;
-    if (parsed.width) tag = addAttr(tag, "data-gstack-width", parsed.width);
-    if (parsed.page) tag = addAttr(tag, "data-gstack-page", parsed.page);
-    return tag;
-  });
+  return html.replace(
+    IMG_WITH_SUFFIX_RE,
+    (full, imgTag: string, body: string) => {
+      const parsed = parseDirectives(body);
+      if (!parsed) return full;
+      let tag = imgTag;
+      if (parsed.width) tag = addAttr(tag, "data-gstack-width", parsed.width);
+      if (parsed.page) tag = addAttr(tag, "data-gstack-page", parsed.page);
+      return tag;
+    },
+  );
 }
 
-export function parseDirectives(body: string): { width?: string; page?: string } | null {
+export function parseDirectives(
+  body: string,
+): { width?: string; page?: string } | null {
   let width: string | undefined;
   let page: string | undefined;
   let recognized = false;
@@ -94,7 +105,10 @@ export function parseDirectives(body: string): { width?: string; page?: string }
     if (!m) return null; // any unknown token ⇒ not a directive group
     const key = m[1].toLowerCase();
     const value = m[2].toLowerCase();
-    if (key === "width" && /^(full|\d{1,3}%|[0-9.]+(in|cm|mm|pt|px))$/.test(value)) {
+    if (
+      key === "width" &&
+      /^(full|\d{1,3}%|[0-9.]+(in|cm|mm|pt|px))$/.test(value)
+    ) {
       width = value;
       recognized = true;
     } else if (key === "page" && /^(landscape|portrait)$/.test(value)) {
@@ -113,7 +127,10 @@ function addAttr(imgTag: string, name: string, value: string): string {
 
 // ─── Pass 2: width styles + landscape promotion ───────────────────────
 
-export function applyImagePolicy(html: string, opts: ImagePolicyOptions): ImagePolicyResult {
+export function applyImagePolicy(
+  html: string,
+  opts: ImagePolicyOptions,
+): ImagePolicyResult {
   let hasLandscape = false;
   const boxCssPx = opts.contentWidthIn * 96;
   const widthThresholdPx = boxCssPx * SHRINK_LIMIT;
@@ -149,7 +166,11 @@ export function applyImagePolicy(html: string, opts: ImagePolicyOptions): ImageP
       hasLandscape = true;
       opts.warn(`promoting diagram to a landscape page (${decision.reason})`);
       const dims = svgCssDims(figure);
-      return wrapPageWide(figure, dims ? dims.height / dims.width : null, opts.landscape);
+      return wrapPageWide(
+        figure,
+        dims ? dims.height / dims.width : null,
+        opts.landscape,
+      );
     },
   );
 
@@ -179,42 +200,65 @@ interface PromotionDecision {
   reason: string;
 }
 
-function decideImagePromotion(tag: string, widthThresholdPx: number): PromotionDecision {
+function decideImagePromotion(
+  tag: string,
+  widthThresholdPx: number,
+): PromotionDecision {
   const page = attrValue(tag, "data-gstack-page");
-  if (page === "portrait") return { promote: false, reason: "page=portrait veto" };
-  if (page === "landscape") return { promote: true, reason: "page=landscape directive" };
+  if (page === "portrait")
+    return { promote: false, reason: "page=portrait veto" };
+  if (page === "landscape")
+    return { promote: true, reason: "page=landscape directive" };
 
   const w = num(attrValue(tag, "data-gstack-px-width"));
   const h = num(attrValue(tag, "data-gstack-px-height"));
   if (!w || !h) return { promote: false, reason: "no intrinsic dimensions" };
-  if (w / h < MIN_ASPECT) return { promote: false, reason: "aspect below floor" };
-  if (w <= widthThresholdPx) return { promote: false, reason: "fits portrait readably" };
+  if (w / h < MIN_ASPECT)
+    return { promote: false, reason: "aspect below floor" };
+  if (w <= widthThresholdPx)
+    return { promote: false, reason: "fits portrait readably" };
 
   const alt = (attrValue(tag, "alt") ?? "").toLowerCase();
-  const hinted = ALT_HINT_TOKENS.some((t) => new RegExp(`\\b${t}\\b`).test(alt));
+  const hinted = ALT_HINT_TOKENS.some((t) =>
+    new RegExp(`\\b${t}\\b`).test(alt),
+  );
   if (!hinted) return { promote: false, reason: "no diagram hint in alt text" };
 
-  return { promote: true, reason: `wide diagram-like image (${Math.round(w)}px, alt hint)` };
+  return {
+    promote: true,
+    reason: `wide diagram-like image (${Math.round(w)}px, alt hint)`,
+  };
 }
 
-function decideDiagramPromotion(figure: string, widthThresholdPx: number): PromotionDecision {
+function decideDiagramPromotion(
+  figure: string,
+  widthThresholdPx: number,
+): PromotionDecision {
   const page = attrValue(figure, "data-gstack-page");
-  if (page === "portrait") return { promote: false, reason: "page=portrait veto" };
-  if (page === "landscape") return { promote: true, reason: "page=landscape fence directive" };
+  if (page === "portrait")
+    return { promote: false, reason: "page=portrait veto" };
+  if (page === "landscape")
+    return { promote: true, reason: "page=landscape fence directive" };
 
   const dims = svgCssDims(figure);
   if (!dims) return { promote: false, reason: "no measurable SVG dimensions" };
-  if (dims.width / dims.height < MIN_ASPECT) return { promote: false, reason: "aspect below floor" };
-  if (dims.width <= widthThresholdPx) return { promote: false, reason: "fits portrait readably" };
-  return { promote: true, reason: `wide diagram (${Math.round(dims.width)}px)` };
+  if (dims.width / dims.height < MIN_ASPECT)
+    return { promote: false, reason: "aspect below floor" };
+  if (dims.width <= widthThresholdPx)
+    return { promote: false, reason: "fits portrait readably" };
+  return {
+    promote: true,
+    reason: `wide diagram (${Math.round(dims.width)}px)`,
+  };
 }
 
 /** SVG dimension probing is shared with the byte prober — see image-size.ts. */
 const svgCssDims = svgTagDims;
 
 function attrValue(tag: string, name: string): string | null {
-  const m = tag.match(new RegExp(`\\b${name}\\s*=\\s*"([^"]*)"`, "i"))
-    ?? tag.match(new RegExp(`\\b${name}\\s*=\\s*'([^']*)'`, "i"));
+  const m =
+    tag.match(new RegExp(`\\b${name}\\s*=\\s*"([^"]*)"`, "i")) ??
+    tag.match(new RegExp(`\\b${name}\\s*=\\s*'([^']*)'`, "i"));
   return m ? m[1] : null;
 }
 
@@ -230,7 +274,10 @@ function mergeStyle(tag: string, css: string): string {
     // Function replacement (no $-pattern expansion from user-controlled style
     // values) and the existing declarations are preserved verbatim — attrValue
     // already returned the unquoted inner value.
-    return tag.replace(/\bstyle\s*=\s*(".*?"|'.*?')/i, () => `style="${existing}; ${css}"`);
+    return tag.replace(
+      /\bstyle\s*=\s*(".*?"|'.*?')/i,
+      () => `style="${existing}; ${css}"`,
+    );
   }
   return tag.replace(/^<img\b/i, () => `<img style="${css}"`);
 }

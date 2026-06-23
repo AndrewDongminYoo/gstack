@@ -18,31 +18,58 @@ export interface ImageDims {
 
 export function imageDims(buf: Buffer): ImageDims | null {
   if (buf.length < 12) return null;
-  return pngDims(buf) ?? jpegDims(buf) ?? gifDims(buf) ?? webpDims(buf) ?? svgDims(buf);
+  return (
+    pngDims(buf) ??
+    jpegDims(buf) ??
+    gifDims(buf) ??
+    webpDims(buf) ??
+    svgDims(buf)
+  );
 }
 
 function pngDims(b: Buffer): ImageDims | null {
   // 8-byte signature, then IHDR chunk: length(4) "IHDR"(4) width(4) height(4)
   if (b.length < 24) return null;
-  if (b.readUInt32BE(0) !== 0x89504e47 || b.readUInt32BE(4) !== 0x0d0a1a0a) return null;
+  if (b.readUInt32BE(0) !== 0x89504e47 || b.readUInt32BE(4) !== 0x0d0a1a0a)
+    return null;
   if (b.toString("ascii", 12, 16) !== "IHDR") return null;
-  return { width: b.readUInt32BE(16), height: b.readUInt32BE(20), mime: "image/png" };
+  return {
+    width: b.readUInt32BE(16),
+    height: b.readUInt32BE(20),
+    mime: "image/png",
+  };
 }
 
 function jpegDims(b: Buffer): ImageDims | null {
   if (b[0] !== 0xff || b[1] !== 0xd8) return null;
   let i = 2;
   while (i + 9 < b.length) {
-    if (b[i] !== 0xff) { i++; continue; }
+    if (b[i] !== 0xff) {
+      i++;
+      continue;
+    }
     const marker = b[i + 1];
     // Standalone markers without length payload
-    if (marker === 0xd8 || (marker >= 0xd0 && marker <= 0xd9)) { i += 2; continue; }
+    if (marker === 0xd8 || (marker >= 0xd0 && marker <= 0xd9)) {
+      i += 2;
+      continue;
+    }
     const len = b.readUInt16BE(i + 2);
     if (len < 2) return null;
     // SOF0-SOF15 except DHT(C4)/JPGA(C8)/DAC(CC) carry dimensions
-    if (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc) {
+    if (
+      marker >= 0xc0 &&
+      marker <= 0xcf &&
+      marker !== 0xc4 &&
+      marker !== 0xc8 &&
+      marker !== 0xcc
+    ) {
       if (i + 9 >= b.length) return null;
-      return { height: b.readUInt16BE(i + 5), width: b.readUInt16BE(i + 7), mime: "image/jpeg" };
+      return {
+        height: b.readUInt16BE(i + 5),
+        width: b.readUInt16BE(i + 7),
+        mime: "image/jpeg",
+      };
     }
     i += 2 + len;
   }
@@ -52,11 +79,19 @@ function jpegDims(b: Buffer): ImageDims | null {
 function gifDims(b: Buffer): ImageDims | null {
   const sig = b.toString("ascii", 0, 6);
   if (sig !== "GIF87a" && sig !== "GIF89a") return null;
-  return { width: b.readUInt16LE(6), height: b.readUInt16LE(8), mime: "image/gif" };
+  return {
+    width: b.readUInt16LE(6),
+    height: b.readUInt16LE(8),
+    mime: "image/gif",
+  };
 }
 
 function webpDims(b: Buffer): ImageDims | null {
-  if (b.toString("ascii", 0, 4) !== "RIFF" || b.toString("ascii", 8, 12) !== "WEBP") return null;
+  if (
+    b.toString("ascii", 0, 4) !== "RIFF" ||
+    b.toString("ascii", 8, 12) !== "WEBP"
+  )
+    return null;
   const fmt = b.toString("ascii", 12, 16);
   if (fmt === "VP8X" && b.length >= 30) {
     // 24-bit little-endian width-1 / height-1 at offsets 24 / 27
@@ -101,17 +136,23 @@ function svgDims(b: Buffer): ImageDims | null {
  * byte prober above and image-policy's diagram-figure measurements — one
  * regex, no drift.
  */
-export function svgTagDims(markup: string): { width: number; height: number } | null {
+export function svgTagDims(
+  markup: string,
+): { width: number; height: number } | null {
   const tag = markup.match(/<svg\b[^>]*>/i)?.[0];
   if (!tag) return null;
   const attr = (name: string): number | null => {
-    const m = tag.match(new RegExp(`\\b${name}\\s*=\\s*["']\\s*([0-9.]+)(px)?\\s*["']`, "i"));
+    const m = tag.match(
+      new RegExp(`\\b${name}\\s*=\\s*["']\\s*([0-9.]+)(px)?\\s*["']`, "i"),
+    );
     return m ? parseFloat(m[1]) : null;
   };
   const w = attr("width");
   const h = attr("height");
   if (w && h) return { width: w, height: h };
-  const vb = tag.match(/\bviewBox\s*=\s*["']\s*[-0-9.]+[\s,]+[-0-9.]+[\s,]+([0-9.]+)[\s,]+([0-9.]+)\s*["']/i);
+  const vb = tag.match(
+    /\bviewBox\s*=\s*["']\s*[-0-9.]+[\s,]+[-0-9.]+[\s,]+([0-9.]+)[\s,]+([0-9.]+)\s*["']/i,
+  );
   if (vb) return { width: parseFloat(vb[1]), height: parseFloat(vb[2]) };
   return null;
 }

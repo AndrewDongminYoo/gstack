@@ -40,7 +40,7 @@ export class PdftotextUnavailableError extends Error {
 
 export interface PdftotextInfo {
   bin: string;
-  version: string;        // "pdftotext version 24.02.0" or similar
+  version: string; // "pdftotext version 24.02.0" or similar
   flavor: "poppler" | "xpdf" | "unknown";
 }
 
@@ -60,58 +60,65 @@ export function findExecutable(base: string): string | null {
   return null;
 }
 
-function resolveOverride(value: string | undefined, env: NodeJS.ProcessEnv): string | null {
+function resolveOverride(
+  value: string | undefined,
+  env: NodeJS.ProcessEnv,
+): string | null {
   if (!value?.trim()) return null;
-  const trimmed = value.trim().replace(/^"(.*)"$/, '$1');
+  const trimmed = value.trim().replace(/^"(.*)"$/, "$1");
   if (path.isAbsolute(trimmed)) return findExecutable(trimmed);
-  const PATH = env.PATH ?? env.Path ?? '';
+  const PATH = env.PATH ?? env.Path ?? "";
   return Bun.which(trimmed, { PATH }) ?? null;
 }
 
 /**
  * Locate pdftotext. Throws PdftotextUnavailableError if none is found.
  */
-export function resolvePdftotext(env: NodeJS.ProcessEnv = process.env): PdftotextInfo {
+export function resolvePdftotext(
+  env: NodeJS.ProcessEnv = process.env,
+): PdftotextInfo {
   // 1 + 2: env overrides (GSTACK_PDFTOTEXT_BIN preferred, PDFTOTEXT_BIN back-compat).
   const overrideRaw = env.GSTACK_PDFTOTEXT_BIN ?? env.PDFTOTEXT_BIN;
   const override = resolveOverride(overrideRaw, env);
   if (override) return describeBinary(override);
 
   // 3: PATH lookup via Bun.which — handles Windows PATHEXT natively.
-  const PATH = env.PATH ?? env.Path ?? '';
-  const onPath = Bun.which('pdftotext', { PATH });
+  const PATH = env.PATH ?? env.Path ?? "";
+  const onPath = Bun.which("pdftotext", { PATH });
   if (onPath) return describeBinary(onPath);
 
   // 4: POSIX-only standard locations. No Windows candidates — Poppler installs
   // scatter across Scoop/Chocolatey/portable zips and guessing causes false
   // positives. Windows users set GSTACK_PDFTOTEXT_BIN explicitly.
   const posixCandidates = [
-    "/opt/homebrew/bin/pdftotext",     // Apple Silicon Homebrew
-    "/usr/local/bin/pdftotext",        // Intel Mac or Linuxbrew
-    "/usr/bin/pdftotext",              // distro package
+    "/opt/homebrew/bin/pdftotext", // Apple Silicon Homebrew
+    "/usr/local/bin/pdftotext", // Intel Mac or Linuxbrew
+    "/usr/bin/pdftotext", // distro package
   ];
   for (const candidate of posixCandidates) {
     if (isExecutable(candidate)) return describeBinary(candidate);
   }
 
-  throw new PdftotextUnavailableError([
-    "pdftotext not found.",
-    "",
-    "make-pdf needs pdftotext to run the copy-paste CI gate.",
-    "(Runtime rendering does NOT need it. This only affects tests.)",
-    "",
-    "To install:",
-    "  macOS:    brew install poppler",
-    "  Ubuntu:   sudo apt-get install poppler-utils",
-    "  Fedora:   sudo dnf install poppler-utils",
-    "  Windows:  scoop install poppler  (or download from",
-    "            https://github.com/oschwartz10612/poppler-windows)",
-    "",
-    "Or set GSTACK_PDFTOTEXT_BIN to an explicit path:",
-    process.platform === "win32"
-      ? '  setx GSTACK_PDFTOTEXT_BIN "C:\\path\\to\\pdftotext.exe"'
-      : "  export GSTACK_PDFTOTEXT_BIN=/path/to/pdftotext",
-  ].join("\n"));
+  throw new PdftotextUnavailableError(
+    [
+      "pdftotext not found.",
+      "",
+      "make-pdf needs pdftotext to run the copy-paste CI gate.",
+      "(Runtime rendering does NOT need it. This only affects tests.)",
+      "",
+      "To install:",
+      "  macOS:    brew install poppler",
+      "  Ubuntu:   sudo apt-get install poppler-utils",
+      "  Fedora:   sudo dnf install poppler-utils",
+      "  Windows:  scoop install poppler  (or download from",
+      "            https://github.com/oschwartz10612/poppler-windows)",
+      "",
+      "Or set GSTACK_PDFTOTEXT_BIN to an explicit path:",
+      process.platform === "win32"
+        ? '  setx GSTACK_PDFTOTEXT_BIN "C:\\path\\to\\pdftotext.exe"'
+        : "  export GSTACK_PDFTOTEXT_BIN=/path/to/pdftotext",
+    ].join("\n"),
+  );
 }
 
 /**
@@ -128,7 +135,10 @@ export function resolvePopplerTool(
   tool: "pdffonts" | "pdfimages" | "pdftoppm",
   env: NodeJS.ProcessEnv = process.env,
 ): string | null {
-  const override = resolveOverride(env[`GSTACK_${tool.toUpperCase()}_BIN`], env);
+  const override = resolveOverride(
+    env[`GSTACK_${tool.toUpperCase()}_BIN`],
+    env,
+  );
   if (override) return override;
 
   const PATH = env.PATH ?? env.Path ?? "";
@@ -178,12 +188,15 @@ function describeBinary(bin: string): PdftotextInfo {
  * Uses `-layout` by default because that's what downstream normalization
  * expects. Callers that need raw text can pass layout=false.
  */
-export function pdftotext(pdfPath: string, opts?: { layout?: boolean }): string {
+export function pdftotext(
+  pdfPath: string,
+  opts?: { layout?: boolean },
+): string {
   const info = resolvePdftotext();
   const layout = opts?.layout ?? true;
   const args: string[] = [];
   if (layout) args.push("-layout");
-  args.push(pdfPath, "-");   // "-" = stdout
+  args.push(pdfPath, "-"); // "-" = stdout
   try {
     return execFileSync(info.bin, args, {
       encoding: "utf8",
@@ -263,7 +276,10 @@ export function copyPasteGate(pdfPath: string, expected: string): GateResult {
   while ((fragMatch = fragRegex.exec(extracted)) !== null) {
     const letters = fragMatch[1].replace(/\s/g, "");
     // Only flag if the reassembled letters appear in the expected text.
-    if (expectedNorm.toLowerCase().includes(letters.toLowerCase()) && letters.length >= 4) {
+    if (
+      expectedNorm.toLowerCase().includes(letters.toLowerCase()) &&
+      letters.length >= 4
+    ) {
       reasons.push(
         `per-glyph emission detected (the "S ai li ng" bug): "${fragMatch[1].trim()}" reassembles to "${letters}"`,
       );
@@ -284,7 +300,10 @@ export function copyPasteGate(pdfPath: string, expected: string): GateResult {
 }
 
 function splitParagraphs(s: string): string[] {
-  return s.split(/\n\n+/).map(p => p.trim()).filter(p => p.length > 0);
+  return s
+    .split(/\n\n+/)
+    .map((p) => p.trim())
+    .filter((p) => p.length > 0);
 }
 
 function collapseWhitespace(s: string): string {
@@ -304,7 +323,7 @@ export function logDiagnostics(): void {
     const info = resolvePdftotext();
     process.stderr.write(
       `[pdftotext] bin=${info.bin} flavor=${info.flavor} version="${info.version}" ` +
-      `os=${os.platform()}-${os.arch()} node=${process.version}\n`,
+        `os=${os.platform()}-${os.arch()} node=${process.version}\n`,
     );
   } catch (err: any) {
     process.stderr.write(`[pdftotext] unavailable: ${err.message}\n`);

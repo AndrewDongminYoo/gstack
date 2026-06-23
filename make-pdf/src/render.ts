@@ -22,7 +22,7 @@ export interface RenderOptions {
   // Document-level metadata (used for cover, PDF metadata, running header).
   title?: string;
   author?: string;
-  date?: string;                  // ISO or human string
+  date?: string; // ISO or human string
   subtitle?: string;
 
   // Features
@@ -30,7 +30,7 @@ export interface RenderOptions {
   toc?: boolean;
   watermark?: string;
   noChapterBreaks?: boolean;
-  confidential?: boolean;         // default: true
+  confidential?: boolean; // default: true
 
   // Page layout
   pageSize?: "letter" | "a4" | "legal" | "tabloid";
@@ -51,9 +51,9 @@ export interface RenderOptions {
 }
 
 export interface RenderResult {
-  html: string;                   // full HTML document, ready for $B load-html
-  printCss: string;               // for debugging / preview
-  bodyHtml: string;               // just the rendered body (tests, snapshots)
+  html: string; // full HTML document, ready for $B load-html
+  printCss: string; // for debugging / preview
+  bodyHtml: string; // just the rendered body (tests, snapshots)
   meta: {
     title: string;
     author: string;
@@ -88,7 +88,8 @@ export function render(opts: RenderOptions): RenderResult {
   const typographicHtml = smartypants(decoded);
 
   // 4. Derive metadata (title from first H1 if not provided)
-  const derivedTitle = opts.title ?? extractFirstHeading(typographicHtml) ?? "Document";
+  const derivedTitle =
+    opts.title ?? extractFirstHeading(typographicHtml) ?? "Document";
   const derivedAuthor = opts.author ?? "";
   const derivedDate = opts.date ?? formatToday();
 
@@ -127,12 +128,12 @@ export function render(opts: RenderOptions): RenderResult {
   // in PDFs by Chromium outline bookmarks, glaring in --to html). Headings
   // that already carry an id keep it — the ids array records the ACTUAL id
   // per heading so TOC entries always link to something real.
-  const anchored = opts.toc ? addHeadingIds(typographicHtml) : { html: typographicHtml, ids: [] };
+  const anchored = opts.toc
+    ? addHeadingIds(typographicHtml)
+    : { html: typographicHtml, ids: [] };
   const anchoredHtml = anchored.html;
 
-  const tocBlock = opts.toc
-    ? buildTocBlock(anchoredHtml, anchored.ids)
-    : "";
+  const tocBlock = opts.toc ? buildTocBlock(anchoredHtml, anchored.ids) : "";
 
   // Wrap body in .chapter sections at H1 boundaries if chapter breaks are on.
   const chapterHtml = opts.noChapterBreaks
@@ -149,7 +150,9 @@ export function render(opts: RenderOptions): RenderResult {
     `<head>`,
     `<meta charset="utf-8">`,
     `<title>${escapeHtml(derivedTitle)}</title>`,
-    derivedAuthor ? `<meta name="author" content="${escapeHtml(derivedAuthor)}">` : ``,
+    derivedAuthor
+      ? `<meta name="author" content="${escapeHtml(derivedAuthor)}">`
+      : ``,
     `<style>`,
     css,
     `</style>`,
@@ -161,7 +164,9 @@ export function render(opts: RenderOptions): RenderResult {
     chapterHtml,
     `</body>`,
     `</html>`,
-  ].filter(Boolean).join("\n");
+  ]
+    .filter(Boolean)
+    .join("\n");
 
   return {
     html: fullHtml,
@@ -183,7 +188,7 @@ export function render(opts: RenderOptions): RenderResult {
  */
 function decodeTypographicEntities(html: string): string {
   return html
-    .replace(/&quot;/g, "\"")
+    .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
     .replace(/&apos;/g, "'")
     .replace(/&#x27;/g, "'");
@@ -212,8 +217,17 @@ export function sanitizeUntrustedHtml(html: string): string {
 
   // Elements to remove entirely (including content).
   const DANGER_TAGS = [
-    "script", "iframe", "object", "embed", "link", "meta", "base", "form",
-    "applet", "frame", "frameset",
+    "script",
+    "iframe",
+    "object",
+    "embed",
+    "link",
+    "meta",
+    "base",
+    "form",
+    "applet",
+    "frame",
+    "frameset",
   ];
   for (const tag of DANGER_TAGS) {
     const re = new RegExp(`<${tag}\\b[\\s\\S]*?</${tag}>`, "gi");
@@ -272,7 +286,9 @@ function buildCoverBlock(opts: {
     `    <div>${date}</div>`,
     `  </div>`,
     `</section>`,
-  ].filter(Boolean).join("\n");
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
 
 /**
@@ -284,17 +300,19 @@ function buildTocBlock(html: string, ids: string[] = []): string {
   const headings = extractHeadings(html);
   if (headings.length === 0) return "";
 
-  const items = headings.map((h, i) => {
-    const level = h.level >= 2 ? "level-2" : "level-1";
-    const id = ids[i] ?? `toc-${i}`;
-    return [
-      `  <li class="${level}">`,
-      `    <span class="toc-title"><a href="#${id}">${escapeHtml(h.text)}</a></span>`,
-      `    <span class="toc-dots"></span>`,
-      `    <span class="toc-page" data-toc-target="${id}"></span>`,
-      `  </li>`,
-    ].join("\n");
-  }).join("\n");
+  const items = headings
+    .map((h, i) => {
+      const level = h.level >= 2 ? "level-2" : "level-1";
+      const id = ids[i] ?? `toc-${i}`;
+      return [
+        `  <li class="${level}">`,
+        `    <span class="toc-title"><a href="#${id}">${escapeHtml(h.text)}</a></span>`,
+        `    <span class="toc-dots"></span>`,
+        `    <span class="toc-page" data-toc-target="${id}"></span>`,
+        `  </li>`,
+      ].join("\n");
+    })
+    .join("\n");
 
   return [
     `<section class="toc">`,
@@ -315,16 +333,19 @@ function buildTocBlock(html: string, ids: string[] = []): string {
  */
 function addHeadingIds(html: string): { html: string; ids: string[] } {
   const ids: string[] = [];
-  const out = html.replace(/<(h[1-3])([^>]*)>/gi, (full, tag: string, attrs: string) => {
-    const existing = attrs.match(/\bid\s*=\s*["']([^"']*)["']/i)?.[1];
-    if (existing) {
-      ids.push(existing);
-      return full;
-    }
-    const id = `toc-${ids.length}`;
-    ids.push(id);
-    return `<${tag}${attrs} id="${id}">`;
-  });
+  const out = html.replace(
+    /<(h[1-3])([^>]*)>/gi,
+    (full, tag: string, attrs: string) => {
+      const existing = attrs.match(/\bid\s*=\s*["']([^"']*)["']/i)?.[1];
+      if (existing) {
+        ids.push(existing);
+        return full;
+      }
+      const id = `toc-${ids.length}`;
+      ids.push(id);
+      return `<${tag}${attrs} id="${id}">`;
+    },
+  );
   return { html: out, ids };
 }
 
@@ -394,17 +415,27 @@ function decodeTextEntities(s: string): string {
     .replace(/&apos;/g, "'")
     .replace(/&#x27;/g, "'")
     .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(parseInt(n, 10)))
-    .replace(/&#x([0-9a-fA-F]+);/g, (_, n) => String.fromCodePoint(parseInt(n, 16)))
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, n) =>
+      String.fromCodePoint(parseInt(n, 16)),
+    )
     .replace(/&amp;/g, "&");
 }
 
 /** Compose `margin: top right bottom left` from per-side overrides + base. */
 function composeMargins(opts: {
-  margins?: string; marginTop?: string; marginRight?: string;
-  marginBottom?: string; marginLeft?: string;
+  margins?: string;
+  marginTop?: string;
+  marginRight?: string;
+  marginBottom?: string;
+  marginLeft?: string;
 }): string | undefined {
   const base = opts.margins ?? "1in";
-  if (!opts.marginTop && !opts.marginRight && !opts.marginBottom && !opts.marginLeft) {
+  if (
+    !opts.marginTop &&
+    !opts.marginRight &&
+    !opts.marginBottom &&
+    !opts.marginLeft
+  ) {
     return opts.margins;
   }
   return [
@@ -429,10 +460,14 @@ export function escapeHtml(s: string): string {
 }
 
 function countWords(text: string): number {
-  return text.split(/\s+/).filter(w => w.length > 0).length;
+  return text.split(/\s+/).filter((w) => w.length > 0).length;
 }
 
 function formatToday(): string {
   const now = new Date();
-  return now.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+  return now.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
 }

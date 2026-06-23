@@ -4,7 +4,7 @@ This is the combined-features fixture. Every feature turned on simultaneously.
 The gate asserts that all of these paragraphs extract cleanly from the PDF
 with pdftotext.
 
-A paragraph with **bold**, *italic*, and `inline code` tokens — each of which
+A paragraph with **bold**, _italic_, and `inline code` tokens — each of which
 gets a different HTML treatment. None should fragment text on copy-paste.
 
 A paragraph with "curly quotes", 'single quotes', an em dash -- like this,

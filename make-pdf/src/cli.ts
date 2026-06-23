@@ -66,16 +66,26 @@ function printUsage(): void {
   lines.push("");
   lines.push("Output format:");
   lines.push("  --to pdf|html|docx        What to produce (default: pdf).");
-  lines.push("                            html = single self-contained file, no network refs.");
-  lines.push("                            docx = content fidelity, diagrams as PNG.");
+  lines.push(
+    "                            html = single self-contained file, no network refs.",
+  );
+  lines.push(
+    "                            docx = content fidelity, diagrams as PNG.",
+  );
   lines.push("");
   lines.push("Page layout:");
-  lines.push("  --margins <dim>           All four margins (default: 1in). in, pt, cm, mm.");
-  lines.push("  --page-size letter|a4|legal  (aliases: --format — page SIZE, not output format)");
+  lines.push(
+    "  --margins <dim>           All four margins (default: 1in). in, pt, cm, mm.",
+  );
+  lines.push(
+    "  --page-size letter|a4|legal  (aliases: --format — page SIZE, not output format)",
+  );
   lines.push("");
   lines.push("Document structure:");
   lines.push("  --cover                   Add a cover page.");
-  lines.push("  --toc                     Generate clickable table of contents.");
+  lines.push(
+    "  --toc                     Generate clickable table of contents.",
+  );
   lines.push("  --no-chapter-breaks       Don't start a new page at every H1.");
   lines.push("");
   lines.push("Branding:");
@@ -86,19 +96,31 @@ function printUsage(): void {
   lines.push("");
   lines.push("Output control:");
   lines.push("  --page-numbers / --no-page-numbers   (default: on)");
-  lines.push("  --tagged / --no-tagged               (default: on, accessible PDF)");
-  lines.push("  --outline / --no-outline             (default: on, PDF bookmarks)");
+  lines.push(
+    "  --tagged / --no-tagged               (default: on, accessible PDF)",
+  );
+  lines.push(
+    "  --outline / --no-outline             (default: on, PDF bookmarks)",
+  );
   lines.push("  --quiet                   Suppress progress on stderr.");
   lines.push("  --verbose                 Per-stage timings on stderr.");
   lines.push("");
   lines.push("Diagrams & images:");
   lines.push("  ```mermaid / ```excalidraw fences render as vector diagrams.");
-  lines.push("  Add render=false to a fence info string to keep it as a code block.");
-  lines.push("  Local images are inlined; oversized rasters downscale to print resolution.");
-  lines.push("  --strict                  Missing/remote images fail the run (CI mode).");
+  lines.push(
+    "  Add render=false to a fence info string to keep it as a code block.",
+  );
+  lines.push(
+    "  Local images are inlined; oversized rasters downscale to print resolution.",
+  );
+  lines.push(
+    "  --strict                  Missing/remote images fail the run (CI mode).",
+  );
   lines.push("");
   lines.push("Network:");
-  lines.push("  --allow-network           Load external images (off by default).");
+  lines.push(
+    "  --allow-network           Load external images (off by default).",
+  );
   lines.push("");
   lines.push("Examples:");
   lines.push("  $P generate letter.md");
@@ -125,7 +147,9 @@ function generateOptionsFromFlags(parsed: ParsedArgs): GenerateOptions {
   };
   const to = typeof f.to === "string" ? f.to.toLowerCase() : "pdf";
   if (to !== "pdf" && to !== "html" && to !== "docx") {
-    console.error(`$P generate: invalid --to '${f.to}'. Expected pdf, html, or docx.`);
+    console.error(
+      `$P generate: invalid --to '${f.to}'. Expected pdf, html, or docx.`,
+    );
     console.error("(--format is a --page-size alias, not the output format.)");
     process.exit(ExitCode.BadArgs);
   }
@@ -138,15 +162,19 @@ function generateOptionsFromFlags(parsed: ParsedArgs): GenerateOptions {
     marginRight: f["margin-right"] as string | undefined,
     marginBottom: f["margin-bottom"] as string | undefined,
     marginLeft: f["margin-left"] as string | undefined,
-    pageSize: ((f["page-size"] ?? f.format) as any),
+    pageSize: (f["page-size"] ?? f.format) as any,
     cover: f.cover === true,
     toc: f.toc === true,
     noChapterBreaks: f["no-chapter-breaks"] === true,
     watermark: typeof f.watermark === "string" ? f.watermark : undefined,
-    headerTemplate: typeof f["header-template"] === "string"
-      ? f["header-template"] : undefined,
-    footerTemplate: typeof f["footer-template"] === "string"
-      ? f["footer-template"] : undefined,
+    headerTemplate:
+      typeof f["header-template"] === "string"
+        ? f["header-template"]
+        : undefined,
+    footerTemplate:
+      typeof f["footer-template"] === "string"
+        ? f["footer-template"]
+        : undefined,
     confidential: booleanFlag("confidential", true),
     pageNumbers: booleanFlag("page-numbers", true),
     tagged: booleanFlag("tagged", true),

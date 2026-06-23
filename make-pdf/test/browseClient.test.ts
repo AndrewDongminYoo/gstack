@@ -23,7 +23,10 @@ const REAL_EXE: string =
     ? path.join(process.env.SystemRoot ?? "C:\\Windows", "System32", "cmd.exe")
     : "/bin/sh";
 
-function withEnv<T>(overrides: Record<string, string | undefined>, fn: () => T): T {
+function withEnv<T>(
+  overrides: Record<string, string | undefined>,
+  fn: () => T,
+): T {
   const saved: Record<string, string | undefined> = {};
   for (const k of Object.keys(overrides)) saved[k] = process.env[k];
   for (const [k, v] of Object.entries(overrides)) {
@@ -50,7 +53,11 @@ describe("findExecutable", () => {
   test("on win32, probes .exe / .cmd / .bat after the bare-path miss", () => {
     if (process.platform !== "win32") return;
     // cmd.exe lives at System32\cmd.exe — probe with the bare base.
-    const base = path.join(process.env.SystemRoot ?? "C:\\Windows", "System32", "cmd");
+    const base = path.join(
+      process.env.SystemRoot ?? "C:\\Windows",
+      "System32",
+      "cmd",
+    );
     const found = findExecutable(base);
     expect(found).toBe(base + ".exe");
   });
@@ -84,9 +91,13 @@ describe("resolveBrowseBin", () => {
 
     if (thrown) {
       expect(thrown).toBeInstanceOf(BrowseClientError);
-      expect((thrown as BrowseClientError).message).toContain("browse binary not found");
+      expect((thrown as BrowseClientError).message).toContain(
+        "browse binary not found",
+      );
       expect((thrown as BrowseClientError).message).toContain("./setup");
-      expect((thrown as BrowseClientError).message).toContain("GSTACK_BROWSE_BIN");
+      expect((thrown as BrowseClientError).message).toContain(
+        "GSTACK_BROWSE_BIN",
+      );
       // Back-compat alias still surfaces in the diagnostic.
       expect((thrown as BrowseClientError).message).toContain("BROWSE_BIN");
     }
@@ -96,7 +107,9 @@ describe("resolveBrowseBin", () => {
   });
 
   test("honors GSTACK_BROWSE_BIN when it points at a real executable", () => {
-    const resolved = withEnv({ GSTACK_BROWSE_BIN: REAL_EXE }, () => resolveBrowseBin());
+    const resolved = withEnv({ GSTACK_BROWSE_BIN: REAL_EXE }, () =>
+      resolveBrowseBin(),
+    );
     expect(resolved).toBe(REAL_EXE);
   });
 
@@ -117,7 +130,9 @@ describe("resolveBrowseBin", () => {
   });
 
   test("strips wrapping double quotes from override values", () => {
-    const resolved = withEnv({ GSTACK_BROWSE_BIN: `"${REAL_EXE}"` }, () => resolveBrowseBin());
+    const resolved = withEnv({ GSTACK_BROWSE_BIN: `"${REAL_EXE}"` }, () =>
+      resolveBrowseBin(),
+    );
     expect(resolved).toBe(REAL_EXE);
   });
 });

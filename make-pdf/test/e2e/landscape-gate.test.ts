@@ -31,13 +31,27 @@ const BUNDLE = path.join(ROOT, "lib/diagram-render/dist/diagram-render.html");
 
 const CHILD_TIMEOUT_MS = 60_000;
 
-function prerequisitesAvailable(): { ok: true } | { ok: false; reason: string } {
-  if (!fs.existsSync(PDF_BIN)) return { ok: false, reason: `make-pdf binary missing (${PDF_BIN}). Run bun run build.` };
-  if (!fs.existsSync(BROWSE_BIN)) return { ok: false, reason: `browse binary missing (${BROWSE_BIN}).` };
-  if (!fs.existsSync(BUNDLE)) return { ok: false, reason: `diagram-render bundle missing (${BUNDLE}).` };
-  if (!fs.existsSync(FIXTURE)) return { ok: false, reason: `fixture missing (${FIXTURE}).` };
-  if (!resolvePopplerTool("pdfinfo")) return { ok: false, reason: "pdfinfo not found (install poppler-utils)." };
-  if (!resolvePopplerTool("pdftotext")) return { ok: false, reason: "pdftotext not found (install poppler-utils)." };
+function prerequisitesAvailable():
+  | { ok: true }
+  | { ok: false; reason: string } {
+  if (!fs.existsSync(PDF_BIN))
+    return {
+      ok: false,
+      reason: `make-pdf binary missing (${PDF_BIN}). Run bun run build.`,
+    };
+  if (!fs.existsSync(BROWSE_BIN))
+    return { ok: false, reason: `browse binary missing (${BROWSE_BIN}).` };
+  if (!fs.existsSync(BUNDLE))
+    return { ok: false, reason: `diagram-render bundle missing (${BUNDLE}).` };
+  if (!fs.existsSync(FIXTURE))
+    return { ok: false, reason: `fixture missing (${FIXTURE}).` };
+  if (!resolvePopplerTool("pdfinfo"))
+    return { ok: false, reason: "pdfinfo not found (install poppler-utils)." };
+  if (!resolvePopplerTool("pdftotext"))
+    return {
+      ok: false,
+      reason: "pdftotext not found (install poppler-utils).",
+    };
   return { ok: true };
 }
 
@@ -54,10 +68,17 @@ function pageBoxes(pdfPath: string): PageBox[] {
     timeout: CHILD_TIMEOUT_MS,
   });
   const boxes: PageBox[] = [];
-  for (const m of out.matchAll(/Page\s+(\d+)\s+size:\s+([0-9.]+)\s+x\s+([0-9.]+)\s+pts/g)) {
-    boxes.push({ page: Number(m[1]), width: parseFloat(m[2]), height: parseFloat(m[3]) });
+  for (const m of out.matchAll(
+    /Page\s+(\d+)\s+size:\s+([0-9.]+)\s+x\s+([0-9.]+)\s+pts/g,
+  )) {
+    boxes.push({
+      page: Number(m[1]),
+      width: parseFloat(m[2]),
+      height: parseFloat(m[3]),
+    });
   }
-  if (boxes.length === 0) throw new Error(`pdfinfo reported no page sizes:\n${out}`);
+  if (boxes.length === 0)
+    throw new Error(`pdfinfo reported no page sizes:\n${out}`);
   return boxes;
 }
 
@@ -75,60 +96,89 @@ function generate(args: string[], outputPdf: string): void {
 describe("landscape promotion gate", () => {
   const avail = prerequisitesAvailable();
 
-  test.skipIf(!avail.ok)("exactly the promoted blocks get landscape pages", () => {
-    if (!avail.ok) return;
-    const workDir = fs.mkdtempSync("/tmp/make-pdf-landscape-gate-");
-    const outputPdf = path.join(workDir, "out.pdf");
-    try {
-      generate([], outputPdf);
-      const boxes = pageBoxes(outputPdf);
-      const landscape = boxes.filter(isLandscape);
-      const portrait = boxes.filter((b) => !isLandscape(b));
+  test.skipIf(!avail.ok)(
+    "exactly the promoted blocks get landscape pages",
+    () => {
+      if (!avail.ok) return;
+      const workDir = fs.mkdtempSync("/tmp/make-pdf-landscape-gate-");
+      const outputPdf = path.join(workDir, "out.pdf");
+      try {
+        generate([], outputPdf);
+        const boxes = pageBoxes(outputPdf);
+        const landscape = boxes.filter(isLandscape);
+        const portrait = boxes.filter((b) => !isLandscape(b));
 
-      // Three promotions: alt-hinted image, directive-forced image, wide diagram.
-      expect(landscape.length).toBe(3);
-      // First page (intro + screenshot) and the veto'd diagram stay portrait.
-      expect(portrait.length).toBeGreaterThanOrEqual(2);
-      expect(isLandscape(boxes[0])).toBe(false);
+        // Three promotions: alt-hinted image, directive-forced image, wide diagram.
+        expect(landscape.length).toBe(3);
+        // First page (intro + screenshot) and the veto'd diagram stay portrait.
+        expect(portrait.length).toBeGreaterThanOrEqual(2);
+        expect(isLandscape(boxes[0])).toBe(false);
 
-      // The veto'd diagram rendered on SOME portrait page and NO landscape
-      // page — the actual invariant. (Asserting a specific page index breaks
-      // spuriously when font metrics shift pagination.)
-      const pdftotext = resolvePopplerTool("pdftotext")!;
-      const pageText = (page: number) =>
-        execFileSync(pdftotext, ["-f", String(page), "-l", String(page), outputPdf, "-"], {
+        // The veto'd diagram rendered on SOME portrait page and NO landscape
+        // page — the actual invariant. (Asserting a specific page index breaks
+        // spuriously when font metrics shift pagination.)
+        const pdftotext = resolvePopplerTool("pdftotext")!;
+        const pageText = (page: number) =>
+          execFileSync(
+            pdftotext,
+            ["-f", String(page), "-l", String(page), outputPdf, "-"],
+            {
+              encoding: "utf8",
+              timeout: CHILD_TIMEOUT_MS,
+            },
+          );
+        expect(
+          portrait.some((b) => pageText(b.page).includes("vetoalpha")),
+        ).toBe(true);
+        expect(
+          landscape.some((b) => pageText(b.page).includes("vetoalpha")),
+        ).toBe(false);
+      } finally {
+        try {
+          fs.rmSync(workDir, { recursive: true, force: true });
+        } catch {
+          /* ignore */
+        }
+      }
+    },
+    120000,
+  );
+
+  test.skipIf(!avail.ok)(
+    "--toc combo: TOC renders and landscape promotion survives",
+    () => {
+      if (!avail.ok) return;
+      const workDir = fs.mkdtempSync("/tmp/make-pdf-landscape-toc-");
+      const outputPdf = path.join(workDir, "out.pdf");
+      try {
+        generate(["--toc"], outputPdf);
+        const boxes = pageBoxes(outputPdf);
+        expect(boxes.filter(isLandscape).length).toBe(3);
+
+        const pdftotext = resolvePopplerTool("pdftotext")!;
+        const text = execFileSync(pdftotext, [outputPdf, "-"], {
           encoding: "utf8",
           timeout: CHILD_TIMEOUT_MS,
         });
-      expect(portrait.some((b) => pageText(b.page).includes("vetoalpha"))).toBe(true);
-      expect(landscape.some((b) => pageText(b.page).includes("vetoalpha"))).toBe(false);
-    } finally {
-      try { fs.rmSync(workDir, { recursive: true, force: true }); } catch { /* ignore */ }
-    }
-  }, 120000);
-
-  test.skipIf(!avail.ok)("--toc combo: TOC renders and landscape promotion survives", () => {
-    if (!avail.ok) return;
-    const workDir = fs.mkdtempSync("/tmp/make-pdf-landscape-toc-");
-    const outputPdf = path.join(workDir, "out.pdf");
-    try {
-      generate(["--toc"], outputPdf);
-      const boxes = pageBoxes(outputPdf);
-      expect(boxes.filter(isLandscape).length).toBe(3);
-
-      const pdftotext = resolvePopplerTool("pdftotext")!;
-      const text = execFileSync(pdftotext, [outputPdf, "-"], { encoding: "utf8", timeout: CHILD_TIMEOUT_MS });
-      // TOC heading extracts uppercase (small-caps styling).
-      expect(text.toUpperCase()).toContain("CONTENTS");
-    } finally {
-      try { fs.rmSync(workDir, { recursive: true, force: true }); } catch { /* ignore */ }
-    }
-  }, 120000);
+        // TOC heading extracts uppercase (small-caps styling).
+        expect(text.toUpperCase()).toContain("CONTENTS");
+      } finally {
+        try {
+          fs.rmSync(workDir, { recursive: true, force: true });
+        } catch {
+          /* ignore */
+        }
+      }
+    },
+    120000,
+  );
 
   if (!avail.ok) {
     test("landscape gate prerequisites are present (hard-required in CI)", () => {
       if (process.env.CI) {
-        throw new Error(`landscape gate prerequisites missing in CI: ${avail.reason}`);
+        throw new Error(
+          `landscape gate prerequisites missing in CI: ${avail.reason}`,
+        );
       }
       console.warn(`[skip] ${avail.reason}`);
     });

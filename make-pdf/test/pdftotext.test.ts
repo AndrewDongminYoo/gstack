@@ -9,7 +9,13 @@
 import { describe, expect, test } from "bun:test";
 
 import * as path from "node:path";
-import { normalize, copyPasteGate, findExecutable, resolvePdftotext, PdftotextUnavailableError } from "../src/pdftotext";
+import {
+  normalize,
+  copyPasteGate,
+  findExecutable,
+  resolvePdftotext,
+  PdftotextUnavailableError,
+} from "../src/pdftotext";
 
 describe("normalize", () => {
   test("strips trailing spaces", () => {
@@ -84,7 +90,9 @@ describe("copyPasteGate — assertion logic", () => {
     if (match) {
       const letters = match[1].replace(/\s/g, "");
       // "ABCD" is not a substring of expected
-      expect(expected.toLowerCase().includes(letters.toLowerCase())).toBe(false);
+      expect(expected.toLowerCase().includes(letters.toLowerCase())).toBe(
+        false,
+      );
     }
   });
 
@@ -92,17 +100,22 @@ describe("copyPasteGate — assertion logic", () => {
     const expected = "para1\n\npara2\n\npara3";
     const extractedOk = "para1\n\npara2\n\npara3";
     const extractedTooFew = "para1 para2 para3";
-    const extractedTooMany = "para1\n\n\n\npara2\n\n\n\npara3\n\n\n\npara4\n\n\n\npara5";
+    const extractedTooMany =
+      "para1\n\n\n\npara2\n\n\n\npara3\n\n\n\npara4\n\n\n\npara5";
 
     const expectedBreaks = (expected.match(/\n\n/g) || []).length;
     const okBreaks = (extractedOk.match(/\n\n/g) || []).length;
     const tooFewBreaks = (extractedTooFew.match(/\n\n/g) || []).length;
-    const tooManyBreaksNormalized = (normalize(extractedTooMany).match(/\n\n/g) || []).length;
+    const tooManyBreaksNormalized = (
+      normalize(extractedTooMany).match(/\n\n/g) || []
+    ).length;
 
     expect(Math.abs(expectedBreaks - okBreaks)).toBeLessThanOrEqual(4);
     expect(Math.abs(expectedBreaks - tooFewBreaks)).toBeGreaterThan(1);
     // After normalize, 3+ newlines become 2, so the count matches
-    expect(Math.abs(expectedBreaks - tooManyBreaksNormalized)).toBeLessThanOrEqual(4);
+    expect(
+      Math.abs(expectedBreaks - tooManyBreaksNormalized),
+    ).toBeLessThanOrEqual(4);
   });
 });
 
@@ -113,7 +126,10 @@ const REAL_EXE: string =
     ? path.join(process.env.SystemRoot ?? "C:\\Windows", "System32", "cmd.exe")
     : "/bin/sh";
 
-function withEnv<T>(overrides: Record<string, string | undefined>, fn: () => T): T {
+function withEnv<T>(
+  overrides: Record<string, string | undefined>,
+  fn: () => T,
+): T {
   const saved: Record<string, string | undefined> = {};
   for (const k of Object.keys(overrides)) saved[k] = process.env[k];
   for (const [k, v] of Object.entries(overrides)) {
@@ -138,7 +154,11 @@ describe("findExecutable (pdftotext.ts)", () => {
 
   test("on win32, probes .exe / .cmd / .bat after the bare-path miss", () => {
     if (process.platform !== "win32") return;
-    const base = path.join(process.env.SystemRoot ?? "C:\\Windows", "System32", "cmd");
+    const base = path.join(
+      process.env.SystemRoot ?? "C:\\Windows",
+      "System32",
+      "cmd",
+    );
     expect(findExecutable(base)).toBe(base + ".exe");
   });
 
@@ -153,7 +173,9 @@ describe("resolvePdftotext (override resolution, v1.24-aligned)", () => {
     // exercise the override-resolution path. describeBinary will mark flavor
     // as "unknown" since cmd.exe / /bin/sh don't respond to -v like pdftotext;
     // the test asserts on the bin-path resolution, not the version probe.
-    const info = withEnv({ GSTACK_PDFTOTEXT_BIN: REAL_EXE }, () => resolvePdftotext());
+    const info = withEnv({ GSTACK_PDFTOTEXT_BIN: REAL_EXE }, () =>
+      resolvePdftotext(),
+    );
     expect(info.bin).toBe(REAL_EXE);
   });
 
@@ -174,7 +196,9 @@ describe("resolvePdftotext (override resolution, v1.24-aligned)", () => {
   });
 
   test("strips wrapping double quotes from override values", () => {
-    const info = withEnv({ GSTACK_PDFTOTEXT_BIN: `"${REAL_EXE}"` }, () => resolvePdftotext());
+    const info = withEnv({ GSTACK_PDFTOTEXT_BIN: `"${REAL_EXE}"` }, () =>
+      resolvePdftotext(),
+    );
     expect(info.bin).toBe(REAL_EXE);
   });
 

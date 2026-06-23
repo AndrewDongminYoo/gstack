@@ -34,7 +34,6 @@ graph LR
   RAWKEPT --> ASCODE
 ```
 
-
 ## Excalidraw scene
 
 ```excalidraw title="Converted flowchart"

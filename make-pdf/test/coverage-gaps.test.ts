@@ -22,7 +22,9 @@ import { imageDims } from "../src/image-size";
 import { screenCss } from "../src/print-css";
 
 /** Duck-typed RenderTab: scripted call results + a loadBundle counter. */
-function mockTab(script: (fn: string, ...args: Array<string | number>) => string) {
+function mockTab(
+  script: (fn: string, ...args: Array<string | number>) => string,
+) {
   const calls: string[] = [];
   let reloads = 0;
   const tab = {
@@ -30,13 +32,17 @@ function mockTab(script: (fn: string, ...args: Array<string | number>) => string
       calls.push(fn);
       return script(fn, ...args);
     },
-    loadBundle: () => { reloads++; },
+    loadBundle: () => {
+      reloads++;
+    },
     close: () => {},
   } as unknown as RenderTab;
   return { tab, calls, reloadCount: () => reloads };
 }
 
-const fence = (over: Partial<{ lang: string; source: string; ordinal: number }>) => ({
+const fence = (
+  over: Partial<{ lang: string; source: string; ordinal: number }>,
+) => ({
   lang: "mermaid",
   source: "graph LR\n  A --> B",
   render: true as const,
@@ -52,7 +58,8 @@ const fence = (over: Partial<{ lang: string; source: string; ordinal: number }>)
 describe("renderFenceSlots (mock tab)", () => {
   test("reset contract: a failure reloads the bundle and the NEXT fence still renders", () => {
     const { tab, reloadCount } = mockTab((fn, ...args) => {
-      if (String(args[1] ?? "").includes("BROKEN")) throw new RenderCallError("Parse error on line 1");
+      if (String(args[1] ?? "").includes("BROKEN"))
+        throw new RenderCallError("Parse error on line 1");
       return "<svg><g/></svg>";
     });
     const warnings: string[] = [];
@@ -68,14 +75,19 @@ describe("renderFenceSlots (mock tab)", () => {
     expect(slots.get("tok-1")).toContain("<svg>");
     expect(slots.get("tok-2")).toContain("diagram-error");
     expect(slots.get("tok-3")).toContain("<svg>"); // post-failure fence rendered
-    expect(reloadCount()).toBe(1);                 // exactly one reset reload
+    expect(reloadCount()).toBe(1); // exactly one reset reload
     expect(warnings[0]).toContain("failed to render");
   });
 
   test("excalidraw fence renders via __excalidrawToSvg", () => {
     const { tab, calls } = mockTab(() => "<svg data-x><g/></svg>");
     const slots = renderFenceSlots(
-      [fence({ lang: "excalidraw", source: '{"type":"excalidraw","elements":[]}' })],
+      [
+        fence({
+          lang: "excalidraw",
+          source: '{"type":"excalidraw","elements":[]}',
+        }),
+      ],
       tab,
       () => {},
     );
@@ -106,20 +118,29 @@ describe("rasterizeDiagramFigures (mock tab)", () => {
   test("svg data-URI images rasterize to PNG", () => {
     const svgUri = `data:image/svg+xml;base64,${Buffer.from("<svg/>").toString("base64")}`;
     const { tab } = mockTab(() => "data:image/png;base64,AAAA");
-    const out = rasterizeDiagramFigures(`<img src="${svgUri}" alt="v">`, tab, 6.5, () => {});
+    const out = rasterizeDiagramFigures(
+      `<img src="${svgUri}" alt="v">`,
+      tab,
+      6.5,
+      () => {},
+    );
     expect(out).toContain('src="data:image/png;base64,AAAA"');
   });
 
   test("figure rasterization failure surfaces the SOURCE as text (never silent loss)", () => {
     // Returning the figure unchanged would make the diagram vanish in DOCX
     // (the converter drops <figure>/<svg>) — the failure must be visible.
-    const { tab } = mockTab(() => { throw new RenderCallError("tainted"); });
+    const { tab } = mockTab(() => {
+      throw new RenderCallError("tainted");
+    });
     const warnings: string[] = [];
     const srcFigure = figure.replace(
       '<figure class="diagram"',
       `<figure class="diagram" data-gstack-source="${Buffer.from("graph LR\n  A --> B").toString("base64")}"`,
     );
-    const out = rasterizeDiagramFigures(srcFigure, tab, 6.5, (m) => warnings.push(m));
+    const out = rasterizeDiagramFigures(srcFigure, tab, 6.5, (m) =>
+      warnings.push(m),
+    );
     expect(out).toContain("could not be rasterized");
     expect(out).toContain("A --&gt; B"); // source visible (escaped), not dropped
     expect(out).not.toContain("<figure");
@@ -128,7 +149,9 @@ describe("rasterizeDiagramFigures (mock tab)", () => {
 
   test("svg data-URI rasterization failure keeps the original tag", () => {
     const svgUri = `data:image/svg+xml;base64,${Buffer.from("<svg/>").toString("base64")}`;
-    const { tab } = mockTab(() => { throw new RenderCallError("decode failed"); });
+    const { tab } = mockTab(() => {
+      throw new RenderCallError("decode failed");
+    });
     const tagIn = `<img src="${svgUri}">`;
     const out = rasterizeDiagramFigures(tagIn, tab, 6.5, () => {});
     expect(out).toBe(tagIn);
@@ -152,24 +175,42 @@ describe("imageDims WebP", () => {
     const body = Buffer.alloc(16);
     body.writeUInt16LE(800 & 0x3fff, 10); // width at chunk offset 26 = body offset 10
     body.writeUInt16LE(600 & 0x3fff, 12);
-    expect(imageDims(riff("VP8 ", body))).toEqual({ width: 800, height: 600, mime: "image/webp" });
+    expect(imageDims(riff("VP8 ", body))).toEqual({
+      width: 800,
+      height: 600,
+      mime: "image/webp",
+    });
   });
 
   test("VP8L (lossless)", () => {
     const body = Buffer.alloc(10);
     body[4] = 0x2f; // signature at chunk offset 20 = body offset 4
-    const w = 1023, h = 511;
+    const w = 1023,
+      h = 511;
     const bits = (w - 1) | ((h - 1) << 14);
     body.writeUInt32LE(bits >>> 0, 5);
-    expect(imageDims(riff("VP8L", body))).toEqual({ width: 1023, height: 511, mime: "image/webp" });
+    expect(imageDims(riff("VP8L", body))).toEqual({
+      width: 1023,
+      height: 511,
+      mime: "image/webp",
+    });
   });
 
   test("VP8X (extended)", () => {
     const body = Buffer.alloc(14);
-    const w = 4000 - 1, h = 250 - 1; // 24-bit minus-one at offsets 24/27 = body 8/11
-    body[8] = w & 0xff; body[9] = (w >> 8) & 0xff; body[10] = (w >> 16) & 0xff;
-    body[11] = h & 0xff; body[12] = (h >> 8) & 0xff; body[13] = (h >> 16) & 0xff;
-    expect(imageDims(riff("VP8X", body))).toEqual({ width: 4000, height: 250, mime: "image/webp" });
+    const w = 4000 - 1,
+      h = 250 - 1; // 24-bit minus-one at offsets 24/27 = body 8/11
+    body[8] = w & 0xff;
+    body[9] = (w >> 8) & 0xff;
+    body[10] = (w >> 16) & 0xff;
+    body[11] = h & 0xff;
+    body[12] = (h >> 8) & 0xff;
+    body[13] = (h >> 16) & 0xff;
+    expect(imageDims(riff("VP8X", body))).toEqual({
+      width: 4000,
+      height: 250,
+      mime: "image/webp",
+    });
   });
 
   test("unknown RIFF subtype → null", () => {
@@ -184,7 +225,13 @@ describe("pure-function stragglers", () => {
     expect(landscapeContentBox({})).toEqual({ contentWIn: 9, contentHIn: 6.5 });
   });
   test("landscapeContentBox a4 + asymmetric margins", () => {
-    const box = landscapeContentBox({ pageSize: "a4", marginLeft: "0.5in", marginRight: "0.5in", marginTop: "25mm", marginBottom: "1in" });
+    const box = landscapeContentBox({
+      pageSize: "a4",
+      marginLeft: "0.5in",
+      marginRight: "0.5in",
+      marginTop: "25mm",
+      marginBottom: "1in",
+    });
     expect(box.contentWIn).toBeCloseTo(11.69 - 1, 2);
     expect(box.contentHIn).toBeCloseTo(8.27 - 25 / 25.4 - 1, 2);
   });
@@ -199,7 +246,9 @@ describe("pure-function stragglers", () => {
     const tmp = path.join(os.tmpdir(), `bundle-override-${process.pid}.html`);
     fs.writeFileSync(tmp, "<!doctype html>");
     try {
-      expect(resolveBundlePath({ GSTACK_DIAGRAM_BUNDLE: tmp } as NodeJS.ProcessEnv)).toBe(tmp);
+      expect(
+        resolveBundlePath({ GSTACK_DIAGRAM_BUNDLE: tmp } as NodeJS.ProcessEnv),
+      ).toBe(tmp);
     } finally {
       fs.unlinkSync(tmp);
     }
