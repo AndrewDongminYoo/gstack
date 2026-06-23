@@ -1,16 +1,26 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8">
-  <title>Test Page - Iframe</title>
-  <style>
-    body { font-family: sans-serif; padding: 20px; }
-    iframe { border: 1px solid #ccc; width: 400px; height: 200px; }
-  </style>
-</head>
-<body>
-  <h1 id="main-title">Main Page</h1>
-  <iframe id="test-frame" name="testframe" srcdoc='
+  <head>
+    <meta charset="utf-8" />
+    <title>Test Page - Iframe</title>
+    <style>
+      body {
+        font-family: sans-serif;
+        padding: 20px;
+      }
+      iframe {
+        border: 1px solid #ccc;
+        width: 400px;
+        height: 200px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1 id="main-title">Main Page</h1>
+    <iframe
+      id="test-frame"
+      name="testframe"
+      srcdoc='
     <!DOCTYPE html>
     <html>
     <body>
@@ -25,6 +35,7 @@
       </script>
     </body>
     </html>
-  '></iframe>
-</body>
+  '
+    ></iframe>
+  </body>
 </html>
