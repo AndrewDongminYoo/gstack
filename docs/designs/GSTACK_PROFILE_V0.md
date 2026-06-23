@@ -1,6 +1,6 @@
 # GSTACK_PROFILE_V0 — per-project skill curation (trunk-style, opt-in)
 
-Status: design (approved direction, pending implementation plan)
+Status: implemented
 Date: 2026-06-24
 Scope: this fork only (not an upstream contribution)
 

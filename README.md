@@ -63,6 +63,43 @@ No vendored files in your repo, no version drift, no manual upgrades. Every Clau
 
 Swap `required` for `optional` if you'd rather nudge teammates than block them.
 
+### Per-project skills (opt-in)
+
+By default, `./setup` links every gstack skill into `~/.claude/skills/` so they appear globally in every project.
+Per-project mode flips that: gstack installs no global skills, and each repo opts in to exactly the subset it wants.
+This mirrors trunk.io — a global superset that each project selects from via a committed config file.
+
+**Enable on your machine (one-time):**
+
+```bash
+cd ~/.claude/skills/gstack && ./setup --opt-in
+```
+
+This sets `skill_install_mode: per-project` in `~/.gstack/config.yaml` and removes any existing global skill symlinks.
+
+**Enable skills in a repo:**
+
+```bash
+# From the project root:
+gstack-profile init               # scaffold .gstack/profile.yaml, gitignore .claude/skills/
+gstack-profile enable ship review # add skills to the profile and materialize symlinks
+git add .gstack/profile.yaml
+git commit -m "enable gstack skills for this project"
+```
+
+`.gstack/profile.yaml` is committed — teammates get the same skill set automatically.
+`.claude/skills/` is gitignored — symlinks are local, generated from the profile on each machine.
+
+**Other `gstack-profile` commands:**
+
+| Command                 | What it does                                                                            |
+| ----------------------- | --------------------------------------------------------------------------------------- |
+| `gstack-profile list`   | Print all available skills, marking which are enabled here                              |
+| `gstack-profile status` | Show enabled skills vs materialized symlinks; surface any drift                         |
+| `gstack-profile sync`   | Reconcile symlinks to match the profile (create missing, remove extra)                  |
+| `gstack-profile off`    | Remove all gstack-managed symlinks from this project (profile stays)                    |
+| `gstack-profile doctor` | Warn if any global `~/.claude/skills/gstack-*` links exist (they would override opt-in) |
+
 ### OpenClaw
 
 OpenClaw spawns Claude Code sessions via ACP, so every gstack skill just works
