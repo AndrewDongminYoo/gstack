@@ -91,7 +91,7 @@ curl -X POST http://<mac-tailnet-ip>:9999/auth/mint \
 ## Step 4: Tighten the Tailscale ACL (defense in depth)
 
 The daemon's allowlist is the primary access control. Belt-and-suspenders:
-restrict the tailnet ACL to limit who can even *reach* the daemon port.
+restrict the tailnet ACL to limit who can even _reach_ the daemon port.
 
 ```jsonc
 // In your tailscale admin console:
@@ -101,21 +101,21 @@ restrict the tailnet ACL to limit who can even *reach* the daemon port.
     {
       "action": "accept",
       "src": ["ci@example.com"],
-      "dst": ["ios-qa-mac:9999"]
+      "dst": ["ios-qa-mac:9999"],
     },
     // Tagged Claude agents — observe tier only (enforced by daemon, not ACL).
     {
       "action": "accept",
       "src": ["tag:claude-readonly"],
-      "dst": ["ios-qa-mac:9999"]
+      "dst": ["ios-qa-mac:9999"],
     },
     // Default deny.
     {
       "action": "drop",
       "src": ["*"],
-      "dst": ["ios-qa-mac:9999"]
-    }
-  ]
+      "dst": ["ios-qa-mac:9999"],
+    },
+  ],
 }
 ```
 
@@ -125,7 +125,16 @@ Every authenticated mutating request through the tailnet listener writes a
 row to `~/.gstack/security/ios-qa-audit.jsonl`:
 
 ```jsonl
-{"ts":"2026-05-18T14:23:00Z","identity":"ci@example.com","device_udid":"00008101-XXXX","endpoint":"/tap","session_id":"abc...","capability":"interact","request_id":"req_001","status":200}
+{
+  "ts": "2026-05-18T14:23:00Z",
+  "identity": "ci@example.com",
+  "device_udid": "00008101-XXXX",
+  "endpoint": "/tap",
+  "session_id": "abc...",
+  "capability": "interact",
+  "request_id": "req_001",
+  "status": 200
+}
 ```
 
 Rejections (no token, expired token, capability-insufficient, identity not
@@ -148,10 +157,10 @@ allowlisted, rate limit hit) write to `~/.gstack/security/attempts.jsonl`.
 
 ## Failure modes
 
-| Symptom | Cause | Action |
-|---|---|---|
-| Daemon refuses to open tailnet listener | `/var/run/tailscale.sock` missing or permission-denied | Install Tailscale; verify `tailscale status` works as the user running daemon |
-| `403 identity_not_allowed` | identity missing from allowlist | Owner mint: `gstack-ios-qa-mint --remote <identity>` |
-| `403 capability_insufficient` | token tier below endpoint requirement | Owner mint with higher `--capability` tier |
-| `429 rate_limited` | >10 mints/min from one identity | Wait 60s; investigate why the agent is re-minting so often |
-| `409 schema_mismatch` on `/state/restore` | snapshot from older app build | Discard the snapshot; re-capture from current app build |
+| Symptom                                   | Cause                                                  | Action                                                                        |
+| ----------------------------------------- | ------------------------------------------------------ | ----------------------------------------------------------------------------- |
+| Daemon refuses to open tailnet listener   | `/var/run/tailscale.sock` missing or permission-denied | Install Tailscale; verify `tailscale status` works as the user running daemon |
+| `403 identity_not_allowed`                | identity missing from allowlist                        | Owner mint: `gstack-ios-qa-mint --remote <identity>`                          |
+| `403 capability_insufficient`             | token tier below endpoint requirement                  | Owner mint with higher `--capability` tier                                    |
+| `429 rate_limited`                        | >10 mints/min from one identity                        | Wait 60s; investigate why the agent is re-minting so often                    |
+| `409 schema_mismatch` on `/state/restore` | snapshot from older app build                          | Discard the snapshot; re-capture from current app build                       |
