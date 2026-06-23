@@ -27,15 +27,15 @@ would let the compiled binary run full ML defense everywhere.
 
 ## Target numbers
 
-| Metric | Current (WASM in non-compiled Bun) | Target (Bun-native) |
-|---|---|---|
-| Cold-start | ~500ms (WASM init) | <100ms (embeddings mmap'd) |
-| Steady-state p50 | ~10ms | ~5ms |
-| Steady-state p95 | ~30ms | ~15ms |
-| Works in compiled binary | NO | YES (primary goal) |
-| macOS arm64 | ok (WASM) | target-first |
-| macOS x64 | ok (WASM) | stretch |
-| Linux amd64 | ok (WASM) | stretch |
+| Metric                   | Current (WASM in non-compiled Bun) | Target (Bun-native)        |
+| ------------------------ | ---------------------------------- | -------------------------- |
+| Cold-start               | ~500ms (WASM init)                 | <100ms (embeddings mmap'd) |
+| Steady-state p50         | ~10ms                              | ~5ms                       |
+| Steady-state p95         | ~30ms                              | ~15ms                      |
+| Works in compiled binary | NO                                 | YES (primary goal)         |
+| macOS arm64              | ok (WASM)                          | target-first               |
+| macOS x64                | ok (WASM)                          | stretch                    |
+| Linux amd64              | ok (WASM)                          | stretch                    |
 
 ## Architecture
 
@@ -59,16 +59,18 @@ our `input_ids` matches transformers.js output on 20 fixture strings.
 ### 2. Forward pass (RESEARCH — multi-week)
 
 The hard part. BERT-small has:
-  * 12 transformer layers
-  * Hidden size 512, attention heads 8
-  * ~30M params total
+
+- 12 transformer layers
+- Hidden size 512, attention heads 8
+- ~30M params total
 
 Each forward pass is:
-  1. Embedding lookup (ids → 512-dim vectors)
-  2. Positional encoding add
-  3. 12 × (self-attention + FFN + LayerNorm)
-  4. Pooler (CLS token projection)
-  5. Classifier head (2-way sigmoid)
+
+1. Embedding lookup (ids → 512-dim vectors)
+2. Positional encoding add
+3. 12 × (self-attention + FFN + LayerNorm)
+4. Pooler (CLS token projection)
+5. Classifier head (2-way sigmoid)
 
 Hot path is the 12 matmuls per transformer layer. Each is ~512×512×{seq_len}.
 At seq_len=128 that's ~100 matmuls of shape (128, 512) @ (512, 512).
@@ -76,33 +78,36 @@ At seq_len=128 that's ~100 matmuls of shape (128, 512) @ (512, 512).
 **Two viable approaches:**
 
 **Approach A: Pure-TS with Float32Array + SIMD**
-  * Use Bun's typed array support + SIMD intrinsics (when they land in
-    Bun stable — currently wasm-only)
-  * Implementation: ~2000 LOC of careful numerics. LayerNorm, GELU,
-    softmax, scaled dot-product attention all hand-written.
-  * Latency estimate: ~30-50ms on M-series (meaningfully slower than
-    WASM which uses WebAssembly SIMD)
-  * VERDICT: not worth it standalone. Pure-TS can't beat WASM at matmul.
+
+- Use Bun's typed array support + SIMD intrinsics (when they land in
+  Bun stable — currently wasm-only)
+- Implementation: ~2000 LOC of careful numerics. LayerNorm, GELU,
+  softmax, scaled dot-product attention all hand-written.
+- Latency estimate: ~30-50ms on M-series (meaningfully slower than
+  WASM which uses WebAssembly SIMD)
+- VERDICT: not worth it standalone. Pure-TS can't beat WASM at matmul.
 
 **Approach B: Bun FFI + Apple Accelerate**
-  * Use `bun:ffi` to call Apple's Accelerate framework (cblas_sgemm).
-    On M-series, cblas_sgemm for 768×768 matmul is ~0.5ms.
-  * Weights stored as Float32Array (loaded from ONNX initializer tensors
-    at startup), tokenizer in TS, matmul via FFI, activations in pure TS.
-  * Implementation: ~1000 LOC. The numerics are the same, but the bulk
-    work is offloaded to BLAS.
-  * Latency estimate: 3-6ms p50 (meets target).
-  * RISK: macOS-only. Linux would need OpenBLAS via FFI (different
-    symbol layout). Windows is a whole separate story.
-  * VERDICT: viable for macOS-first gstack. Matches our existing ship
-    posture (compiled binaries only for Darwin arm64).
+
+- Use `bun:ffi` to call Apple's Accelerate framework (cblas_sgemm).
+  On M-series, cblas_sgemm for 768×768 matmul is ~0.5ms.
+- Weights stored as Float32Array (loaded from ONNX initializer tensors
+  at startup), tokenizer in TS, matmul via FFI, activations in pure TS.
+- Implementation: ~1000 LOC. The numerics are the same, but the bulk
+  work is offloaded to BLAS.
+- Latency estimate: 3-6ms p50 (meets target).
+- RISK: macOS-only. Linux would need OpenBLAS via FFI (different
+  symbol layout). Windows is a whole separate story.
+- VERDICT: viable for macOS-first gstack. Matches our existing ship
+  posture (compiled binaries only for Darwin arm64).
 
 **Approach C: WebGPU in Bun**
-  * Bun gained WebGPU support in 1.1.x. transformers.js already has a
-    WebGPU backend. Could we route native Bun through it?
-  * RISK: WebGPU in headless server context on macOS requires a proper
-    display context. Unclear if it works from a compiled bun binary.
-  * STATUS: unexplored. Might be the winning path — worth a spike.
+
+- Bun gained WebGPU support in 1.1.x. transformers.js already has a
+  WebGPU backend. Could we route native Bun through it?
+- RISK: WebGPU in headless server context on macOS requires a proper
+  display context. Unclear if it works from a compiled bun binary.
+- STATUS: unexplored. Might be the winning path — worth a spike.
 
 ### 3. Weight loading (EASY — shipped)
 
@@ -154,10 +159,10 @@ PR with its own correctness-regression test suite.
 Current baseline (from `browse/test/security-bunnative.test.ts`
 benchmark mode, measured on Apple M-series — YMMV on other hardware):
 
-| Backend | p50 | p95 | p99 | Notes |
-|---|---|---|---|---|
-| transformers.js (WASM) | ~10ms | ~30ms | ~80ms | After warmup |
-| bun-native (stub — delegates) | same as WASM | | | Matches by design |
+| Backend                       | p50          | p95   | p99   | Notes             |
+| ----------------------------- | ------------ | ----- | ----- | ----------------- |
+| transformers.js (WASM)        | ~10ms        | ~30ms | ~80ms | After warmup      |
+| bun-native (stub — delegates) | same as WASM |       |       | Matches by design |
 
 When Approach B (Accelerate FFI) lands, this row gets refreshed with
 the new numbers and the delta flagged in the commit message.

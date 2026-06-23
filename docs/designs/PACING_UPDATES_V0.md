@@ -13,7 +13,7 @@ This plan exists because of **[Louise de Sadeleer](https://x.com/LouiseDSadeleer
 
 Louise's fatigue reading gstack review output came from two sources:
 
-1. **Jargon density** — technical terms appeared without explanation. *Addressed in V1 (ELI10 writing).*
+1. **Jargon density** — technical terms appeared without explanation. _Addressed in V1 (ELI10 writing)._
 2. **Interruption volume** — `/autoplan` ran 4 phases (CEO + Design + Eng + DX), each with 5–10 AskUserQuestion prompts. Total ≈ 30–50 prompts over ~45 minutes. Non-technical users check out at ~10–15 interruptions. **This is V1.1.**
 
 Translation alone doesn't fix interruption volume. A translated interruption is still an interruption. The fix needs to change WHEN findings surface, not just HOW they're worded.
@@ -24,7 +24,7 @@ During V1 planning, a pacing workstream was drafted: rank findings, auto-accept 
 
 1. **Session-state model undefined.** Pacing needs per-phase state (which findings surfaced, which auto-accepted, which user can flip). V1 has per-skill-invocation state for glossing but no backing store for per-phase pacing memory.
 2. **Phase identifier missing from question-log.** Silent Eng #8 wanted to warn when > 3 prompts within one phase. V0's `question-log.jsonl` has no `phase` field. V1 claimed "no schema change" — contradicts the enforcement target.
-3. **Question registry ≠ finding registry.** V0's `scripts/question-registry.ts` covers *questions* (registered at skill definition time). Review findings are *dynamic* (discovered at runtime). `door_type: one-way` enforcement via registry doesn't cover ad-hoc findings. One-way-door safety isn't enforceable for findings the agent generates mid-review.
+3. **Question registry ≠ finding registry.** V0's `scripts/question-registry.ts` covers _questions_ (registered at skill definition time). Review findings are _dynamic_ (discovered at runtime). `door_type: one-way` enforcement via registry doesn't cover ad-hoc findings. One-way-door safety isn't enforceable for findings the agent generates mid-review.
 4. **Pacing as prose can't invert existing control flow.** V1 planned to add a "rank findings, then ask" rule to preamble prose. But existing skill templates like `plan-eng-review/SKILL.md.tmpl` have per-section STOP/AskUserQuestion sequences. A prose rule in preamble can't reliably override a hardcoded per-section STOP. The behavioral change is sequencing, not prompt wording.
 5. **Flip mechanism has no implementation.** "Reply `flip <id>` to change" was prose. No command parser, no state store, no replay behavior. If the conversation compacts and the Silent Decisions block leaves context, the original decision is lost.
 6. **Migration prompt is itself an interrupt.** V1's post-upgrade migration prompt (offering to restore V0 prose) counts against the interruption budget V1.1 is trying to reduce. V1.1 must decide: exempt from budget, or include as interrupt-1-of-N?
@@ -69,6 +69,7 @@ During V1 planning, a pacing workstream was drafted: rank findings, auto-accept 
 ## Dependencies on V1
 
 V1.1 builds on V1's infrastructure:
+
 - `explain_level` config key + preamble echo pattern (A4).
 - Jargon list + Writing Style section (V1.1's interruption language should respect ELI10 rules).
 - V0 dormancy negative tests (V1.1 won't wake the 5D psychographic machinery either).
@@ -87,6 +88,7 @@ V1.1 does NOT depend on any V2 items (E1 substrate wiring, narrative/vibe, etc.)
 ## NOT touched in V1.1
 
 V2 items remain deferred:
+
 - Confusion-signal detection
 - 5D psychographic-driven skill adaptation (V0 E1)
 - /plan-tune narrative + /plan-tune vibe (V0 E3)

@@ -39,6 +39,7 @@ Same integration as /review. Additionally, show a one-line summary in the PR bod
 
 ```markdown
 ## Pre-Landing Review
+
 - 2 issues auto-fixed, 0 needs input
 - AI Slop: +0 new / -3 removed ✓
 ```
@@ -53,12 +54,14 @@ independently. It shows up inside Eng Review output, not as its own dashboard en
 Follow CLAUDE.md "Slop-scan" section. Summary:
 
 **Auto-fix (genuine quality improvements):**
+
 - Empty catch around `fs.unlinkSync` → replace with `safeUnlink()`
 - Empty catch around `process.kill` → replace with `safeKill()`
 - `return await` with no enclosing try → remove `await`
 - Untyped catch around URL parsing → add `instanceof TypeError` check
 
 **Skip (correct patterns that slop-scan flags):**
+
 - `.catch(() => {})` on fire-and-forget browser ops (page.close, bringToFront)
 - Catch-and-log in Chrome extension code (uncaught errors crash extensions)
 - `safeUnlinkQuiet` in shutdown/emergency paths (swallowing all errors is correct)
@@ -75,10 +78,10 @@ Follow CLAUDE.md "Slop-scan" section. Summary:
 
 ## Effort estimate
 
-| Task | Human | CC+gstack |
-|------|-------|-----------|
-| Add to review/SKILL.md.tmpl | 2 hours | 10 min |
-| Add to ship/SKILL.md.tmpl | 2 hours | 10 min |
-| Add to review/checklist.md | 1 hour | 5 min |
-| Test with actual PRs | 2 hours | 15 min |
-| Regenerate SKILL.md files | — | 1 min |
+| Task                        | Human   | CC+gstack |
+| --------------------------- | ------- | --------- |
+| Add to review/SKILL.md.tmpl | 2 hours | 10 min    |
+| Add to ship/SKILL.md.tmpl   | 2 hours | 10 min    |
+| Add to review/checklist.md  | 1 hour  | 5 min     |
+| Test with actual PRs        | 2 hours | 15 min    |
+| Regenerate SKILL.md files   | —       | 1 min     |

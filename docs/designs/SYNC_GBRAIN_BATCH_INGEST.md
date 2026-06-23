@@ -45,13 +45,13 @@ Three properties verified by reading `~/git/gbrain/src/`:
 
 ## Performance: planned vs measured (post 2026-05-10 perf review)
 
-| Metric | Plan target | Measured | Verdict |
-|---|---|---|---|
-| Prepare phase on 5135 files | — | <10s | FAST |
-| `gbrain import` on 5135 files | — | >10 min | gbrain-side perf issue, filed |
-| Loop / hang (original bug) | never | never | FIXED |
-| Memory ingest exits null on SIGTERM | no | no — state writes succeed; child gbrain dies with parent | FIXED |
-| FILE_TOO_LARGE blocks last_commit | no | no — failed paths excluded via D7 | FIXED |
+| Metric                              | Plan target | Measured                                                 | Verdict                       |
+| ----------------------------------- | ----------- | -------------------------------------------------------- | ----------------------------- |
+| Prepare phase on 5135 files         | —           | <10s                                                     | FAST                          |
+| `gbrain import` on 5135 files       | —           | >10 min                                                  | gbrain-side perf issue, filed |
+| Loop / hang (original bug)          | never       | never                                                    | FIXED                         |
+| Memory ingest exits null on SIGTERM | no          | no — state writes succeed; child gbrain dies with parent | FIXED                         |
+| FILE_TOO_LARGE blocks last_commit   | no          | no — failed paths excluded via D7                        | FIXED                         |
 
 **Initial perf miss + correction.** The first cold-run measurement
 (~12 min) was dominated by 1841 sequential gitleaks subprocess spawns
@@ -120,15 +120,15 @@ Two compounding bugs in `bin/gstack-memory-ingest.ts`:
 
 ## Numbers from the field
 
-| Metric | Value | Source |
-|---|---|---|
-| Files in walkAllSources | 1,841 | `find ~/.gstack/projects -type f \( -name "*.md" -o -name "*.jsonl" \)` |
-| `gbrain put` cold start | 329ms | `time (echo "test" \| gbrain put _bench)` |
-| `gitleaks detect` cold start | 46ms | `time gitleaks detect --no-git --source <small-file>` |
-| Theoretical floor (subprocess only) | 690s / 11.5 min | 375ms × 1841 |
-| Observed run time | 2100s / 35 min | matches orchestrator timeout exactly |
-| Pages actually persisted | 501 | gbrain sources list page_count |
-| PGLite growth during run | 290 → 386 MB | `du -sh ~/.gbrain/brain.pglite` |
+| Metric                              | Value           | Source                                                                  |
+| ----------------------------------- | --------------- | ----------------------------------------------------------------------- |
+| Files in walkAllSources             | 1,841           | `find ~/.gstack/projects -type f \( -name "*.md" -o -name "*.jsonl" \)` |
+| `gbrain put` cold start             | 329ms           | `time (echo "test" \| gbrain put _bench)`                               |
+| `gitleaks detect` cold start        | 46ms            | `time gitleaks detect --no-git --source <small-file>`                   |
+| Theoretical floor (subprocess only) | 690s / 11.5 min | 375ms × 1841                                                            |
+| Observed run time                   | 2100s / 35 min  | matches orchestrator timeout exactly                                    |
+| Pages actually persisted            | 501             | gbrain sources list page_count                                          |
+| PGLite growth during run            | 290 → 386 MB    | `du -sh ~/.gbrain/brain.pglite`                                         |
 
 ## Proposed architecture
 
@@ -187,6 +187,7 @@ Pure function: `writeStaged(prepared, stagingDir) → { written, errors }`.
 Filename: `${slug}.md`. Idempotent overwrite.
 
 Staging dir lifecycle:
+
 - Created at `~/.gstack/.staging-ingest-${pid}-${ts}/`
 - Cleaned in `finally` block, even on SIGTERM
 - One staging dir per ingest pass — never reused across runs
@@ -220,6 +221,7 @@ next run, but successes don't redo.
 ### Step 6: SIGTERM handler in `gstack-memory-ingest.ts`
 
 Wrap `main()` in:
+
 ```typescript
 let interrupted = false;
 const flush = () => {
@@ -239,6 +241,7 @@ runs over the orchestrator timeout, state from the prepare stage survives.
 ### Step 7: orchestrator update
 
 In `bin/gstack-gbrain-sync.ts:444`:
+
 - Change `result.status === 0` to `result.status === 0 || (parsedSummary.imported > 0 && parsedSummary.imported >= parsedSummary.skipped + parsedSummary.failed)`.
   Treat partial success (most pages imported) as OK, not ERR.
 - Surface `failed_count` and `partial_blockers` in the stage summary so the

@@ -29,7 +29,7 @@ Make the writer use the same file the reader does.
    - Atomic mktemp+mv write (matches existing pattern at line 54).
    - Calls `gstack-brain-enqueue "developer-profile.json"` after write, mirroring `bin/gstack-timeline-log:40`.
 
-2. **`bin/gstack-developer-profile:do_read`** — filter `mode:"resources"` entries when picking LAST_PROJECT / LAST_ASSIGNMENT / LAST_DESIGN_TITLE / CROSS_PROJECT / DESIGN_*. The Phase 6 resources auto-append happens after the real session in the same /office-hours invocation; without the filter, that resources entry clobbers real-session state for the user's next session. Latent bug that was masked by the broken writer; activated by the fix.
+2. **`bin/gstack-developer-profile:do_read`** — filter `mode:"resources"` entries when picking LAST*PROJECT / LAST_ASSIGNMENT / LAST_DESIGN_TITLE / CROSS_PROJECT / DESIGN*\*. The Phase 6 resources auto-append happens after the real session in the same /office-hours invocation; without the filter, that resources entry clobbers real-session state for the user's next session. Latent bug that was masked by the broken writer; activated by the fix.
 
 3. **`office-hours/SKILL.md.tmpl`** — swap writers at lines 490 and 893:
    - From: `echo '{...}' >> "$GSTACK_STATE_ROOT/builder-profile.jsonl"`

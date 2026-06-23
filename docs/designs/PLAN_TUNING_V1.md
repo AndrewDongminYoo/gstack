@@ -14,10 +14,10 @@ A canonical record of what /plan-tune v1 is, what it is NOT, what we considered,
 
 This plan exists because of **[Louise de Sadeleer](https://x.com/LouiseDSadeleer/status/2045139351227478199)**, who sat through a complete gstack run as a non-technical user and told us the truth about how it feels. Her specific feedback:
 
-1. "I was getting a bit tired after a while and it felt a little bit rigid." — *pacing/fatigue*
-2. "I'm just gonna say yes yes yes" (during architecture review). — *disengagement*
-3. "What I find funny is his emphasis on how many lines of code he produces. AI has produced for him of course." — *LOC framing*
-4. "As a non-engineer this is a bit complicated to understand." — *jargon density + outcome framing*
+1. "I was getting a bit tired after a while and it felt a little bit rigid." — _pacing/fatigue_
+2. "I'm just gonna say yes yes yes" (during architecture review). — _disengagement_
+3. "What I find funny is his emphasis on how many lines of code he produces. AI has produced for him of course." — _LOC framing_
+4. "As a non-engineer this is a bit complicated to understand." — _jargon density + outcome framing_
 
 V1 addresses #3 and #4 directly: jargon-glossing + outcome-framed writing that reads like a real person wrote it for the reader, plus a defensible LOC reframe. Louise's #1 and #2 (pacing/fatigue) require a separate design round — extracted to [PACING_UPDATES_V0.md](./PACING_UPDATES_V0.md) as the V1.1 plan.
 
@@ -60,10 +60,12 @@ The through-line: every review pass correctly narrowed the ambition until the re
 ## Deferred
 
 **To V1.1 (explicit, with dedicated design doc):**
+
 - Review pacing overhaul (ranking, auto-accept, max-3-per-phase, Silent Decisions block, flip mechanism). Reasoning: see [PACING_UPDATES_V0.md](./PACING_UPDATES_V0.md) §"Why it's extracted." Has 10+ structural gaps unfixable via prose-only changes.
 - Preamble first-run meta-prompt audit (lake intro, telemetry, proactive, routing). Louise saw all of them on first run; they count against fatigue. V1.1 considers suppressing until session N.
 
 **To V2 (or later):**
+
 - Confusion-signal detection from question-log driving on-the-fly translation offers.
 - 5D psychographic-driven skill adaptation (V0 E1 item).
 - /plan-tune narrative + /plan-tune vibe (V0 E3 item).
@@ -168,70 +170,82 @@ bun run scripts/garry-output-comparison.ts
 ### Decision A: Four-level experience axis vs. ELI10 by default — ANSWER: ELI10 BY DEFAULT
 
 **Four-level axis (rejected):** Ask users to self-identify as A/B/C/D on first run. Skills adapt per level.
+
 - Pros: Explicit user sovereignty. Power users get V0 behavior.
 - Cons: Adds onboarding friction. Forces users to label themselves. Technical expertise isn't one-dimensional. Engineers benefit from the same writing standards non-technical users do.
 
 **ELI10 by default with terse opt-out (chosen):** Every skill's output defaults to the writing standard. Power users set `explain_level: terse`.
+
 - Pros: No onboarding question. Good writing benefits everyone. Power users still have an escape hatch.
 - Cons: Silently changes V0 behavior on upgrade → requires migration prompt.
 
 ### Decision B: New resolver file vs. extend existing preamble — ANSWER: EXTEND EXISTING
 
 **New resolver (rejected):** `scripts/resolvers/eli10-writing.ts` as a separate generator.
+
 - Pros: Modular.
 - Cons (Codex #7): Conflicts with existing "smart 16-year-old" framing in preamble's AskUserQuestion Format section. Two sources of truth.
 
 **Extend preamble (chosen):** Writing Style section added to `scripts/resolvers/preamble.ts` directly below AskUserQuestion Format.
+
 - Pros: One source of truth. Composes with existing rules.
 - Cons: `preamble.ts` grows.
 
 ### Decision C: Runtime suppression vs. conditional prose gate — ANSWER: CONDITIONAL PROSE GATE
 
 **Runtime suppression (rejected):** Preamble read of `explain_level` triggers suppression logic.
+
 - Pros: Simpler mental model.
 - Cons (Codex #1): `gen-skill-docs` produces static Markdown. Once baked, content can't be retroactively hidden. Runtime suppression is fictional.
 
 **Conditional prose gate (chosen):** "Skip this block if EXPLAIN_LEVEL: terse OR user says 'be terse' this turn." Prose convention; agent obeys or disobeys at runtime.
+
 - Pros: Testable. Matches V0's `QUESTION_TUNING` pattern. Honest about the mechanism.
 - Cons: Depends on agent prose compliance (no hard runtime gate).
 
 ### Decision D: Jargon list location — runtime-user-editable vs. repo-owned gen-time — ANSWER: REPO-OWNED GEN-TIME
 
 **User-editable at runtime (rejected):** `~/.gstack/jargon-list.json` overrides `scripts/jargon-list.json`.
+
 - Pros: User can add terms specific to their domain.
 - Cons (Codex #4, Pass 2): Gen-time inlining means user edits require regeneration. Contradiction.
 
 **Repo-owned, gen-time inlined (chosen):** `scripts/jargon-list.json` only. PRs to add/remove. `bun run gen:skill-docs` inlines terms into preamble prose.
+
 - Pros: One source of truth. Zero runtime cost. Composable with existing build.
 - Cons: Users can't add terms locally. Mitigation: documented in CONTRIBUTING.md; PRs accepted.
 
 ### Decision E: Pacing overhaul in V1 vs. V1.1 — ANSWER: V1.1 (extracted)
 
 **Pacing in V1 (rejected):** Bundle ranking + auto-accept + Silent Decisions + max-3-per-phase cap + flip mechanism.
+
 - Pros: Addresses Louise's fatigue directly.
 - Cons (Eng review Pass 3 + Codex Pass 2): 10+ structural gaps unfixable via plan-text editing. Session-state model undefined. `phase` field missing from question-log. Registry doesn't cover dynamic review findings. Flip mechanism has no implementation. Migration prompt itself is an interrupt. First-run preamble prompts also count. Pacing as prose can't invert existing ask-per-section execution order.
 
 **Extract to V1.1 (chosen):** Ship ELI10 + LOC in V1. Pacing gets its own design round with full review cycle.
+
 - Pros: Ships V1 honestly. Gives V1.1 real baseline data from V1 usage (Louise's V1 transcript). Matches SCOPE REDUCTION mode from CEO review.
 - Cons: Louise's fatigue complaint isn't fully addressed until V1.1. Mitigation: V1 still improves her experience via writing quality; V1.1 follows up with pacing.
 
 ### Decision F: README update mechanism — single string vs. two-string — ANSWER: TWO-STRING
 
 **Single string (rejected):** `<!-- GSTACK-THROUGHPUT-MULTIPLE: N× -->` as both replacement anchor AND CI-reject marker.
+
 - Pros: Simple.
 - Cons (Codex Pass 2): Pipeline breaks on itself — CI rejects commits containing the marker, but the marker IS the anchor.
 
 **Two-string (chosen):** `GSTACK-THROUGHPUT-PLACEHOLDER` (anchor, stable) + `GSTACK-THROUGHPUT-PENDING` (explicit missing-build marker, CI rejects).
+
 - Pros: Anchor persists; CI catches actual failure state.
 - Cons: Two symbols to remember.
 
 ## Review record
 
-| Review | Runs | Status | Key findings integrated |
-|---|---|---|---|
-| CEO Review | 1 | CLEAR (HOLD SCOPE) | Premise pivot: four-level axis → ELI10 by default. Cross-model tensions resolved via explicit user choice. |
-| Codex Review | 2 | ISSUES_FOUND + drove scope reduction | Pass 1: 25 findings, 3 critical blockers (static-markdown, host-paths, README mechanism). Pass 2: 20 findings on revised plan, drove V1.1 extraction. |
-| Eng Review | 3 | CLEAR (SCOPE_REDUCED) | Pass 1: critical gaps + 3 decisions (all A). Pass 2: scoring-formula bug, path contradiction, fake `devDependencies.optional` field. Pass 3: identified pacing structural gaps, drove extraction. |
-| DX Review | 1 | CLEAR (TRIAGE) | 3 critical (docs plan, upgrade migration, hero moment). 9 auto-accepted as Silent DX Decisions. |
+| Review       | Runs | Status                               | Key findings integrated                                                                                                                                                                           |
+| ------------ | ---- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CEO Review   | 1    | CLEAR (HOLD SCOPE)                   | Premise pivot: four-level axis → ELI10 by default. Cross-model tensions resolved via explicit user choice.                                                                                        |
+| Codex Review | 2    | ISSUES_FOUND + drove scope reduction | Pass 1: 25 findings, 3 critical blockers (static-markdown, host-paths, README mechanism). Pass 2: 20 findings on revised plan, drove V1.1 extraction.                                             |
+| Eng Review   | 3    | CLEAR (SCOPE_REDUCED)                | Pass 1: critical gaps + 3 decisions (all A). Pass 2: scoring-formula bug, path contradiction, fake `devDependencies.optional` field. Pass 3: identified pacing structural gaps, drove extraction. |
+| DX Review    | 1    | CLEAR (TRIAGE)                       | 3 critical (docs plan, upgrade migration, hero moment). 9 auto-accepted as Silent DX Decisions.                                                                                                   |
 
 Review report persisted in `~/.gstack/` via `gstack-review-log`. Plan file retained with full history at `~/.claude/plans/system-instruction-you-are-working-transient-sunbeam.md`.

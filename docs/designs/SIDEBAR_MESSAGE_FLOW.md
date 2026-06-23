@@ -103,11 +103,11 @@ The protocol-token path is what the browser actually uses.
 
 ### Dual-token model
 
-| Token | Lives in | Used for | Lifetime |
-|-------|----------|----------|----------|
-| `AUTH_TOKEN` | `<stateDir>/browse.json`; in-memory in server.ts | `/pty-session` POST (mint cookie + token) | server lifetime |
-| `gstack-pty.<...>` (Sec-WebSocket-Protocol) | Browser memory only; agent `validTokens` Set | `/ws` upgrade auth | 30 min, auto-revoked on WS close |
-| `INTERNAL_TOKEN` | `<stateDir>/terminal-internal-token`; in agent memory | server → agent loopback `/internal/grant` | agent lifetime |
+| Token                                       | Lives in                                              | Used for                                  | Lifetime                         |
+| ------------------------------------------- | ----------------------------------------------------- | ----------------------------------------- | -------------------------------- |
+| `AUTH_TOKEN`                                | `<stateDir>/browse.json`; in-memory in server.ts      | `/pty-session` POST (mint cookie + token) | server lifetime                  |
+| `gstack-pty.<...>` (Sec-WebSocket-Protocol) | Browser memory only; agent `validTokens` Set          | `/ws` upgrade auth                        | 30 min, auto-revoked on WS close |
+| `INTERNAL_TOKEN`                            | `<stateDir>/terminal-internal-token`; in agent memory | server → agent loopback `/internal/grant` | agent lifetime                   |
 
 `AUTH_TOKEN` is **never** valid for `/ws` directly. The session token is
 **never** valid for `/pty-session` or `/command`. Strict separation
@@ -157,11 +157,11 @@ Drop any one of those three and the whole tab becomes unsafe.
 Three browser-action buttons live next to the Restart button at the top
 of the Terminal pane:
 
-| Button | Behavior |
-|--------|----------|
-| 🧹 Cleanup | `window.gstackInjectToTerminal(prompt)` — pipes a "remove ads/banners" instruction into the live PTY. claude in the terminal sees it and acts. |
-| 📸 Screenshot | `POST /command screenshot` — direct browse-server call, no PTY involvement. |
-| 🍪 Cookies | Navigates to the `/cookie-picker` page. |
+| Button        | Behavior                                                                                                                                       |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| 🧹 Cleanup    | `window.gstackInjectToTerminal(prompt)` — pipes a "remove ads/banners" instruction into the live PTY. claude in the terminal sees it and acts. |
+| 📸 Screenshot | `POST /command screenshot` — direct browse-server call, no PTY involvement.                                                                    |
+| 🍪 Cookies    | Navigates to the `/cookie-picker` page.                                                                                                        |
 
 The Inspector's "Send to Code" button uses the same `gstackInjectToTerminal`
 path to forward CSS inspector data into claude.
@@ -183,18 +183,18 @@ to `display:flex`, so sidepanel-terminal.js runs a `MutationObserver` on
 
 ## Files
 
-| Component | File | Runs in |
-|-----------|------|---------|
-| Sidebar UI shell | `extension/sidepanel.html` + `sidepanel.js` + `sidepanel.css` | Chrome side panel |
-| Terminal UI | `extension/sidepanel-terminal.js` + `extension/lib/xterm.js` | Chrome side panel |
-| Service worker | `extension/background.js` | Chrome background |
-| Content script | `extension/content.js` | Page context |
-| HTTP server | `browse/src/server.ts` | Bun (compiled binary) |
-| PTY agent | `browse/src/terminal-agent.ts` | Bun (non-compiled) |
-| PTY token store | `browse/src/pty-session-cookie.ts` | Bun (compiled, in server.ts) |
-| CLI entry | `browse/src/cli.ts` | Bun (compiled binary) |
-| State file | `<stateDir>/browse.json` | Filesystem |
-| Terminal port | `<stateDir>/terminal-port` | Filesystem |
-| Internal token | `<stateDir>/terminal-internal-token` | Filesystem |
-| Claude probe | `<stateDir>/claude-available.json` | Filesystem |
-| Active tab | `<stateDir>/active-tab.json` | Filesystem (claude reads) |
+| Component        | File                                                          | Runs in                      |
+| ---------------- | ------------------------------------------------------------- | ---------------------------- |
+| Sidebar UI shell | `extension/sidepanel.html` + `sidepanel.js` + `sidepanel.css` | Chrome side panel            |
+| Terminal UI      | `extension/sidepanel-terminal.js` + `extension/lib/xterm.js`  | Chrome side panel            |
+| Service worker   | `extension/background.js`                                     | Chrome background            |
+| Content script   | `extension/content.js`                                        | Page context                 |
+| HTTP server      | `browse/src/server.ts`                                        | Bun (compiled binary)        |
+| PTY agent        | `browse/src/terminal-agent.ts`                                | Bun (non-compiled)           |
+| PTY token store  | `browse/src/pty-session-cookie.ts`                            | Bun (compiled, in server.ts) |
+| CLI entry        | `browse/src/cli.ts`                                           | Bun (compiled binary)        |
+| State file       | `<stateDir>/browse.json`                                      | Filesystem                   |
+| Terminal port    | `<stateDir>/terminal-port`                                    | Filesystem                   |
+| Internal token   | `<stateDir>/terminal-internal-token`                          | Filesystem                   |
+| Claude probe     | `<stateDir>/claude-available.json`                            | Filesystem                   |
+| Active tab       | `<stateDir>/active-tab.json`                                  | Filesystem (claude reads)    |

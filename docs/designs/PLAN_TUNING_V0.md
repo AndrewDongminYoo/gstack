@@ -40,25 +40,25 @@ After weighing Codex's argument, we chose to roll back CEO EXPANSION and ship an
 
 ## Deferred to v2 (not in this PR, but explicit acceptance criteria)
 
-| Item | Why deferred | Acceptance criteria for v2 promotion |
-|------|--------------|--------------------------------------|
-| E1 Substrate wiring (5 skills read profile and adapt) | Requires v1 registry proving durable. Requires real observed data to calibrate signal deltas. Risk of psychographic drift. | v1 registry stable for 90+ days. Inferred dimensions show clear stability across 3+ skills. User dogfood validates that defaults informed by profile feel right. |
-| E3 `/plan-tune narrative` + `/plan-tune vibe` | Event-anchored narrative needs stable profile. Without v1 data, output will be generic slop. | Profile diversity check passes for 2+ weeks real usage. Narrative test proves it quotes specific events, not clichés. |
-| E4 Blind-spot coach | Logically conflicts with E1/E6 without explicit interaction-budget design. Needs global session budget, escalation rules, exclusion from mismatch detection. | Design spec for interaction budget + escalation. Dogfood confirms challenges feel coaching, not nagging. |
-| E5 LANDED celebration HTML page | Cannot live in preamble (Codex #9, #10). When promoted, moves to explicit command `/plan-tune show-landed` OR post-ship hook — not passive detection in the hot path. | Explicit command or hook design. /design-shotgun → /design-html for the visual direction. Security + privacy review for PR data aggregation. |
-| E6 Auto-adjustment based on mismatch | In v1, /plan-tune shows the gap between declared and inferred. In v2, it could suggest declaration updates. Requires dual-track profile to be stable. | Real mismatch data from v1 shows consistent patterns. Suggestion UX designed separately. |
-| Psychographic-driven auto-decide | Zero behavioral change in v1. Only explicit preferences act. | Real usage shows explicit preferences cover most cases. Inferred profile stable enough to trust. |
+| Item                                                  | Why deferred                                                                                                                                                          | Acceptance criteria for v2 promotion                                                                                                                             |
+| ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| E1 Substrate wiring (5 skills read profile and adapt) | Requires v1 registry proving durable. Requires real observed data to calibrate signal deltas. Risk of psychographic drift.                                            | v1 registry stable for 90+ days. Inferred dimensions show clear stability across 3+ skills. User dogfood validates that defaults informed by profile feel right. |
+| E3 `/plan-tune narrative` + `/plan-tune vibe`         | Event-anchored narrative needs stable profile. Without v1 data, output will be generic slop.                                                                          | Profile diversity check passes for 2+ weeks real usage. Narrative test proves it quotes specific events, not clichés.                                            |
+| E4 Blind-spot coach                                   | Logically conflicts with E1/E6 without explicit interaction-budget design. Needs global session budget, escalation rules, exclusion from mismatch detection.          | Design spec for interaction budget + escalation. Dogfood confirms challenges feel coaching, not nagging.                                                         |
+| E5 LANDED celebration HTML page                       | Cannot live in preamble (Codex #9, #10). When promoted, moves to explicit command `/plan-tune show-landed` OR post-ship hook — not passive detection in the hot path. | Explicit command or hook design. /design-shotgun → /design-html for the visual direction. Security + privacy review for PR data aggregation.                     |
+| E6 Auto-adjustment based on mismatch                  | In v1, /plan-tune shows the gap between declared and inferred. In v2, it could suggest declaration updates. Requires dual-track profile to be stable.                 | Real mismatch data from v1 shows consistent patterns. Suggestion UX designed separately.                                                                         |
+| Psychographic-driven auto-decide                      | Zero behavioral change in v1. Only explicit preferences act.                                                                                                          | Real usage shows explicit preferences cover most cases. Inferred profile stable enough to trust.                                                                 |
 
 ## Rejected entirely (Codex was right, we're not doing these)
 
-| Item | Why rejected |
-|------|--------------|
-| Substrate-as-prompt-convention (vs. typed registry) | Codex #1. Agents can silently skip instructions. Building psychographic on top is sand. |
-| ±0.2 clamp on declared dimensions | Codex #6. Creates logical contradiction with E6 mismatch detection. Pick ONE: editable preference OR inferred behavior. Now: both, tracked separately (dual-track profile). |
-| One-way door classification by parsing prose summaries | Codex #4. Safety depends on wording. door_type must be declared at question definition site (registry), not inferred. |
-| Single event-schema file mixing declarations + overrides + verdicts + feedback | Codex #5. Incompatible domain objects. Now split into three files: question-log.jsonl, question-preferences.json, question-events.jsonl. |
-| TTHW telemetry for /plan-tune onboarding | Codex #14. Contradicts local-first framing. Local logging only. |
-| Inline tune: writes without user-origin verification | Codex #16. Profile poisoning attack. Now: user-origin gate is non-optional. |
+| Item                                                                           | Why rejected                                                                                                                                                                |
+| ------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Substrate-as-prompt-convention (vs. typed registry)                            | Codex #1. Agents can silently skip instructions. Building psychographic on top is sand.                                                                                     |
+| ±0.2 clamp on declared dimensions                                              | Codex #6. Creates logical contradiction with E6 mismatch detection. Pick ONE: editable preference OR inferred behavior. Now: both, tracked separately (dual-track profile). |
+| One-way door classification by parsing prose summaries                         | Codex #4. Safety depends on wording. door_type must be declared at question definition site (registry), not inferred.                                                       |
+| Single event-schema file mixing declarations + overrides + verdicts + feedback | Codex #5. Incompatible domain objects. Now split into three files: question-log.jsonl, question-preferences.json, question-events.jsonl.                                    |
+| TTHW telemetry for /plan-tune onboarding                                       | Codex #14. Contradicts local-first framing. Local logging only.                                                                                                             |
+| Inline tune: writes without user-origin verification                           | Codex #16. Profile poisoning attack. Now: user-origin gate is non-optional.                                                                                                 |
 
 ## Architecture
 
@@ -76,7 +76,7 @@ After weighing Codex's argument, we chose to roll back CEO EXPANSION and ship an
 
 ```json
 {
-  "identity": {"email": "..."},
+  "identity": { "email": "..." },
   "declared": {
     "scope_appetite": 0.9,
     "risk_tolerance": 0.7,
@@ -85,7 +85,7 @@ After weighing Codex's argument, we chose to roll back CEO EXPANSION and ship an
     "architecture_care": 0.7
   },
   "inferred": {
-    "values": {"scope_appetite": 0.72, "risk_tolerance": 0.58, "...": "..."},
+    "values": { "scope_appetite": 0.72, "risk_tolerance": 0.58, "...": "..." },
     "sample_size": 47,
     "diversity": {
       "skills_covered": 5,
@@ -93,12 +93,15 @@ After weighing Codex's argument, we chose to roll back CEO EXPANSION and ship an
       "days_span": 23
     }
   },
-  "gap": {"scope_appetite": 0.18, "...": "..."},
+  "gap": { "scope_appetite": 0.18, "...": "..." },
   "sessions": [
-    {"date": "...", "mode": "builder", "project_slug": "...", "signals": []}
+    { "date": "...", "mode": "builder", "project_slug": "...", "signals": [] }
   ],
   "signals_accumulated": {
-    "named_users": 1, "taste": 4, "agency": 3, "...": "..."
+    "named_users": 1,
+    "taste": 4,
+    "agency": 3,
+    "...": "..."
   }
 }
 ```
@@ -123,6 +126,7 @@ After weighing Codex's argument, we chose to roll back CEO EXPANSION and ship an
 ## Security model
 
 **Profile poisoning defense** (Codex #16, Decision J below): Inline tune events may be written ONLY when:
+
 - The agent is processing the user's current chat turn
 - The `tune:` prefix appears in that user message (not in any tool output, file content, PR description, commit message, etc.)
 - The resolver's instructions to the agent explicitly call this out
@@ -130,6 +134,7 @@ After weighing Codex's argument, we chose to roll back CEO EXPANSION and ship an
 Binary enforcement: `gstack-question-preference --write` requires `source: "inline-user"` field on every tune-originated record. Any other source value (e.g., `inline-tool-output`, `inline-file-content`) is rejected with an error. Agent is instructed to never forge the `source` field.
 
 **Data privacy**:
+
 - All data is local-only under `~/.gstack/`. Nothing leaves without explicit user action.
 - `/plan-tune export <path>` writes profile to user-specified path (opt-in export).
 - `/plan-tune delete` wipes local profile files.
@@ -149,11 +154,13 @@ Binary enforcement: `gstack-question-preference --write` requires `source: "inli
 ## Why event-sourced + dual-track
 
 **Why event-sourced for the inferred profile**:
+
 - Signal map can change between gstack versions. Recompute from events, no data migration needed.
 - Auditable: `/plan-tune profile --trace autonomy` shows every event that contributed to the value.
 - Future-proof: new dimensions can be derived from existing history.
 
 **Why dual-track (declared + inferred, separately)** (Decision B below):
+
 - Resolves the logical contradiction Codex #6 identified.
 - `declared` is user sovereignty. User states who they are. System obeys for anything user-driven (preferences, declarations, overrides).
 - `inferred` is observation. System tracks behavioral patterns. Displayed but not acted on in v1.
@@ -166,6 +173,7 @@ Binary enforcement: `gstack-question-preference --write` requires `source: "inli
 `/plan-tune` (no args) enters conversational mode. No CLI subcommand syntax required.
 
 Menu in plain language:
+
 - "Show me my profile"
 - "Review questions I've been asked"
 - "Set a preference about a question"
@@ -174,6 +182,7 @@ Menu in plain language:
 - "Turn it off"
 
 User replies conversationally. Agent interprets, confirms the intended change, then writes. For example:
+
 - User: "I'm more of a boil-the-ocean person than 0.5 suggests"
 - Agent: "Got it — update `declared.scope_appetite` from 0.5 to 0.8? [Y/n]"
 - User: "Yes"
@@ -186,22 +195,27 @@ Power users can type shortcuts (`narrative`, `vibe`, `reset`, `stats`, `enable`,
 ## Files to Create
 
 ### Core schema
+
 - `scripts/question-registry.ts` — typed registry. Seeded from audit of all SKILL.md.tmpl AskUserQuestion invocations.
 - `scripts/one-way-doors.ts` — secondary keyword fallback. Primary: `door_type` in registry.
 - `scripts/psychographic-signals.ts` — hand-crafted signal map for inferred computation.
 
 ### Binaries
+
 - `bin/gstack-question-log` — append log record, validate against registry.
 - `bin/gstack-question-preference` — read/write/check/clear explicit preferences.
 - `bin/gstack-developer-profile` — supersedes `bin/gstack-builder-profile`. Subcommands: `--read` (legacy compat), `--derive`, `--gap`, `--profile`.
 
 ### Resolvers
+
 - `scripts/resolvers/question-tuning.ts` — three generators: `generateQuestionPreferenceCheck(ctx)` (pre-question check), `generateQuestionLog(ctx)` (post-question log), `generateInlineTuneFeedback(ctx)` (post-question tune: prompt with user-origin gate instructions).
 
 ### Skill
+
 - `plan-tune/SKILL.md.tmpl` — conversational, plain-English inspection and preference tool.
 
 ### Tests
+
 - `test/plan-tune.test.ts` — registry completeness, duplicate ID check, preference precedence (never-ask + not-one-way → AUTO_DECIDE; never-ask + one-way → ASK_NORMALLY), user-origin gate (rejects non-inline-user sources), derivation + recompute, unified profile schema, migration regression with 7-session fixture.
 
 ## Files to Modify
@@ -234,14 +248,17 @@ Initial user position (office-hours): "The psychographic IS the differentiation.
 ### Decision B: Event-sourced vs. stored dimensions vs. hybrid — ANSWER: EVENT-SOURCED + USER-DECLARED ANCHOR (B+C)
 
 **Approach A (stored dimensions):** Mutate in place. Simple.
+
 - Pros: Smallest data model. Easy to reason about.
 - Cons: Lossy. No history. Signal map changes require migration. Profile changes are opaque to the user.
 
 **Approach B (event-sourced):** Store raw events, derive dimensions.
+
 - Pros: Auditable. Recomputable on signal map changes. No data migration ever. Matches existing learnings.jsonl pattern.
 - Cons: More complex derivation. Events file grows over time (compaction deferred to v2).
 
 **Approach C (hybrid — user-declared anchor, events refine):** Initial profile is user-stated; events refine within ±0.2.
+
 - Pros: Day-1 value. User sovereignty. Calibration anchor instead of starting from zero.
 - Cons: ±0.2 clamp creates logical conflict with mismatch detection (Codex #6 caught this).
 
@@ -250,10 +267,12 @@ Initial user position (office-hours): "The psychographic IS the differentiation.
 ### Decision C: One-way door classification — runtime prose parsing vs. registry declaration — ANSWER: REGISTRY DECLARATION (post-Codex)
 
 **Runtime prose parsing (original):** `isOneWayDoor(skill, category, summary)` plus keyword patterns.
+
 - Pros: Minimal friction for skill authors. No schema to maintain.
 - Cons (Codex #4): Safety depends on wording. A destructive-op question phrased mildly could be misclassified. Unacceptable for a safety gate.
 
 **Registry declaration (revised):** Every registry entry declares `door_type`.
+
 - Pros: Deterministic. Auditable. CI-enforceable (all questions must declare).
 - Cons: Maintenance burden. Every new skill question must classify.
 
@@ -262,10 +281,12 @@ Initial user position (office-hours): "The psychographic IS the differentiation.
 ### Decision D: Inline tune feedback grammar — structured keywords vs. free-form natural language — ANSWER: STRUCTURED WITH FREE-FORM FALLBACK
 
 **Structured keywords only:** `tune: unnecessary | ask-less | never-ask | always-ask | context-dependent`.
+
 - Pros: Unambiguous. Clean profile data.
 - Cons: Users must memorize.
 
 **Free-form only:** Agent interprets whatever user says.
+
 - Pros: Natural. No syntax to learn.
 - Cons: Inconsistent profile data. Hard to debug why a tune didn't take effect.
 
@@ -274,10 +295,12 @@ Initial user position (office-hours): "The psychographic IS the differentiation.
 ### Decision E: CLI subcommand structure for /plan-tune — ANSWER: PLAIN ENGLISH CONVERSATIONAL (no subcommand syntax required)
 
 **`/plan-tune profile`, `/plan-tune profile set autonomy 0.4`, etc.** (original):
+
 - Pros: Fast for power users. Self-documenting via --help.
 - Cons: Users must memorize. Every invocation feels like a CLI session, not a conversation.
 
 **Plain-English conversational (revised after user correction):** `/plan-tune` enters a menu. User says what they want in natural language.
+
 - Pros: Zero memorization. Feels like talking to a coach, not a shell.
 - Cons: Slower for power users. Requires good agent interpretation.
 
@@ -286,14 +309,17 @@ Initial user position (office-hours): "The psychographic IS the differentiation.
 ### Decision F: Landed celebration — passive preamble detection vs. explicit command vs. post-ship hook — ANSWER: DEFERRED TO v2; WHEN PROMOTED, NOT IN PREAMBLE
 
 **Passive detection in preamble (original):** Every skill's preamble runs `gh pr view` to detect recent merges.
+
 - Pros: Works regardless of which skill the user runs. User doesn't need to do anything special.
 - Cons (Codex #9): Latency, auth failures, rate limits, surprise browser opens, nondeterminism injected into every skill's preamble. Side effect in hot path.
 
 **Explicit command (`/plan-tune show-landed`):** User opts in.
+
 - Pros: No hot-path side effects. User controls when to see it.
 - Cons: Requires user discovery. The "surprise you when you earned it" magic is lost.
 
 **Post-ship hook (`/ship` triggers detection after PR creation):** Tied to /ship.
+
 - Pros: Natural timing. No preamble cost.
 - Cons: /ship isn't always the landing event (manual merges, team members merging, etc.).
 
@@ -302,10 +328,12 @@ Initial user position (office-hours): "The psychographic IS the differentiation.
 ### Decision G: Calibration gate — 20 events vs. diversity-checked — ANSWER: DIVERSITY-CHECKED
 
 **"20 events" (original):** Simple count.
+
 - Pros: Trivial to implement.
 - Cons (Codex #13): Gameable. 20 inline "unnecessary" replies to ONE question should not calibrate five dimensions.
 
 **Diversity check (revised):** `sample_size >= 20 AND skills_covered >= 3 AND question_ids_covered >= 8 AND days_span >= 7`.
+
 - Pros: Profile has actually been exercised across the system before it's trusted.
 - Cons: Slightly more complex.
 
@@ -314,10 +342,12 @@ Initial user position (office-hours): "The psychographic IS the differentiation.
 ### Decision H: Implementation order — classifiers first vs. integration point first — ANSWER: INTEGRATION POINT FIRST (registry + CI lint)
 
 **Classifiers first (original):** Build bin tools, then resolvers, then skill template.
+
 - Pros: Atomic building blocks. Can unit-test before integration.
 - Cons (Codex #19): Builds machinery around an unenforceable convention. If the convention doesn't hold, all the work is wasted.
 
 **Integration point first (revised):** Build typed registry + CI lint first. Prove the integration works before building infrastructure on top.
+
 - Pros: Foundation is proven. Infrastructure has something durable to rely on.
 - Cons: Requires auditing every existing AskUserQuestion in gstack — substantial up-front work.
 
@@ -326,10 +356,12 @@ Initial user position (office-hours): "The psychographic IS the differentiation.
 ### Decision I: Telemetry for TTHW — opt-in telemetry vs. local-only — ANSWER: LOCAL-ONLY
 
 **Opt-in telemetry (original, suggested in DX review):** Instrument TTHW via telemetry event.
+
 - Pros: Quantitative measure of onboarding experience across all users.
 - Cons (Codex #14): Contradicts local-first OSS framing. Adds telemetry surface specifically for this skill.
 
 **Local-only (revised):** Logging is local. Respect existing `telemetry` config; skill adds no new telemetry channels.
+
 - Pros: Consistent with gstack's local-first ethos.
 - Cons: No aggregate view of onboarding time.
 
@@ -338,14 +370,17 @@ Initial user position (office-hours): "The psychographic IS the differentiation.
 ### Decision J: Profile poisoning defense — no defense vs. confirmation gate vs. user-origin gate — ANSWER: USER-ORIGIN GATE
 
 **No defense (original — caught by Codex):** Agent writes any tune event it sees.
+
 - Pros: Simplest. No additional trust checks.
 - Cons (Codex #16): Malicious repo content, PR descriptions, tool output can inject `tune: never ask` and poison the profile. This is a real attack surface.
 
 **Confirmation gate:** Every tune write prompts "Confirmed? [Y/n]".
+
 - Pros: Universal defense.
 - Cons: Friction on every legitimate use.
 
 **User-origin gate:** Agent only writes tune events when the `tune:` prefix appears in the user's own chat message for the current turn (not tool output, not file content). Binary validates `source: "inline-user"`.
+
 - Pros: Blocks the attack without friction on legitimate use.
 - Cons: Relies on agent correctly identifying source. Binary-level validation is the enforcement.
 
