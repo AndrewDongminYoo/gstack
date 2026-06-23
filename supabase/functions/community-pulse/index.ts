@@ -23,12 +23,13 @@ const JSON_HEADERS = {
 Deno.serve(async () => {
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
   );
 
   // Cache fetch is hoisted above the recompute try so the catch can serve a
   // stale-but-real snapshot instead of an error when recompute fails.
-  let cached: { data: Record<string, unknown>; refreshed_at: string } | null = null;
+  let cached: { data: Record<string, unknown>; refreshed_at: string } | null =
+    null;
   try {
     const { data } = await supabase
       .from("community_pulse_cache")
@@ -54,8 +55,12 @@ Deno.serve(async () => {
 
   try {
     // Cache is stale or missing — recompute
-    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-    const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
+    const weekAgo = new Date(
+      Date.now() - 7 * 24 * 60 * 60 * 1000,
+    ).toISOString();
+    const twoWeeksAgo = new Date(
+      Date.now() - 14 * 24 * 60 * 60 * 1000,
+    ).toISOString();
 
     // Weekly active (update checks this week)
     const { count: thisWeek, error: thisWeekErr } = await supabase
@@ -74,9 +79,8 @@ Deno.serve(async () => {
 
     const current = thisWeek ?? 0;
     const previous = lastWeek ?? 0;
-    const changePct = previous > 0
-      ? Math.round(((current - previous) / previous) * 100)
-      : 0;
+    const changePct =
+      previous > 0 ? Math.round(((current - previous) / previous) * 100) : 0;
 
     // Top skills (last 7 days)
     const { data: skillRows, error: skillErr } = await supabase
@@ -102,7 +106,9 @@ Deno.serve(async () => {
     // Crash clusters (top 5)
     const { data: crashes, error: crashErr } = await supabase
       .from("crash_clusters")
-      .select("error_class, gstack_version, total_occurrences, identified_users")
+      .select(
+        "error_class, gstack_version, total_occurrences, identified_users",
+      )
       .limit(5);
     if (crashErr) throw crashErr;
 
@@ -118,7 +124,8 @@ Deno.serve(async () => {
 
     for (const row of versionRows ?? []) {
       if (row.gstack_version) {
-        versionCounts[row.gstack_version] = (versionCounts[row.gstack_version] ?? 0) + 1;
+        versionCounts[row.gstack_version] =
+          (versionCounts[row.gstack_version] ?? 0) + 1;
       }
     }
     const topVersions = Object.entries(versionCounts)
@@ -132,7 +139,9 @@ Deno.serve(async () => {
     //   security_layer, security_verdict.
     const { data: attackRows, error: attackErr } = await supabase
       .from("telemetry_events")
-      .select("security_url_domain, security_layer, security_verdict, installation_id")
+      .select(
+        "security_url_domain, security_layer, security_verdict, installation_id",
+      )
       .eq("event_type", "attack_attempt")
       .gte("event_timestamp", weekAgo)
       .limit(5000);
@@ -154,13 +163,15 @@ Deno.serve(async () => {
     for (const row of attackRows ?? []) {
       const iid = row.installation_id ?? "";
       if (row.security_url_domain) {
-        domainCounts[row.security_url_domain] = (domainCounts[row.security_url_domain] ?? 0) + 1;
+        domainCounts[row.security_url_domain] =
+          (domainCounts[row.security_url_domain] ?? 0) + 1;
         if (iid) {
           (domainInstallations[row.security_url_domain] ??= new Set()).add(iid);
         }
       }
       if (row.security_layer) {
-        layerCounts[row.security_layer] = (layerCounts[row.security_layer] ?? 0) + 1;
+        layerCounts[row.security_layer] =
+          (layerCounts[row.security_layer] ?? 0) + 1;
         if (iid) {
           (layerInstallations[row.security_layer] ??= new Set()).add(iid);
         }
@@ -169,7 +180,8 @@ Deno.serve(async () => {
         // Verdict distribution is low-cardinality (block/warn/log_only) and
         // aggregates population-wide with no re-identification risk, so no
         // k-anon filter.
-        verdictCounts[row.security_verdict] = (verdictCounts[row.security_verdict] ?? 0) + 1;
+        verdictCounts[row.security_verdict] =
+          (verdictCounts[row.security_verdict] ?? 0) + 1;
       }
     }
     const topAttackDomains = Object.entries(domainCounts)
@@ -202,13 +214,11 @@ Deno.serve(async () => {
     };
 
     // Upsert cache
-    await supabase
-      .from("community_pulse_cache")
-      .upsert({
-        id: 1,
-        data: result,
-        refreshed_at: new Date().toISOString(),
-      });
+    await supabase.from("community_pulse_cache").upsert({
+      id: 1,
+      data: result,
+      refreshed_at: new Date().toISOString(),
+    });
 
     return new Response(JSON.stringify(result), {
       status: 200,
