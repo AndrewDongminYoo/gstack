@@ -20,11 +20,15 @@
  * per TODOS.md E1 substrate-risk guidance. Inferred-driven AUTO_DECIDE
  * remains v2.
  */
-import * as fs from 'fs';
-import * as path from 'path';
-import * as os from 'os';
+import * as fs from "fs";
+import * as path from "path";
+import * as os from "os";
 
-import { SIGNAL_MAP, type Dimension, ALL_DIMENSIONS } from './psychographic-signals';
+import {
+  SIGNAL_MAP,
+  type Dimension,
+  ALL_DIMENSIONS,
+} from "./psychographic-signals";
 
 const STRONG_HIGH = 0.7;
 const STRONG_LOW = 0.3;
@@ -35,24 +39,24 @@ const STRONG_LOW = 0.3;
  */
 const DIMENSION_PHRASING: Record<Dimension, { high: string; low: string }> = {
   scope_appetite: {
-    high: 'Your declared profile leans complete-implementation (boil the ocean).',
-    low: 'Your declared profile leans ship-small-fast.',
+    high: "Your declared profile leans complete-implementation (boil the ocean).",
+    low: "Your declared profile leans ship-small-fast.",
   },
   risk_tolerance: {
-    high: 'Your declared profile leans move-fast.',
-    low: 'Your declared profile leans check-carefully.',
+    high: "Your declared profile leans move-fast.",
+    low: "Your declared profile leans check-carefully.",
   },
   detail_preference: {
-    high: 'Your declared profile leans verbose-with-tradeoffs.',
-    low: 'Your declared profile leans terse, just-do-it.',
+    high: "Your declared profile leans verbose-with-tradeoffs.",
+    low: "Your declared profile leans terse, just-do-it.",
   },
   autonomy: {
-    high: 'Your declared profile leans delegate-and-trust.',
-    low: 'Your declared profile leans consult-me-first.',
+    high: "Your declared profile leans delegate-and-trust.",
+    low: "Your declared profile leans consult-me-first.",
   },
   architecture_care: {
-    high: 'Your declared profile leans get-the-design-right.',
-    low: 'Your declared profile leans pragmatic-ship-it.',
+    high: "Your declared profile leans get-the-design-right.",
+    low: "Your declared profile leans pragmatic-ship-it.",
   },
 };
 
@@ -64,15 +68,15 @@ function stateRoot(): string {
   return (
     process.env.GSTACK_STATE_ROOT ||
     process.env.GSTACK_HOME ||
-    path.join(os.homedir(), '.gstack')
+    path.join(os.homedir(), ".gstack")
   );
 }
 
 function readProfile(): DeveloperProfile | null {
   try {
-    const p = path.join(stateRoot(), 'developer-profile.json');
+    const p = path.join(stateRoot(), "developer-profile.json");
     if (!fs.existsSync(p)) return null;
-    return JSON.parse(fs.readFileSync(p, 'utf-8'));
+    return JSON.parse(fs.readFileSync(p, "utf-8"));
   } catch {
     return null;
   }
@@ -111,13 +115,13 @@ export function primaryDimensionFor(signalKey: string): Dimension | null {
  * else null.
  */
 export function getDeclaredAnnotation(signalKey: string): string | null {
-  if (!signalKey || typeof signalKey !== 'string') return null;
+  if (!signalKey || typeof signalKey !== "string") return null;
   const dim = primaryDimensionFor(signalKey);
   if (!dim) return null;
 
   const profile = readProfile();
   const declared = profile?.declared?.[dim];
-  if (typeof declared !== 'number') return null;
+  if (typeof declared !== "number") return null;
 
   if (declared >= STRONG_HIGH) return DIMENSION_PHRASING[dim].high;
   if (declared <= STRONG_LOW) return DIMENSION_PHRASING[dim].low;

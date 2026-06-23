@@ -1,4 +1,4 @@
-import type { TemplateContext } from '../types';
+import type { TemplateContext } from "../types";
 
 /**
  * Writing Style preamble section.
@@ -14,7 +14,7 @@ import type { TemplateContext } from '../types';
  *   opt-in terse build.
  */
 export function generateWritingStyle(ctx: TemplateContext): string {
-  if (ctx.explainLevel === 'terse') {
+  if (ctx.explainLevel === "terse") {
     return `## Writing Style\n\nTerse mode (build-time): skip jargon glossing, outcome-framing layer, and decision-impact closers. Lead with the answer.\n`;
   }
 

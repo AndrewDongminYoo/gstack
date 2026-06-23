@@ -13,15 +13,15 @@
  *     CI rejects commits containing this string, so contributors get a clear
  *     signal to run the throughput script before committing.
  */
-import * as fs from 'fs';
-import * as path from 'path';
+import * as fs from "fs";
+import * as path from "path";
 
 const ROOT = process.cwd();
-const README = path.join(ROOT, 'README.md');
-const JSON_PATH = path.join(ROOT, 'docs', 'throughput-2013-vs-2026.json');
+const README = path.join(ROOT, "README.md");
+const JSON_PATH = path.join(ROOT, "docs", "throughput-2013-vs-2026.json");
 
-const ANCHOR = '<!-- GSTACK-THROUGHPUT-PLACEHOLDER -->';
-const PENDING = 'GSTACK-THROUGHPUT-PENDING';
+const ANCHOR = "<!-- GSTACK-THROUGHPUT-PLACEHOLDER -->";
+const PENDING = "GSTACK-THROUGHPUT-PENDING";
 
 function main() {
   if (!fs.existsSync(README)) {
@@ -29,7 +29,7 @@ function main() {
     process.exit(1);
   }
 
-  const readme = fs.readFileSync(README, 'utf-8');
+  const readme = fs.readFileSync(README, "utf-8");
   if (!readme.includes(ANCHOR)) {
     // Anchor already replaced by a computed number (or was never inserted).
     // Nothing to do — silent success.
@@ -43,7 +43,7 @@ function main() {
     const updated = readme.replace(ANCHOR, replacement);
     fs.writeFileSync(README, updated);
     process.stderr.write(
-      `${JSON_PATH} not found. Wrote ${PENDING} marker to README. Run scripts/garry-output-comparison.ts to generate it.\n`
+      `${JSON_PATH} not found. Wrote ${PENDING} marker to README. Run scripts/garry-output-comparison.ts to generate it.\n`,
     );
     // Non-zero exit so CI that wraps this sees the signal, but local dev workflows
     // can continue. Callers can decide whether this is fatal.
@@ -52,7 +52,7 @@ function main() {
 
   let parsed: { multiples?: { logical_lines_added?: number | null } } = {};
   try {
-    parsed = JSON.parse(fs.readFileSync(JSON_PATH, 'utf-8'));
+    parsed = JSON.parse(fs.readFileSync(JSON_PATH, "utf-8"));
   } catch (err) {
     process.stderr.write(`Failed to parse ${JSON_PATH}: ${err}\n`);
     process.exit(1);

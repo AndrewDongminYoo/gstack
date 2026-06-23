@@ -16,38 +16,41 @@
  * wrapper heading so it appears with every overlay regardless of file content.
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
-import type { TemplateContext } from './types';
+import * as fs from "fs";
+import * as path from "path";
+import type { TemplateContext } from "./types";
 
-const OVERLAY_DIR = path.resolve(import.meta.dir, '../../model-overlays');
+const OVERLAY_DIR = path.resolve(import.meta.dir, "../../model-overlays");
 
 const INHERIT_RE = /^\s*\{\{INHERIT:([a-z0-9-]+(?:\.[0-9]+)*)\}\}\s*\n/;
 
-export function readOverlay(model: string, seen: Set<string> = new Set()): string {
-  if (seen.has(model)) return ''; // cycle guard
+export function readOverlay(
+  model: string,
+  seen: Set<string> = new Set(),
+): string {
+  if (seen.has(model)) return ""; // cycle guard
   seen.add(model);
 
   const filePath = path.join(OVERLAY_DIR, `${model}.md`);
-  if (!fs.existsSync(filePath)) return '';
+  if (!fs.existsSync(filePath)) return "";
 
-  const raw = fs.readFileSync(filePath, 'utf-8');
+  const raw = fs.readFileSync(filePath, "utf-8");
   const match = raw.match(INHERIT_RE);
   if (!match) return raw.trim();
 
   const baseModel = match[1];
   const base = readOverlay(baseModel, seen);
-  const rest = raw.replace(INHERIT_RE, '').trim();
+  const rest = raw.replace(INHERIT_RE, "").trim();
 
   if (!base) return rest;
   return `${base}\n\n${rest}`;
 }
 
 export function generateModelOverlay(ctx: TemplateContext): string {
-  if (!ctx.model) return '';
+  if (!ctx.model) return "";
 
   const content = readOverlay(ctx.model);
-  if (!content) return '';
+  if (!content) return "";
 
   return `## Model-Specific Behavioral Patch (${ctx.model})
 

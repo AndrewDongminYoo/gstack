@@ -27,10 +27,10 @@
  * Skill-end sync is handled by the completion-status generator via a call
  * to `gstack-brain-sync --discover-new` + `--once`.
  */
-import type { TemplateContext } from '../types';
+import type { TemplateContext } from "../types";
 
 export function generateBrainSyncBlock(ctx: TemplateContext): string {
-  const isBrainHost = ctx.host === 'gbrain' || ctx.host === 'hermes';
+  const isBrainHost = ctx.host === "gbrain" || ctx.host === "hermes";
   return `## Artifacts Sync (skill start)
 
 \`\`\`bash
@@ -128,7 +128,7 @@ else
 fi
 \`\`\`
 
-${isBrainHost ? `If output shows \`ARTIFACTS_SYNC: artifacts repo detected\`, offer \`gstack-brain-restore\` via AskUserQuestion; otherwise continue.` : ''}
+${isBrainHost ? `If output shows \`ARTIFACTS_SYNC: artifacts repo detected\`, offer \`gstack-brain-restore\` via AskUserQuestion; otherwise continue.` : ""}
 
 Privacy stop-gate: if output shows \`ARTIFACTS_SYNC: off\`, \`artifacts_sync_mode_prompted\` is \`false\`, and gbrain is on PATH or \`gbrain doctor --fast --json\` works, ask once:
 

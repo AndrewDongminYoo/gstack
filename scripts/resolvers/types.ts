@@ -1,11 +1,11 @@
-import { ALL_HOST_CONFIGS } from '../../hosts/index';
+import { ALL_HOST_CONFIGS } from "../../hosts/index";
 
 /**
  * Host type — derived from host configs in hosts/*.ts.
  * Adding a new host: create hosts/myhost.ts + add to hosts/index.ts.
  * Do NOT hardcode host names here.
  */
-export type Host = (typeof ALL_HOST_CONFIGS)[number]['name'];
+export type Host = (typeof ALL_HOST_CONFIGS)[number]["name"];
 
 export interface HostPaths {
   skillRoot: string;
@@ -26,12 +26,12 @@ function buildHostPaths(): Record<string, HostPaths> {
   for (const config of ALL_HOST_CONFIGS) {
     if (config.usesEnvVars) {
       paths[config.name] = {
-        skillRoot: '$GSTACK_ROOT',
+        skillRoot: "$GSTACK_ROOT",
         localSkillRoot: config.localSkillRoot,
-        binDir: '$GSTACK_BIN',
-        browseDir: '$GSTACK_BROWSE',
-        designDir: '$GSTACK_DESIGN',
-        makePdfDir: '$GSTACK_MAKE_PDF',
+        binDir: "$GSTACK_BIN",
+        browseDir: "$GSTACK_BROWSE",
+        designDir: "$GSTACK_DESIGN",
+        makePdfDir: "$GSTACK_MAKE_PDF",
       };
     } else {
       const root = `~/${config.globalRoot}`;
@@ -50,8 +50,8 @@ function buildHostPaths(): Record<string, HostPaths> {
 
 export const HOST_PATHS: Record<string, HostPaths> = buildHostPaths();
 
-import type { Model } from '../models';
-export type { Model } from '../models';
+import type { Model } from "../models";
+export type { Model } from "../models";
 
 export interface TemplateContext {
   skillName: string;
@@ -59,9 +59,9 @@ export interface TemplateContext {
   benefitsFrom?: string[];
   host: Host;
   paths: HostPaths;
-  preambleTier?: number;  // 1-4, controls which preamble sections are included
-  model?: Model;  // model family for behavioral overlay. Omitted/undefined → no overlay.
-  interactive?: boolean;  // true → emit plan-mode handshake in preamble. Generator-only, not written to SKILL.md.
+  preambleTier?: number; // 1-4, controls which preamble sections are included
+  model?: Model; // model family for behavioral overlay. Omitted/undefined → no overlay.
+  interactive?: boolean; // true → emit plan-mode handshake in preamble. Generator-only, not written to SKILL.md.
   /**
    * Build-time compression mode. Defaults to 'default'.
    *
@@ -77,7 +77,7 @@ export interface TemplateContext {
    * section says "skip entirely if EXPLAIN_LEVEL: terse appears in preamble echo").
    * Terse builds make the compression structural — bytes never ship in the first place.
    */
-  explainLevel?: 'default' | 'terse';
+  explainLevel?: "default" | "terse";
 }
 
 /** Resolver function signature. args is populated for parameterized placeholders like {{INVOKE_SKILL:name}}. */
@@ -112,6 +112,6 @@ export function unwrapResolver(entry: ResolverValue): {
   resolve: ResolverFn;
   appliesTo?: (ctx: TemplateContext) => boolean;
 } {
-  if (typeof entry === 'function') return { resolve: entry };
+  if (typeof entry === "function") return { resolve: entry };
   return { resolve: entry.resolve, appliesTo: entry.appliesTo };
 }

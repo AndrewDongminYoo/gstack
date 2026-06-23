@@ -16,10 +16,10 @@
  * side effects beyond stdout and a ~15 token API call.
  */
 
-import '../lib/conductor-env-shim';
-import { query, type SDKMessage } from '@anthropic-ai/claude-agent-sdk';
-import { readOverlay } from './resolvers/model-overlay';
-import { resolveClaudeBinary } from '../browse/src/claude-bin';
+import "../lib/conductor-env-shim";
+import { query, type SDKMessage } from "@anthropic-ai/claude-agent-sdk";
+import { readOverlay } from "./resolvers/model-overlay";
+import { resolveClaudeBinary } from "../browse/src/claude-bin";
 
 async function main() {
   const failures: string[] = [];
@@ -30,42 +30,44 @@ async function main() {
   };
 
   // 1. Overlay resolver
-  console.log('1. Overlay resolver');
-  const resolved = readOverlay('opus-4-7');
+  console.log("1. Overlay resolver");
+  const resolved = readOverlay("opus-4-7");
   if (!resolved) {
     fail("readOverlay('opus-4-7') returned empty");
   } else {
     pass(`resolved overlay length: ${resolved.length} chars`);
-    if (resolved.includes('{{INHERIT:')) {
-      fail('resolved overlay still contains {{INHERIT:...}} directive');
+    if (resolved.includes("{{INHERIT:")) {
+      fail("resolved overlay still contains {{INHERIT:...}} directive");
     } else {
-      pass('no unresolved INHERIT directives');
+      pass("no unresolved INHERIT directives");
     }
   }
 
   // 2. Local claude binary exists
-  console.log('\n2. Binary pinning');
+  console.log("\n2. Binary pinning");
   let claudePath: string | null = resolveClaudeBinary();
   if (claudePath) {
     pass(`local claude binary: ${claudePath}`);
   } else {
-    fail('`Bun.which("claude")` failed — cannot pin binary (set GSTACK_CLAUDE_BIN to override)');
+    fail(
+      '`Bun.which("claude")` failed — cannot pin binary (set GSTACK_CLAUDE_BIN to override)',
+    );
   }
 
   // 3. SDK query end-to-end
-  console.log('\n3. SDK query end-to-end');
+  console.log("\n3. SDK query end-to-end");
   if (!process.env.ANTHROPIC_API_KEY) {
-    console.log('  skip  ANTHROPIC_API_KEY not set — cannot test live query');
+    console.log("  skip  ANTHROPIC_API_KEY not set — cannot test live query");
   } else {
     try {
       const events: SDKMessage[] = [];
       const q = query({
-        prompt: 'say pong',
+        prompt: "say pong",
         options: {
-          model: 'claude-opus-4-7',
-          systemPrompt: '',
+          model: "claude-opus-4-7",
+          systemPrompt: "",
           tools: [],
-          permissionMode: 'bypassPermissions',
+          permissionMode: "bypassPermissions",
           allowDangerouslySkipPermissions: true,
           settingSources: [],
           maxTurns: 1,
@@ -77,40 +79,47 @@ async function main() {
       pass(`received ${events.length} events`);
 
       const init = events.find(
-        (e) => e.type === 'system' && (e as { subtype?: string }).subtype === 'init',
+        (e) =>
+          e.type === "system" && (e as { subtype?: string }).subtype === "init",
       ) as { claude_code_version?: string; model?: string } | undefined;
       if (!init) {
-        fail('no system/init event received');
+        fail("no system/init event received");
       } else {
-        pass(`system init: claude_code_version=${init.claude_code_version}, model=${init.model}`);
+        pass(
+          `system init: claude_code_version=${init.claude_code_version}, model=${init.model}`,
+        );
       }
 
-      const assistantEvents = events.filter((e) => e.type === 'assistant');
+      const assistantEvents = events.filter((e) => e.type === "assistant");
       if (assistantEvents.length === 0) {
-        fail('no assistant events received — model ID may be rejected');
+        fail("no assistant events received — model ID may be rejected");
       } else {
         pass(`received ${assistantEvents.length} assistant event(s)`);
-        const first = assistantEvents[0] as { message?: { content?: unknown[] } };
+        const first = assistantEvents[0] as {
+          message?: { content?: unknown[] };
+        };
         const content = first.message?.content;
         if (!Array.isArray(content)) {
-          fail('first assistant event has no content[] array');
+          fail("first assistant event has no content[] array");
         } else {
           pass(`first assistant content[] has ${content.length} block(s)`);
         }
       }
 
-      const result = events.find((e) => e.type === 'result') as
+      const result = events.find((e) => e.type === "result") as
         | { subtype?: string; total_cost_usd?: number; num_turns?: number }
         | undefined;
       if (!result) {
-        fail('no result event received');
+        fail("no result event received");
       } else {
         pass(
           `result: subtype=${result.subtype}, cost=$${result.total_cost_usd?.toFixed(4)}, turns=${result.num_turns}`,
         );
       }
     } catch (err) {
-      fail(`SDK query threw: ${err instanceof Error ? err.message : String(err)}`);
+      fail(
+        `SDK query threw: ${err instanceof Error ? err.message : String(err)}`,
+      );
     }
   }
 
@@ -119,7 +128,7 @@ async function main() {
     console.log(`PREFLIGHT FAILED: ${failures.length} check(s) failed`);
     process.exit(1);
   }
-  console.log('PREFLIGHT OK');
+  console.log("PREFLIGHT OK");
 }
 
 main().catch((err) => {

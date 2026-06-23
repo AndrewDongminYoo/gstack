@@ -3,24 +3,29 @@
  * Scans root + one level of subdirs, skipping node_modules/.git/dist.
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
+import * as fs from "fs";
+import * as path from "path";
 
-const SKIP = new Set(['node_modules', '.git', 'dist']);
+const SKIP = new Set(["node_modules", ".git", "dist"]);
 
 function subdirs(root: string): string[] {
-  return fs.readdirSync(root, { withFileTypes: true })
-    .filter(d => d.isDirectory() && !d.name.startsWith('.') && !SKIP.has(d.name))
-    .map(d => d.name);
+  return fs
+    .readdirSync(root, { withFileTypes: true })
+    .filter(
+      (d) => d.isDirectory() && !d.name.startsWith(".") && !SKIP.has(d.name),
+    )
+    .map((d) => d.name);
 }
 
-export function discoverTemplates(root: string): Array<{ tmpl: string; output: string }> {
-  const dirs = ['', ...subdirs(root)];
+export function discoverTemplates(
+  root: string,
+): Array<{ tmpl: string; output: string }> {
+  const dirs = ["", ...subdirs(root)];
   const results: Array<{ tmpl: string; output: string }> = [];
   for (const dir of dirs) {
-    const rel = dir ? `${dir}/SKILL.md.tmpl` : 'SKILL.md.tmpl';
+    const rel = dir ? `${dir}/SKILL.md.tmpl` : "SKILL.md.tmpl";
     if (fs.existsSync(path.join(root, rel))) {
-      results.push({ tmpl: rel, output: rel.replace(/\.tmpl$/, '') });
+      results.push({ tmpl: rel, output: rel.replace(/\.tmpl$/, "") });
     }
   }
   return results;
@@ -42,12 +47,17 @@ export function discoverSectionTemplates(
 ): Array<{ tmpl: string; output: string; skillDir: string }> {
   const results: Array<{ tmpl: string; output: string; skillDir: string }> = [];
   for (const dir of subdirs(root)) {
-    const sectionsDir = path.join(root, dir, 'sections');
-    if (!fs.existsSync(sectionsDir) || !fs.statSync(sectionsDir).isDirectory()) continue;
+    const sectionsDir = path.join(root, dir, "sections");
+    if (!fs.existsSync(sectionsDir) || !fs.statSync(sectionsDir).isDirectory())
+      continue;
     for (const entry of fs.readdirSync(sectionsDir, { withFileTypes: true })) {
-      if (!entry.isFile() || !entry.name.endsWith('.md.tmpl')) continue;
+      if (!entry.isFile() || !entry.name.endsWith(".md.tmpl")) continue;
       const rel = `${dir}/sections/${entry.name}`;
-      results.push({ tmpl: rel, output: rel.replace(/\.tmpl$/, ''), skillDir: dir });
+      results.push({
+        tmpl: rel,
+        output: rel.replace(/\.tmpl$/, ""),
+        skillDir: dir,
+      });
     }
   }
   // Deterministic order so CI freshness checks don't flap on FS iteration order.
@@ -55,10 +65,10 @@ export function discoverSectionTemplates(
 }
 
 export function discoverSkillFiles(root: string): string[] {
-  const dirs = ['', ...subdirs(root)];
+  const dirs = ["", ...subdirs(root)];
   const results: string[] = [];
   for (const dir of dirs) {
-    const rel = dir ? `${dir}/SKILL.md` : 'SKILL.md';
+    const rel = dir ? `${dir}/SKILL.md` : "SKILL.md";
     if (fs.existsSync(path.join(root, rel))) {
       results.push(rel);
     }

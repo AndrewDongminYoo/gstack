@@ -1,11 +1,22 @@
-import type { TemplateContext } from './types';
-import { AI_SLOP_BLACKLIST, OPENAI_HARD_REJECTIONS, OPENAI_LITMUS_CHECKS } from './constants';
+import type { TemplateContext } from "./types";
+import {
+  AI_SLOP_BLACKLIST,
+  OPENAI_HARD_REJECTIONS,
+  OPENAI_LITMUS_CHECKS,
+} from "./constants";
 
 export function generateDesignReviewLite(ctx: TemplateContext): string {
-  const litmusList = OPENAI_LITMUS_CHECKS.map((item, i) => `${i + 1}. ${item}`).join(' ');
-  const rejectionList = OPENAI_HARD_REJECTIONS.map((item, i) => `${i + 1}. ${item}`).join(' ');
+  const litmusList = OPENAI_LITMUS_CHECKS.map(
+    (item, i) => `${i + 1}. ${item}`,
+  ).join(" ");
+  const rejectionList = OPENAI_HARD_REJECTIONS.map(
+    (item, i) => `${i + 1}. ${item}`,
+  ).join(" ");
   // Codex block only for Claude host
-  const codexBlock = ctx.host === 'codex' ? '' : `
+  const codexBlock =
+    ctx.host === "codex"
+      ? ""
+      : `
 
 7. **Codex design voice** (optional, automatic if available):
 
@@ -279,7 +290,7 @@ Apply these at each page. Each finding gets an impact rating (high/medium/polish
 
 The test: would a human designer at a respected studio ever ship this?
 
-${AI_SLOP_BLACKLIST.map(item => `- ${item}`).join('\n')}
+${AI_SLOP_BLACKLIST.map((item) => `- ${item}`).join("\n")}
 
 **10. Performance as Design** (6 items)
 - LCP < 2.0s (web apps), < 1.5s (informational sites)
@@ -540,19 +551,23 @@ Error handling: all non-blocking. On failure, skip and continue.`;
 
 export function generateDesignOutsideVoices(ctx: TemplateContext): string {
   // Codex host: strip entirely — Codex should never invoke itself
-  if (ctx.host === 'codex') return '';
+  if (ctx.host === "codex") return "";
 
-  const rejectionList = OPENAI_HARD_REJECTIONS.map((item, i) => `${i + 1}. ${item}`).join('\n');
-  const litmusList = OPENAI_LITMUS_CHECKS.map((item, i) => `${i + 1}. ${item}`).join('\n');
+  const rejectionList = OPENAI_HARD_REJECTIONS.map(
+    (item, i) => `${i + 1}. ${item}`,
+  ).join("\n");
+  const litmusList = OPENAI_LITMUS_CHECKS.map(
+    (item, i) => `${i + 1}. ${item}`,
+  ).join("\n");
 
   // Skill-specific configuration
-  const isPlanDesignReview = ctx.skillName === 'plan-design-review';
-  const isDesignReview = ctx.skillName === 'design-review';
-  const isDesignConsultation = ctx.skillName === 'design-consultation';
+  const isPlanDesignReview = ctx.skillName === "plan-design-review";
+  const isDesignReview = ctx.skillName === "design-review";
+  const isDesignConsultation = ctx.skillName === "design-consultation";
 
   // Determine opt-in behavior and reasoning effort
   const isAutomatic = isDesignReview; // design-review runs automatically
-  const reasoningEffort = isDesignConsultation ? 'medium' : 'high'; // creative vs analytical
+  const reasoningEffort = isDesignConsultation ? "medium" : "high"; // creative vs analytical
 
   // Build skill-specific Codex prompt
   let codexPrompt: string;
@@ -629,14 +644,16 @@ Be opinionated. Be specific. Do not hedge. This is YOUR design direction — own
 Be bold. Be specific. No hedging.`;
   } else {
     // Unknown skill — return empty
-    return '';
+    return "";
   }
 
   // Build the opt-in section
-  const optInSection = isAutomatic ? `
-**Automatic:** Outside voices run automatically when Codex is available. No opt-in needed.` : `
+  const optInSection = isAutomatic
+    ? `
+**Automatic:** Outside voices run automatically when Codex is available. No opt-in needed.`
+    : `
 Use AskUserQuestion:
-> "Want outside design voices${isPlanDesignReview ? ' before the detailed review' : ''}? Codex evaluates against OpenAI's design hard rules + litmus checks; Claude subagent does an independent ${isDesignConsultation ? 'design direction proposal' : 'completeness review'}."
+> "Want outside design voices${isPlanDesignReview ? " before the detailed review" : ""}? Codex evaluates against OpenAI's design hard rules + litmus checks; Claude subagent does an independent ${isDesignConsultation ? "design direction proposal" : "completeness review"}."
 >
 > A) Yes — run outside design voices
 > B) No — proceed without
@@ -644,7 +661,8 @@ Use AskUserQuestion:
 If user chooses B, skip this step and continue.`;
 
   // Build the synthesis section
-  const synthesisSection = isPlanDesignReview ? `
+  const synthesisSection = isPlanDesignReview
+    ? `
 **Synthesis — Litmus scorecard:**
 
 \`\`\`
@@ -670,18 +688,22 @@ Fill in each cell from the Codex and subagent outputs. CONFIRMED = both agree. D
 - Hard rejections → raised as the FIRST items in Pass 1, tagged \`[HARD REJECTION]\`
 - Litmus DISAGREE items → raised in the relevant pass with both perspectives
 - Litmus CONFIRMED failures → pre-loaded as known issues in the relevant pass
-- Passes can skip discovery and go straight to fixing for pre-identified issues` :
-    isDesignConsultation ? `
+- Passes can skip discovery and go straight to fixing for pre-identified issues`
+    : isDesignConsultation
+      ? `
 **Synthesis:** Claude main references both Codex and subagent proposals in the Phase 3 proposal. Present:
 - Areas of agreement between all three voices (Claude main + Codex + subagent)
 - Genuine divergences as creative alternatives for the user to choose from
-- "Codex and I agree on X. Codex suggested Y where I'm proposing Z — here's why..."` : `
+- "Codex and I agree on X. Codex suggested Y where I'm proposing Z — here's why..."`
+      : `
 **Synthesis — Litmus scorecard:**
 
 Use the same scorecard format as /plan-design-review (shown above). Fill in from both outputs.
 Merge findings into the triage with \`[codex]\` / \`[subagent]\` / \`[cross-model]\` tags.`;
 
-  const escapedCodexPrompt = codexPrompt.replace(/`/g, '\\`').replace(/\$/g, '\\$');
+  const escapedCodexPrompt = codexPrompt
+    .replace(/`/g, "\\`")
+    .replace(/\$/g, "\\$");
 
   return `## Design Outside Voices (parallel)
 ${optInSection}
@@ -715,8 +737,8 @@ Dispatch a subagent with this prompt:
 - On any Codex error: proceed with Claude subagent output only, tagged \`[single-model]\`.
 - If Claude subagent also fails: "Outside voices unavailable — continuing with primary review."
 
-Present Codex output under a \`CODEX SAYS (design ${isPlanDesignReview ? 'critique' : isDesignReview ? 'source audit' : 'direction'}):\` header.
-Present subagent output under a \`CLAUDE SUBAGENT (design ${isPlanDesignReview ? 'completeness' : isDesignReview ? 'consistency' : 'direction'}):\` header.
+Present Codex output under a \`CODEX SAYS (design ${isPlanDesignReview ? "critique" : isDesignReview ? "source audit" : "direction"}):\` header.
+Present subagent output under a \`CLAUDE SUBAGENT (design ${isPlanDesignReview ? "completeness" : isDesignReview ? "consistency" : "direction"}):\` header.
 ${synthesisSection}
 
 **Log the result:**
@@ -728,9 +750,15 @@ Replace STATUS with "clean" or "issues_found", SOURCE with "codex+subagent", "co
 
 // ─── Design Hard Rules (OpenAI framework + gstack slop blacklist) ───
 export function generateDesignHardRules(_ctx: TemplateContext): string {
-  const slopItems = AI_SLOP_BLACKLIST.map((item, i) => `${i + 1}. ${item}`).join('\n');
-  const rejectionItems = OPENAI_HARD_REJECTIONS.map((item, i) => `${i + 1}. ${item}`).join('\n');
-  const litmusItems = OPENAI_LITMUS_CHECKS.map((item, i) => `${i + 1}. ${item}`).join('\n');
+  const slopItems = AI_SLOP_BLACKLIST.map(
+    (item, i) => `${i + 1}. ${item}`,
+  ).join("\n");
+  const rejectionItems = OPENAI_HARD_REJECTIONS.map(
+    (item, i) => `${i + 1}. ${item}`,
+  ).join("\n");
+  const litmusItems = OPENAI_LITMUS_CHECKS.map(
+    (item, i) => `${i + 1}. ${item}`,
+  ).join("\n");
 
   return `### Design Hard Rules
 
@@ -792,7 +820,7 @@ export function generateDesignSetup(ctx: TemplateContext): string {
 _ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
 D=""
 [ -n "$_ROOT" ] && [ -x "$_ROOT/${ctx.paths.localSkillRoot}/design/dist/design" ] && D="$_ROOT/${ctx.paths.localSkillRoot}/design/dist/design"
-[ -z "$D" ] && D="$HOME${ctx.paths.designDir.replace(/^~/, '')}/design"
+[ -z "$D" ] && D="$HOME${ctx.paths.designDir.replace(/^~/, "")}/design"
 if [ -x "$D" ]; then
   echo "DESIGN_READY: $D"
 else
@@ -800,7 +828,7 @@ else
 fi
 B=""
 [ -n "$_ROOT" ] && [ -x "$_ROOT/${ctx.paths.localSkillRoot}/browse/dist/browse" ] && B="$_ROOT/${ctx.paths.localSkillRoot}/browse/dist/browse"
-[ -z "$B" ] && B="$HOME${ctx.paths.browseDir.replace(/^~/, '')}/browse"
+[ -z "$B" ] && B="$HOME${ctx.paths.browseDir.replace(/^~/, "")}/browse"
 if [ -x "$B" ]; then
   echo "BROWSE_READY: $B"
 else
@@ -837,7 +865,7 @@ export function generateDesignMockup(ctx: TemplateContext): string {
 _ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
 D=""
 [ -n "$_ROOT" ] && [ -x "$_ROOT/${ctx.paths.localSkillRoot}/design/dist/design" ] && D="$_ROOT/${ctx.paths.localSkillRoot}/design/dist/design"
-[ -z "$D" ] && D="$HOME${ctx.paths.designDir.replace(/^~/, '')}/design"
+[ -z "$D" ] && D="$HOME${ctx.paths.designDir.replace(/^~/, "")}/design"
 [ -x "$D" ] && echo "DESIGN_READY" || echo "DESIGN_NOT_AVAILABLE"
 \`\`\`
 
@@ -1045,7 +1073,7 @@ fi
 **If TASTE_PROFILE_FOUND:** Summarize the strongest signals (top 3 approved entries
 per dimension by confidence * approved_count). Include them in the design brief:
 
-"Based on ${'\\${SESSION_COUNT}'} prior sessions, this user's taste leans toward:
+"Based on ${"\\${SESSION_COUNT}"} prior sessions, this user's taste leans toward:
 fonts [top-3], colors [top-3], layouts [top-3], aesthetics [top-3]. Bias
 generation toward these unless the user explicitly requests a different direction.
 Also avoid their strong rejections: [top-3 rejected per dimension]."
@@ -1154,4 +1182,3 @@ Flat design can strip away useful visual information that signals interactivity.
 Prioritize ruthlessly: things needed in a hurry go close at hand, everything
 else a few taps away with an obvious path to get there.`;
 }
-

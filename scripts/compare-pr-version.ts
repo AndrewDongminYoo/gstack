@@ -32,8 +32,12 @@ try {
 }
 
 if (parsed.offline === true) {
-  console.log("::warning::workspace-aware-ship util offline; failing open (no collision check performed)");
-  console.log(`::notice::If you merge this PR and a queued PR landed ahead, CHANGELOG may need manual reconciliation.`);
+  console.log(
+    "::warning::workspace-aware-ship util offline; failing open (no collision check performed)",
+  );
+  console.log(
+    `::notice::If you merge this PR and a queued PR landed ahead, CHANGELOG may need manual reconciliation.`,
+  );
   process.exit(0);
 }
 
@@ -58,12 +62,19 @@ function cmp(a: number[], b: number[]): number {
 const pPR = parseV(prVersion);
 const pNext = parseV(nextSlot);
 if (!pPR || !pNext) {
-  console.log(`::warning::malformed version string (PR=${prVersion}, next=${nextSlot}); failing open`);
+  console.log(
+    `::warning::malformed version string (PR=${prVersion}, next=${nextSlot}); failing open`,
+  );
   process.exit(0);
 }
 
 const tag = prNumber ? `PR #${prNumber}` : "this PR";
-const claimed = (parsed.claimed ?? []) as Array<{ pr: number; branch: string; version: string; url?: string }>;
+const claimed = (parsed.claimed ?? []) as Array<{
+  pr: number;
+  branch: string;
+  version: string;
+  url?: string;
+}>;
 
 // Emit a GitHub step summary (always helpful, even on pass).
 const claimedList = claimed
@@ -81,15 +92,21 @@ console.log("::endgroup::");
 // version, otherwise we're not actually bumping.
 const pBase = parseV((parsed.base_version ?? "").trim());
 if (pBase && cmp(pPR, pBase) <= 0) {
-  console.log(`::error::VERSION not bumped: ${tag} claims v${prVersion} but base is v${parsed.base_version}.`);
+  console.log(
+    `::error::VERSION not bumped: ${tag} claims v${prVersion} but base is v${parsed.base_version}.`,
+  );
   process.exit(1);
 }
 
 // Hard rule 2: no collision with another open PR's claimed VERSION.
 const collision = claimed.find((c) => c.version.trim() === prVersion);
 if (collision) {
-  console.log(`::error::VERSION collision: ${tag} claims v${prVersion} but #${collision.pr} (${collision.branch}) already claims the same slot.`);
-  console.log(`::error::Rerun /ship to pick a different slot, or coordinate with #${collision.pr} on landing order.`);
+  console.log(
+    `::error::VERSION collision: ${tag} claims v${prVersion} but #${collision.pr} (${collision.branch}) already claims the same slot.`,
+  );
+  console.log(
+    `::error::Rerun /ship to pick a different slot, or coordinate with #${collision.pr} on landing order.`,
+  );
   process.exit(1);
 }
 
@@ -99,7 +116,9 @@ if (collision) {
 // monotonic ordering on main when this PR merges ahead of higher-numbered
 // queued PRs.
 if (cmp(pPR, pNext) < 0) {
-  console.log(`::notice::${tag} claims v${prVersion}, below util's suggestion v${nextSlot}. Slot is unclaimed; gate passes. If this PR lands ahead of queued PRs at higher slots, version ordering on main remains monotonic.`);
+  console.log(
+    `::notice::${tag} claims v${prVersion}, below util's suggestion v${nextSlot}. Slot is unclaimed; gate passes. If this PR lands ahead of queued PRs at higher slots, version ordering on main remains monotonic.`,
+  );
 }
 
 console.log(`✓ ${tag} claims v${prVersion} — slot is free.`);

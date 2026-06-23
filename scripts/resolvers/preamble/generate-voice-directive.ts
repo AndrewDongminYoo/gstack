@@ -1,5 +1,3 @@
-
-
 export function generateVoiceDirective(tier: number): string {
   if (tier <= 1) {
     return `## Voice

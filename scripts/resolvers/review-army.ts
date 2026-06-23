@@ -9,13 +9,13 @@
  *
  * Shipped as Release 2 of the self-learning roadmap (SELF_LEARNING_V0.md).
  */
-import type { TemplateContext } from './types';
+import type { TemplateContext } from "./types";
 
 function generateSpecialistSelection(ctx: TemplateContext): string {
-  const isShip = ctx.skillName === 'ship';
-  const stepSel = isShip ? '9.1' : '4.5';
-  const stepMerge = isShip ? '9.2' : '4.6';
-  const nextStep = isShip ? 'the Fix-First flow (item 4)' : 'Step 5';
+  const isShip = ctx.skillName === "ship";
+  const stepSel = isShip ? "9.1" : "4.5";
+  const stepMerge = isShip ? "9.2" : "4.6";
+  const nextStep = isShip ? "the Fix-First flow (item 4)" : "Step 5";
   return `## Step ${stepSel}: Review Army — Specialist Dispatch
 
 ### Detect stack and scope
@@ -134,12 +134,18 @@ CHECKLIST:
 }
 
 function generateFindingsMerge(ctx: TemplateContext): string {
-  const isShip = ctx.skillName === 'ship';
-  const stepMerge = isShip ? '9.2' : '4.6';
-  const stepSel = isShip ? '9.1' : '4.5';
-  const fixFirstRef = isShip ? 'the Fix-First flow (item 4)' : 'Step 5 Fix-First';
-  const critPassRef = isShip ? 'the checklist pass (Step 9)' : 'the CRITICAL pass findings from Step 4';
-  const persistRef = isShip ? 'the review-log persist' : 'the review-log entry in Step 5.8';
+  const isShip = ctx.skillName === "ship";
+  const stepMerge = isShip ? "9.2" : "4.6";
+  const stepSel = isShip ? "9.1" : "4.5";
+  const fixFirstRef = isShip
+    ? "the Fix-First flow (item 4)"
+    : "Step 5 Fix-First";
+  const critPassRef = isShip
+    ? "the checklist pass (Step 9)"
+    : "the CRITICAL pass findings from Step 4";
+  const persistRef = isShip
+    ? "the review-log persist"
+    : "the review-log entry in Step 5.8";
   return `### Step ${stepMerge}: Collect and merge findings
 
 After all specialist subagents complete, collect their outputs.
@@ -202,9 +208,11 @@ Remember these stats — you will need them for the review-log entry in Step 5.8
 }
 
 function generateRedTeam(ctx: TemplateContext): string {
-  const isShip = ctx.skillName === 'ship';
-  const stepMerge = isShip ? '9.2' : '4.6';
-  const fixFirstRef = isShip ? 'the Fix-First flow (item 4)' : 'Step 5 Fix-First';
+  const isShip = ctx.skillName === "ship";
+  const stepMerge = isShip ? "9.2" : "4.6";
+  const fixFirstRef = isShip
+    ? "the Fix-First flow (item 4)"
+    : "Step 5 Fix-First";
   return `### Red Team dispatch (conditional)
 
 **Activation:** Only if DIFF_LINES > 200 OR any specialist produced a CRITICAL finding.
@@ -232,7 +240,7 @@ If the Red Team subagent fails or times out, skip silently and continue.`;
 
 export function generateReviewArmy(ctx: TemplateContext): string {
   // Codex host: strip entirely — Codex should not run Review Army
-  if (ctx.host === 'codex') return '';
+  if (ctx.host === "codex") return "";
 
   const sections = [
     generateSpecialistSelection(ctx),
@@ -241,5 +249,5 @@ export function generateReviewArmy(ctx: TemplateContext): string {
     generateRedTeam(ctx),
   ];
 
-  return sections.join('\n\n---\n\n');
+  return sections.join("\n\n---\n\n");
 }

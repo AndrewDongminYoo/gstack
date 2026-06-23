@@ -1,5 +1,3 @@
-
-
 export function generateContinuousCheckpoint(): string {
   return `## Continuous Checkpoint Mode
 

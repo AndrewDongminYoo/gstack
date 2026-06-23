@@ -1,4 +1,4 @@
-import type { TemplateContext } from '../types';
+import type { TemplateContext } from "../types";
 
 export function generateTelemetryPrompt(ctx: TemplateContext): string {
   return `If \`TEL_PROMPTED\` is \`no\` AND \`LAKE_INTRO\` is \`yes\`: ask telemetry once via AskUserQuestion:

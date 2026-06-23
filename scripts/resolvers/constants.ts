@@ -9,39 +9,39 @@
  * Design prompts should bias toward less-common display faces.
  */
 export const AI_SLOP_BLACKLIST = [
-  'Purple/violet/indigo gradient backgrounds or blue-to-purple color schemes',
-  '**The 3-column feature grid:** icon-in-colored-circle + bold title + 2-line description, repeated 3x symmetrically. THE most recognizable AI layout.',
-  'Icons in colored circles as section decoration (SaaS starter template look)',
-  'Centered everything (`text-align: center` on all headings, descriptions, cards)',
-  'Uniform bubbly border-radius on every element (same large radius on everything)',
-  'Decorative blobs, floating circles, wavy SVG dividers (if a section feels empty, it needs better content, not decoration)',
-  'Emoji as design elements (rockets in headings, emoji as bullet points)',
-  'Colored left-border on cards (`border-left: 3px solid <accent>`)',
+  "Purple/violet/indigo gradient backgrounds or blue-to-purple color schemes",
+  "**The 3-column feature grid:** icon-in-colored-circle + bold title + 2-line description, repeated 3x symmetrically. THE most recognizable AI layout.",
+  "Icons in colored circles as section decoration (SaaS starter template look)",
+  "Centered everything (`text-align: center` on all headings, descriptions, cards)",
+  "Uniform bubbly border-radius on every element (same large radius on everything)",
+  "Decorative blobs, floating circles, wavy SVG dividers (if a section feels empty, it needs better content, not decoration)",
+  "Emoji as design elements (rockets in headings, emoji as bullet points)",
+  "Colored left-border on cards (`border-left: 3px solid <accent>`)",
   'Generic hero copy ("Welcome to [X]", "Unlock the power of...", "Your all-in-one solution for...")',
-  'Cookie-cutter section rhythm (hero → 3 features → testimonials → pricing → CTA, every section same height)',
+  "Cookie-cutter section rhythm (hero → 3 features → testimonials → pricing → CTA, every section same height)",
   'system-ui or `-apple-system` as the PRIMARY display/body font — the "I gave up on typography" signal. Pick a real typeface.',
 ];
 
 /** OpenAI hard rejection criteria (from "Designing Delightful Frontends with GPT-5.4", Mar 2026) */
 export const OPENAI_HARD_REJECTIONS = [
-  'Generic SaaS card grid as first impression',
-  'Beautiful image with weak brand',
-  'Strong headline with no clear action',
-  'Busy imagery behind text',
-  'Sections repeating same mood statement',
-  'Carousel with no narrative purpose',
-  'App UI made of stacked cards instead of layout',
+  "Generic SaaS card grid as first impression",
+  "Beautiful image with weak brand",
+  "Strong headline with no clear action",
+  "Busy imagery behind text",
+  "Sections repeating same mood statement",
+  "Carousel with no narrative purpose",
+  "App UI made of stacked cards instead of layout",
 ];
 
 /** OpenAI litmus checks — 7 yes/no tests for cross-model consensus scoring */
 export const OPENAI_LITMUS_CHECKS = [
-  'Brand/product unmistakable in first screen?',
-  'One strong visual anchor present?',
-  'Page understandable by scanning headlines only?',
-  'Each section has one job?',
-  'Are cards actually necessary?',
-  'Does motion improve hierarchy or atmosphere?',
-  'Would design feel premium with all decorative shadows removed?',
+  "Brand/product unmistakable in first screen?",
+  "One strong visual anchor present?",
+  "Page understandable by scanning headlines only?",
+  "Each section has one job?",
+  "Are cards actually necessary?",
+  "Does motion improve hierarchy or atmosphere?",
+  "Would design feel premium with all decorative shadows removed?",
 ];
 
 /**
@@ -86,11 +86,15 @@ On any error: continue — ${feature} is informational, not a gate.`;
  *   - `codex-only` (diff adversarial): disabled gates only the Codex passes; the
  *     free Claude adversarial subagent still runs.
  */
-export function codexPreflight(opts: { modeVar?: string; disabledBehavior: 'skip-all' | 'codex-only' }): string {
-  const m = opts.modeVar ?? '_CODEX_MODE';
-  const disabledLine = opts.disabledBehavior === 'codex-only'
-    ? 'Skip the Codex passes only; the Claude adversarial subagent below STILL runs (it is free and fast). Print: "Codex passes skipped (codex_reviews disabled) — running Claude adversarial only."'
-    : 'Skip this section entirely; do NOT fall back to a Claude subagent — disabled means no extra review step. Print: "Codex review skipped (codex_reviews disabled). Re-enable: `gstack-config set codex_reviews enabled`."';
+export function codexPreflight(opts: {
+  modeVar?: string;
+  disabledBehavior: "skip-all" | "codex-only";
+}): string {
+  const m = opts.modeVar ?? "_CODEX_MODE";
+  const disabledLine =
+    opts.disabledBehavior === "codex-only"
+      ? 'Skip the Codex passes only; the Claude adversarial subagent below STILL runs (it is free and fast). Print: "Codex passes skipped (codex_reviews disabled) — running Claude adversarial only."'
+      : 'Skip this section entirely; do NOT fall back to a Claude subagent — disabled means no extra review step. Print: "Codex review skipped (codex_reviews disabled). Re-enable: `gstack-config set codex_reviews enabled`."';
   return `\`\`\`bash
 # Codex preflight: one block (functions sourced here don't persist to later blocks).
 _TEL=$(~/.claude/skills/gstack/bin/gstack-config get telemetry 2>/dev/null || echo off)

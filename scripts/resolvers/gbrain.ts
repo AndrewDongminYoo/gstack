@@ -17,14 +17,14 @@
  * SKILL_DIGEST_SUBSETS (office-hours, plan-ceo-review, plan-eng-review,
  * plan-design-review, plan-devex-review).
  */
-import type { TemplateContext } from './types';
+import type { TemplateContext } from "./types";
 import {
   SKILL_DIGEST_SUBSETS,
   SKILL_CALIBRATION_WEIGHTS,
   BRAIN_CACHE_ENTITIES,
   getSkillSubset,
   getInvalidationTargets,
-} from '../brain-cache-spec';
+} from "../brain-cache-spec";
 
 // Per-skill slug + title + tag metadata for SAVE_RESULTS. The full save
 // template (heredoc body, entity-stub instructions, throttle handling,
@@ -40,16 +40,48 @@ interface SkillSaveMeta {
 }
 
 const skillSaveMap: Record<string, SkillSaveMeta> = {
-  'office-hours':         { slugPrefix: 'office-hours',    title: 'Office Hours',    tag: 'design-doc' },
-  'investigate':          { slugPrefix: 'investigations',  title: 'Investigation',   tag: 'investigation' },
-  'plan-ceo-review':      { slugPrefix: 'ceo-plans',       title: 'CEO Plan',        tag: 'ceo-plan' },
-  'plan-eng-review':      { slugPrefix: 'eng-reviews',     title: 'Eng Review',      tag: 'eng-review' },
-  'plan-design-review':   { slugPrefix: 'design-reviews',  title: 'Design Review',   tag: 'design-review' },
-  'plan-devex-review':    { slugPrefix: 'devex-reviews',   title: 'Devex Review',    tag: 'devex-review' },
-  'retro':                { slugPrefix: 'retros',          title: 'Retro',           tag: 'retro' },
-  'ship':                 { slugPrefix: 'releases',        title: 'Release',         tag: 'release' },
-  'cso':                  { slugPrefix: 'security-audits', title: 'Security Audit',  tag: 'security-audit' },
-  'design-consultation':  { slugPrefix: 'design-systems',  title: 'Design System',   tag: 'design-system' },
+  "office-hours": {
+    slugPrefix: "office-hours",
+    title: "Office Hours",
+    tag: "design-doc",
+  },
+  investigate: {
+    slugPrefix: "investigations",
+    title: "Investigation",
+    tag: "investigation",
+  },
+  "plan-ceo-review": {
+    slugPrefix: "ceo-plans",
+    title: "CEO Plan",
+    tag: "ceo-plan",
+  },
+  "plan-eng-review": {
+    slugPrefix: "eng-reviews",
+    title: "Eng Review",
+    tag: "eng-review",
+  },
+  "plan-design-review": {
+    slugPrefix: "design-reviews",
+    title: "Design Review",
+    tag: "design-review",
+  },
+  "plan-devex-review": {
+    slugPrefix: "devex-reviews",
+    title: "Devex Review",
+    tag: "devex-review",
+  },
+  retro: { slugPrefix: "retros", title: "Retro", tag: "retro" },
+  ship: { slugPrefix: "releases", title: "Release", tag: "release" },
+  cso: {
+    slugPrefix: "security-audits",
+    title: "Security Audit",
+    tag: "security-audit",
+  },
+  "design-consultation": {
+    slugPrefix: "design-systems",
+    title: "Design System",
+    tag: "design-system",
+  },
 };
 
 export function generateGBrainContextLoad(ctx: TemplateContext): string {
@@ -65,7 +97,7 @@ If \`gbrain search\` returns no results or any non-zero exit, proceed
 without brain context. Full search/read protocol + examples:
 see \`docs/gbrain-write-surfaces.md\` §Context Load.`;
 
-  if (ctx.skillName === 'investigate') {
+  if (ctx.skillName === "investigate") {
     base += `\n\nFor structured-data extraction requests ("track this", "extract from emails", "build a tracker"), route to GBrain's data-research skill instead: \`gbrain call data-research\`.`;
   }
 
@@ -143,16 +175,19 @@ function isPreflightSkill(skillName: string): boolean {
  * shell command per digest.
  */
 export function generateBrainPreflight(ctx: TemplateContext): string {
-  if (!isPreflightSkill(ctx.skillName)) return '';
+  if (!isPreflightSkill(ctx.skillName)) return "";
   const subset = getSkillSubset(ctx.skillName);
   const binDir = ctx.paths.binDir;
   // Build the bash that loads each digest. Per-skill subset is small (2-5 entries).
-  const loadLines = subset.map((entityName) => {
-    const entity = BRAIN_CACHE_ENTITIES[entityName];
-    if (!entity) return '';
-    const projectFlag = entity.scope === 'per-project' ? '--project "$SLUG"' : '';
-    return `  printf '\\n### %s\\n\\n' "${entityName}"\n  ${binDir}/gstack-brain-cache get ${entityName} ${projectFlag} 2>/dev/null || printf '_(no ${entityName} digest available yet)_\\n'`;
-  }).join('\n');
+  const loadLines = subset
+    .map((entityName) => {
+      const entity = BRAIN_CACHE_ENTITIES[entityName];
+      if (!entity) return "";
+      const projectFlag =
+        entity.scope === "per-project" ? '--project "$SLUG"' : "";
+      return `  printf '\\n### %s\\n\\n' "${entityName}"\n  ${binDir}/gstack-brain-cache get ${entityName} ${projectFlag} 2>/dev/null || printf '_(no ${entityName} digest available yet)_\\n'`;
+    })
+    .join("\n");
 
   return `## Brain Context (preflight)
 
@@ -193,7 +228,7 @@ rm -f /tmp/.gstack-brain-context-$$.md 2>/dev/null || true
  * Subordinate to {{TELEMETRY}} — runs after. Doesn't block the user.
  */
 export function generateBrainCacheRefresh(ctx: TemplateContext): string {
-  if (!isPreflightSkill(ctx.skillName)) return '';
+  if (!isPreflightSkill(ctx.skillName)) return "";
   const binDir = ctx.paths.binDir;
   return `## Brain Cache Background Refresh
 
@@ -220,15 +255,18 @@ eval "$(${binDir}/gstack-slug 2>/dev/null)" 2>/dev/null || true
  * write-back behavior without any template changes.
  */
 export function generateBrainWriteBack(ctx: TemplateContext): string {
-  if (!isPreflightSkill(ctx.skillName)) return '';
+  if (!isPreflightSkill(ctx.skillName)) return "";
   const weight = SKILL_CALIBRATION_WEIGHTS[ctx.skillName];
-  if (weight == null) return '';
+  if (weight == null) return "";
   // List the cache digests this skill's writes should invalidate. Multiple
   // skills write to multiple entities; the invalidation map captures this.
   const invalidatesEntities = getInvalidationTargets(`/${ctx.skillName}`);
   const invalidateBash = invalidatesEntities
-    .map((e) => `  ${ctx.paths.binDir}/gstack-brain-cache invalidate ${e} --project "$SLUG" 2>/dev/null || true`)
-    .join('\n');
+    .map(
+      (e) =>
+        `  ${ctx.paths.binDir}/gstack-brain-cache invalidate ${e} --project "$SLUG" 2>/dev/null || true`,
+    )
+    .join("\n");
 
   return `## Brain Calibration Write-Back (Phase 2 / gated)
 
@@ -264,7 +302,7 @@ the new state:
 
 \`\`\`bash
 eval "$(${ctx.paths.binDir}/gstack-slug 2>/dev/null)" 2>/dev/null || true
-${invalidateBash || '  # (no per-skill invalidation targets configured)'}
+${invalidateBash || "  # (no per-skill invalidation targets configured)"}
 \`\`\`
 `;
 }

@@ -18,7 +18,7 @@
  * generic.
  */
 
-import type { Dimension } from './psychographic-signals';
+import type { Dimension } from "./psychographic-signals";
 
 export interface Archetype {
   /** Short vibe label — one or two words. */
@@ -33,8 +33,8 @@ export interface Archetype {
 
 export const ARCHETYPES: readonly Archetype[] = [
   {
-    name: 'Cathedral Builder',
-    description: 'Boil the ocean. Architecture first. Ship the complete thing.',
+    name: "Cathedral Builder",
+    description: "Boil the ocean. Architecture first. Ship the complete thing.",
     center: {
       scope_appetite: 0.85,
       risk_tolerance: 0.55,
@@ -45,8 +45,8 @@ export const ARCHETYPES: readonly Archetype[] = [
     tightness: 1.0,
   },
   {
-    name: 'Ship-It Pragmatist',
-    description: 'Small scope, fast iteration. Good enough is done.',
+    name: "Ship-It Pragmatist",
+    description: "Small scope, fast iteration. Good enough is done.",
     center: {
       scope_appetite: 0.25,
       risk_tolerance: 0.75,
@@ -57,8 +57,9 @@ export const ARCHETYPES: readonly Archetype[] = [
     tightness: 1.0,
   },
   {
-    name: 'Deep Craft',
-    description: 'Every detail matters. Verbose explanations. Slow and considered.',
+    name: "Deep Craft",
+    description:
+      "Every detail matters. Verbose explanations. Slow and considered.",
     center: {
       scope_appetite: 0.6,
       risk_tolerance: 0.35,
@@ -69,8 +70,9 @@ export const ARCHETYPES: readonly Archetype[] = [
     tightness: 1.0,
   },
   {
-    name: 'Taste Maker',
-    description: 'Decisions feel intuitive. Overrides recommendations when taste dictates.',
+    name: "Taste Maker",
+    description:
+      "Decisions feel intuitive. Overrides recommendations when taste dictates.",
     center: {
       scope_appetite: 0.6,
       risk_tolerance: 0.6,
@@ -81,8 +83,8 @@ export const ARCHETYPES: readonly Archetype[] = [
     tightness: 0.9,
   },
   {
-    name: 'Solo Operator',
-    description: 'High autonomy. Delegate to the agent. Trust but verify.',
+    name: "Solo Operator",
+    description: "High autonomy. Delegate to the agent. Trust but verify.",
     center: {
       scope_appetite: 0.5,
       risk_tolerance: 0.7,
@@ -93,8 +95,9 @@ export const ARCHETYPES: readonly Archetype[] = [
     tightness: 0.9,
   },
   {
-    name: 'Consultant',
-    description: 'Hands-on. Wants to be consulted on everything. Verifies each step.',
+    name: "Consultant",
+    description:
+      "Hands-on. Wants to be consulted on everything. Verifies each step.",
     center: {
       scope_appetite: 0.5,
       risk_tolerance: 0.3,
@@ -105,8 +108,9 @@ export const ARCHETYPES: readonly Archetype[] = [
     tightness: 0.9,
   },
   {
-    name: 'Wedge Hunter',
-    description: 'Narrow scope aggressively. Find the smallest thing worth building.',
+    name: "Wedge Hunter",
+    description:
+      "Narrow scope aggressively. Find the smallest thing worth building.",
     center: {
       scope_appetite: 0.15,
       risk_tolerance: 0.5,
@@ -117,8 +121,9 @@ export const ARCHETYPES: readonly Archetype[] = [
     tightness: 0.85,
   },
   {
-    name: 'Builder-Coach',
-    description: 'Balanced steering. Makes room for the agent to propose and challenge.',
+    name: "Builder-Coach",
+    description:
+      "Balanced steering. Makes room for the agent to propose and challenge.",
     center: {
       scope_appetite: 0.55,
       risk_tolerance: 0.5,
@@ -135,21 +140,31 @@ export const ARCHETYPES: readonly Archetype[] = [
  * dimension cluster genuinely doesn't match any named pattern.
  */
 export const FALLBACK_ARCHETYPE: Archetype = {
-  name: 'Polymath',
-  description: "Your steering style doesn't fit a common archetype. That's a compliment.",
-  center: { scope_appetite: 0.5, risk_tolerance: 0.5, detail_preference: 0.5, autonomy: 0.5, architecture_care: 0.5 },
+  name: "Polymath",
+  description:
+    "Your steering style doesn't fit a common archetype. That's a compliment.",
+  center: {
+    scope_appetite: 0.5,
+    risk_tolerance: 0.5,
+    detail_preference: 0.5,
+    autonomy: 0.5,
+    architecture_care: 0.5,
+  },
   tightness: 0,
 };
 
 const DIMENSIONS: readonly Dimension[] = [
-  'scope_appetite',
-  'risk_tolerance',
-  'detail_preference',
-  'autonomy',
-  'architecture_care',
+  "scope_appetite",
+  "risk_tolerance",
+  "detail_preference",
+  "autonomy",
+  "architecture_care",
 ] as const;
 
-function euclidean(a: Record<Dimension, number>, b: Record<Dimension, number>): number {
+function euclidean(
+  a: Record<Dimension, number>,
+  b: Record<Dimension, number>,
+): number {
   let sumSq = 0;
   for (const d of DIMENSIONS) {
     const diff = (a[d] ?? 0.5) - (b[d] ?? 0.5);

@@ -17,7 +17,7 @@ export interface BrainCacheEntity {
   /** Time-to-live in milliseconds before cache is considered stale and triggers cold refresh. */
   ttl_ms: number;
   /** Scope determines which dir holds the cache file. */
-  scope: 'cross-project' | 'per-project';
+  scope: "cross-project" | "per-project";
   /**
    * Which write-paths invalidate this digest. When a writer runs, it consults
    * this list to know which cache files to bust. Special values:
@@ -39,59 +39,59 @@ export interface BrainCacheEntity {
  *   salience (mcp__gbrain__get_recent_salience output)
  */
 export const BRAIN_CACHE_ENTITIES: Record<string, BrainCacheEntity> = {
-  'user-profile': {
-    file: 'user-profile.md',
+  "user-profile": {
+    file: "user-profile.md",
     ttl_ms: 7 * 86_400_000, // 7 days
-    scope: 'cross-project',
-    invalidated_by: ['/retro', '/plan-tune', 'calibration-write'],
+    scope: "cross-project",
+    invalidated_by: ["/retro", "/plan-tune", "calibration-write"],
     budget_bytes: 2048,
   },
   product: {
-    file: 'product.md',
+    file: "product.md",
     ttl_ms: 1 * 86_400_000, // 1 day
-    scope: 'per-project',
-    invalidated_by: ['/office-hours', '/plan-ceo-review'],
+    scope: "per-project",
+    invalidated_by: ["/office-hours", "/plan-ceo-review"],
     budget_bytes: 1024,
   },
   goals: {
-    file: 'goals.md',
+    file: "goals.md",
     ttl_ms: 12 * 3_600_000, // 12 hours
-    scope: 'per-project',
-    invalidated_by: ['/office-hours', '/plan-ceo-review'],
+    scope: "per-project",
+    invalidated_by: ["/office-hours", "/plan-ceo-review"],
     budget_bytes: 512,
   },
-  'developer-persona': {
-    file: 'developer-persona.md',
+  "developer-persona": {
+    file: "developer-persona.md",
     ttl_ms: 7 * 86_400_000,
-    scope: 'per-project',
-    invalidated_by: ['/plan-devex-review', '/devex-review'],
+    scope: "per-project",
+    invalidated_by: ["/plan-devex-review", "/devex-review"],
     budget_bytes: 1024,
   },
   brand: {
-    file: 'brand.md',
+    file: "brand.md",
     ttl_ms: 7 * 86_400_000,
-    scope: 'per-project',
-    invalidated_by: ['/design-consultation', '/plan-design-review'],
+    scope: "per-project",
+    invalidated_by: ["/design-consultation", "/plan-design-review"],
     budget_bytes: 1024,
   },
-  'competitive-intel': {
-    file: 'competitive-intel.md',
+  "competitive-intel": {
+    file: "competitive-intel.md",
     ttl_ms: 1 * 86_400_000,
-    scope: 'per-project',
-    invalidated_by: ['/plan-ceo-review', '/office-hours'],
+    scope: "per-project",
+    invalidated_by: ["/plan-ceo-review", "/office-hours"],
     budget_bytes: 1024,
   },
-  'recent-decisions': {
-    file: 'recent-decisions.md',
+  "recent-decisions": {
+    file: "recent-decisions.md",
     ttl_ms: 12 * 3_600_000,
-    scope: 'per-project',
-    invalidated_by: ['skill-run-write'],
+    scope: "per-project",
+    invalidated_by: ["skill-run-write"],
     budget_bytes: 2048,
   },
   salience: {
-    file: 'salience.md',
+    file: "salience.md",
     ttl_ms: 4 * 3_600_000, // 4 hours
-    scope: 'per-project',
+    scope: "per-project",
     invalidated_by: [],
     budget_bytes: 512,
   },
@@ -107,20 +107,31 @@ export const BRAIN_CACHE_ENTITIES: Record<string, BrainCacheEntity> = {
  *   - eng/design/devex: 2 KB
  */
 export const SKILL_DIGEST_SUBSETS: Record<string, ReadonlyArray<string>> = {
-  'office-hours': ['product', 'goals', 'user-profile', 'recent-decisions', 'salience'],
-  'plan-ceo-review': ['product', 'goals', 'recent-decisions', 'user-profile'],
-  'plan-eng-review': ['product', 'recent-decisions'],
-  'plan-design-review': ['product', 'brand', 'recent-decisions'],
-  'plan-devex-review': ['product', 'developer-persona', 'recent-decisions', 'competitive-intel'],
+  "office-hours": [
+    "product",
+    "goals",
+    "user-profile",
+    "recent-decisions",
+    "salience",
+  ],
+  "plan-ceo-review": ["product", "goals", "recent-decisions", "user-profile"],
+  "plan-eng-review": ["product", "recent-decisions"],
+  "plan-design-review": ["product", "brand", "recent-decisions"],
+  "plan-devex-review": [
+    "product",
+    "developer-persona",
+    "recent-decisions",
+    "competitive-intel",
+  ],
 };
 
 /** Per-skill total digest budget (sum of loaded digests must not exceed). */
 export const SKILL_PREFLIGHT_BUDGET_BYTES: Record<string, number> = {
-  'office-hours': 5120,
-  'plan-ceo-review': 5120,
-  'plan-eng-review': 2048,
-  'plan-design-review': 2048,
-  'plan-devex-review': 2048,
+  "office-hours": 5120,
+  "plan-ceo-review": 5120,
+  "plan-eng-review": 2048,
+  "plan-design-review": 2048,
+  "plan-devex-review": 2048,
 };
 
 /**
@@ -137,9 +148,9 @@ export const AUTOPLAN_PREFLIGHT_BUDGET_BYTES = 25_600;
  * `gstack-config set salience_allowlist '<comma-separated-prefixes>'`.
  */
 export const SALIENCE_DEFAULT_ALLOWLIST: ReadonlyArray<string> = [
-  'projects/',
-  'concepts/',
-  'gstack/',
+  "projects/",
+  "concepts/",
+  "gstack/",
 ];
 
 /**
@@ -149,11 +160,11 @@ export const SALIENCE_DEFAULT_ALLOWLIST: ReadonlyArray<string> = [
  * on resolution.
  */
 export const SKILL_CALIBRATION_WEIGHTS: Record<string, number> = {
-  'plan-ceo-review': 0.8,
-  'plan-eng-review': 0.7,
-  'plan-design-review': 0.5,
-  'plan-devex-review': 0.6,
-  'office-hours': 0.9,
+  "plan-ceo-review": 0.8,
+  "plan-eng-review": 0.7,
+  "plan-design-review": 0.5,
+  "plan-devex-review": 0.6,
+  "office-hours": 0.9,
 };
 
 /**
@@ -173,14 +184,14 @@ export const SKILL_RUN_RETENTION_DAYS = 90;
  * On mismatch with the version recorded in _meta.json, the cache layer
  * triggers a FULL rebuild for the affected project.
  */
-export const GSTACK_SCHEMA_PACK_NAME = 'gstack-core';
-export const GSTACK_SCHEMA_PACK_VERSION = '1.0.0';
+export const GSTACK_SCHEMA_PACK_NAME = "gstack-core";
+export const GSTACK_SCHEMA_PACK_VERSION = "1.0.0";
 
 /**
  * Trust policy values. Drives auto-push of artifacts, calibration write-back
  * eligibility, and user-namespacing strategy.
  */
-export type BrainTrustPolicy = 'personal' | 'shared' | 'unset';
+export type BrainTrustPolicy = "personal" | "shared" | "unset";
 
 /**
  * Per-transport default policy. Local engines auto-set to personal (single-tenant
@@ -188,12 +199,15 @@ export type BrainTrustPolicy = 'personal' | 'shared' | 'unset';
  * exactly one source + whoami matches → personal default; multiple sources or
  * federation → ask the policy question.
  */
-export const TRANSPORT_DEFAULT_POLICY: Record<string, BrainTrustPolicy | 'infer'> = {
-  'local-pglite': 'personal',
-  'local-stdio': 'personal',
-  'remote-http-single-tenant': 'personal',
-  'remote-http-ambiguous': 'unset',
-  unknown: 'unset',
+export const TRANSPORT_DEFAULT_POLICY: Record<
+  string,
+  BrainTrustPolicy | "infer"
+> = {
+  "local-pglite": "personal",
+  "local-stdio": "personal",
+  "remote-http-single-tenant": "personal",
+  "remote-http-ambiguous": "unset",
+  unknown: "unset",
 };
 
 /**
@@ -202,10 +216,10 @@ export const TRANSPORT_DEFAULT_POLICY: Record<string, BrainTrustPolicy | 'infer'
  * Stable across sessions.
  */
 export const USER_SLUG_RESOLUTION_ORDER = [
-  'whoami_client_name', // mcp__gbrain__whoami.client_name (remote + OAuth)
-  'env_user', // $USER environment variable
-  'git_email_sha8', // sha8($(git config user.email))
-  'anonymous_hostname_sha8', // anonymous-<sha8(hostname)>
+  "whoami_client_name", // mcp__gbrain__whoami.client_name (remote + OAuth)
+  "env_user", // $USER environment variable
+  "git_email_sha8", // sha8($(git config user.email))
+  "anonymous_hostname_sha8", // anonymous-<sha8(hostname)>
 ] as const;
 
 /** ----------------------------------------------------------------------- */
@@ -222,14 +236,16 @@ export function getCacheFile(entityName: string): string {
 /** Returns the digest subset for a skill, throws if the skill isn't preflight-enabled. */
 export function getSkillSubset(skillName: string): ReadonlyArray<string> {
   const subset = SKILL_DIGEST_SUBSETS[skillName];
-  if (!subset) throw new Error(`Skill not registered for brain preflight: ${skillName}`);
+  if (!subset)
+    throw new Error(`Skill not registered for brain preflight: ${skillName}`);
   return subset;
 }
 
 /** Returns the per-skill total digest budget in bytes. */
 export function getSkillBudget(skillName: string): number {
   const budget = SKILL_PREFLIGHT_BUDGET_BYTES[skillName];
-  if (budget == null) throw new Error(`Skill not registered for brain preflight: ${skillName}`);
+  if (budget == null)
+    throw new Error(`Skill not registered for brain preflight: ${skillName}`);
   return budget;
 }
 
@@ -238,7 +254,9 @@ export function getSkillBudget(skillName: string): number {
  * of cache files that should be invalidated. Drives the cache CLI's `invalidate`
  * subcommand and the resolver's BRAIN_WRITE_BACK block.
  */
-export function getInvalidationTargets(writePath: string): ReadonlyArray<string> {
+export function getInvalidationTargets(
+  writePath: string,
+): ReadonlyArray<string> {
   const targets: string[] = [];
   for (const [name, entity] of Object.entries(BRAIN_CACHE_ENTITIES)) {
     if (entity.invalidated_by.includes(writePath)) {
@@ -264,5 +282,8 @@ export function getPreflightSkills(): ReadonlyArray<string> {
  */
 export function getMaxSubsetBytes(skillName: string): number {
   const subset = getSkillSubset(skillName);
-  return subset.reduce((sum, name) => sum + (BRAIN_CACHE_ENTITIES[name]?.budget_bytes ?? 0), 0);
+  return subset.reduce(
+    (sum, name) => sum + (BRAIN_CACHE_ENTITIES[name]?.budget_bytes ?? 0),
+    0,
+  );
 }

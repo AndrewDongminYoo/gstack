@@ -24,7 +24,7 @@
  *   3. Default to ASK_NORMALLY (safer than AUTO_DECIDE)
  */
 
-import { getQuestion } from './question-registry';
+import { getQuestion } from "./question-registry";
 
 /**
  * Keyword patterns that identify one-way-door questions when the registry
@@ -80,8 +80,8 @@ const DESTRUCTIVE_PATTERNS: RegExp[] = [
  * inherently high-stakes.
  */
 const ONE_WAY_SKILL_CATEGORIES = new Set<string>([
-  'cso:approval', // security-audit findings
-  'land-and-deploy:approval', // anything /land-and-deploy asks
+  "cso:approval", // security-audit findings
+  "land-and-deploy:approval", // anything /land-and-deploy asks
 ]);
 
 export interface ClassifyInput {
@@ -99,7 +99,12 @@ export interface ClassifyResult {
   /** true = treat as one-way door (always ask, never auto-decide) */
   oneWay: boolean;
   /** Which check triggered the classification (for audit/debug) */
-  reason: 'registry' | 'skill-category' | 'keyword' | 'default-safe' | 'default-two-way';
+  reason:
+    | "registry"
+    | "skill-category"
+    | "keyword"
+    | "default-safe"
+    | "default-two-way";
   /** Matched pattern if reason is 'keyword' */
   matched?: string;
 }
@@ -115,8 +120,8 @@ export function classifyQuestion(input: ClassifyInput): ClassifyResult {
     const registered = getQuestion(input.question_id);
     if (registered) {
       return {
-        oneWay: registered.door_type === 'one-way',
-        reason: 'registry',
+        oneWay: registered.door_type === "one-way",
+        reason: "registry",
       };
     }
   }
@@ -125,7 +130,7 @@ export function classifyQuestion(input: ClassifyInput): ClassifyResult {
   if (input.skill && input.category) {
     const key = `${input.skill}:${input.category}`;
     if (ONE_WAY_SKILL_CATEGORIES.has(key)) {
-      return { oneWay: true, reason: 'skill-category' };
+      return { oneWay: true, reason: "skill-category" };
     }
   }
 
@@ -135,7 +140,7 @@ export function classifyQuestion(input: ClassifyInput): ClassifyResult {
       if (pattern.test(input.summary)) {
         return {
           oneWay: true,
-          reason: 'keyword',
+          reason: "keyword",
           matched: pattern.toString(),
         };
       }
@@ -143,7 +148,7 @@ export function classifyQuestion(input: ClassifyInput): ClassifyResult {
   }
 
   // 4. No evidence either way — treat as two-way (can be preference-suppressed).
-  return { oneWay: false, reason: 'default-two-way' };
+  return { oneWay: false, reason: "default-two-way" };
 }
 
 /**

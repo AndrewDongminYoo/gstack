@@ -17,11 +17,11 @@
  * is the single source of id/file/title/trigger text (CM2; v2_PLAN.md:663).
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
-import type { ResolverFn, TemplateContext } from './types';
+import * as fs from "fs";
+import * as path from "path";
+import type { ResolverFn, TemplateContext } from "./types";
 
-const ROOT = path.resolve(import.meta.dir, '..', '..');
+const ROOT = path.resolve(import.meta.dir, "..", "..");
 
 interface SectionEntry {
   id: string;
@@ -35,15 +35,17 @@ interface SectionManifest {
 }
 
 function loadManifest(skill: string): SectionManifest {
-  const p = path.join(ROOT, skill, 'sections', 'manifest.json');
-  const raw = fs.readFileSync(p, 'utf-8');
+  const p = path.join(ROOT, skill, "sections", "manifest.json");
+  const raw = fs.readFileSync(p, "utf-8");
   return JSON.parse(raw) as SectionManifest;
 }
 
 function findSection(skill: string, id: string): SectionEntry {
-  const entry = loadManifest(skill).sections.find(s => s.id === id);
+  const entry = loadManifest(skill).sections.find((s) => s.id === id);
   if (!entry) {
-    throw new Error(`{{SECTION:${id}}} — no section "${id}" in ${skill}/sections/manifest.json`);
+    throw new Error(
+      `{{SECTION:${id}}} — no section "${id}" in ${skill}/sections/manifest.json`,
+    );
   }
   return entry;
 }
@@ -53,44 +55,55 @@ function findSection(skill: string, id: string): SectionEntry {
  * Claude path uses the stable gstack-root install (`{skillRoot}/{skill}/sections/`),
  * which always exists, instead of a naked relative path (Codex outside-voice #7).
  */
-export const SECTION: ResolverFn = (ctx: TemplateContext, args?: string[]): string => {
+export const SECTION: ResolverFn = (
+  ctx: TemplateContext,
+  args?: string[],
+): string => {
   const id = args?.[0];
-  if (!id) throw new Error('{{SECTION:id}} requires a section id');
+  if (!id) throw new Error("{{SECTION:id}} requires a section id");
   const entry = findSection(ctx.skillName, id);
 
-  if (ctx.host === 'claude') {
+  if (ctx.host === "claude") {
     const sectionPath = `${ctx.paths.skillRoot}/${ctx.skillName}/sections/${entry.file}`;
     return [
       `> **STOP.** Before ${entry.trigger}, Read \`${sectionPath}\` and execute it`,
       `> in full. Do not work from memory — that section is the source of truth for this step.`,
-    ].join('\n');
+    ].join("\n");
   }
 
   // Non-Claude hosts inline the section template content (monolith preserved).
   // Inner {{RESOLVER}} tokens are expanded by the generator's multi-pass resolve.
-  const tmplPath = path.join(ROOT, ctx.skillName, 'sections', `${entry.file}.tmpl`);
-  return fs.readFileSync(tmplPath, 'utf-8').trimEnd();
+  const tmplPath = path.join(
+    ROOT,
+    ctx.skillName,
+    "sections",
+    `${entry.file}.tmpl`,
+  );
+  return fs.readFileSync(tmplPath, "utf-8").trimEnd();
 };
 
 /**
  * {{SECTION_INDEX:skill}} — situation→section table from the passive manifest.
  * Claude only; other hosts inline everything so an index would be noise.
  */
-export const SECTION_INDEX: ResolverFn = (ctx: TemplateContext, args?: string[]): string => {
-  if (ctx.host !== 'claude') return '';
+export const SECTION_INDEX: ResolverFn = (
+  ctx: TemplateContext,
+  args?: string[],
+): string => {
+  if (ctx.host !== "claude") return "";
   const skill = args?.[0] ?? ctx.skillName;
   const manifest = loadManifest(skill);
   const lines: string[] = [
-    '## Section index — Read each section when its situation applies',
-    '',
-    'This skill is a decision-tree skeleton. The steps below point to on-demand',
-    'sections. Read a section in full before doing its step; do not work from memory.',
-    '',
-    '| When | Read this section |',
-    '|------|-------------------|',
+    "## Section index — Read each section when its situation applies",
+    "",
+    "This skill is a decision-tree skeleton. The steps below point to on-demand",
+    "sections. Read a section in full before doing its step; do not work from memory.",
+    "",
+    "| When | Read this section |",
+    "|------|-------------------|",
   ];
   for (const s of manifest.sections) {
     lines.push(`| ${s.trigger} | \`sections/${s.file}\` |`);
   }
-  return lines.join('\n');
+  return lines.join("\n");
 };

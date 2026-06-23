@@ -1,5 +1,3 @@
-
-
 export function generateTestFailureTriage(): string {
   return `## Test Failure Ownership Triage
 
@@ -105,4 +103,3 @@ Use AskUserQuestion:
 - Continue with the workflow.
 - Note in output: "Pre-existing test failure skipped: <test-name>"`;
 }
-

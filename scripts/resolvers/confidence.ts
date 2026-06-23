@@ -14,7 +14,7 @@
  * and the gate forces the reviewer to do that lookup before promoting the
  * finding to the report.
  */
-import type { TemplateContext } from './types';
+import type { TemplateContext } from "./types";
 
 export function generateConfidenceCalibration(_ctx: TemplateContext): string {
   return `## Confidence Calibration

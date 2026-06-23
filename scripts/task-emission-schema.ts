@@ -15,8 +15,12 @@
  * contain quotes, newlines, and backslashes.
  */
 
-export type TaskPhase = 'ceo-review' | 'design-review' | 'eng-review' | 'devex-review';
-export type TaskPriority = 'P1' | 'P2' | 'P3';
+export type TaskPhase =
+  | "ceo-review"
+  | "design-review"
+  | "eng-review"
+  | "devex-review";
+export type TaskPriority = "P1" | "P2" | "P3";
 
 /**
  * One row in tasks-{phase}-{datetime}.jsonl. All fields required unless noted.
@@ -52,7 +56,9 @@ export interface ImplementationTask {
  * tuple is identical (per `D13 finding 9`). Near-duplicates surface as
  * separate tasks with a `possible-duplicate-of: <id>` note.
  */
-export function dedupKey(t: Pick<ImplementationTask, 'component' | 'files' | 'title'>): string {
+export function dedupKey(
+  t: Pick<ImplementationTask, "component" | "files" | "title">,
+): string {
   return JSON.stringify({
     component: t.component,
     files: [...t.files].sort(),

@@ -1,5 +1,3 @@
-
-
 export function generateRepoModeSection(): string {
   return `## Repo Ownership — See Something, Say Something
 
@@ -9,4 +7,3 @@ export function generateRepoModeSection(): string {
 
 Always flag anything that looks wrong — one sentence, what you noticed and its impact.`;
 }
-

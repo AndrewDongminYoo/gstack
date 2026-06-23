@@ -14,28 +14,88 @@
  * even if someone later adds {{NAME}} to skill W.
  */
 
-import type { TemplateContext, ResolverFn, ResolverValue } from './types';
+import type { TemplateContext, ResolverFn, ResolverValue } from "./types";
 
 // Domain modules
-import { generatePreamble } from './preamble';
-import { generateTestFailureTriage } from './preamble';
-import { generateCommandReference, generateSnapshotFlags, generateBrowseSetup } from './browse';
-import { generateDesignMethodology, generateDesignHardRules, generateDesignOutsideVoices, generateDesignReviewLite, generateDesignSketch, generateDesignSetup, generateDesignMockup, generateDesignShotgunLoop, generateTasteProfile, generateUXPrinciples } from './design';
-import { generateTestBootstrap, generateTestCoverageAuditPlan, generateTestCoverageAuditShip, generateTestCoverageAuditReview } from './testing';
-import { generateReviewDashboard, generatePlanFileReviewReport, generateExitPlanModeGate, generateAntiShortcutClause, generateSpecReviewLoop, generateBenefitsFrom, generateCodexSecondOpinion, generateAdversarialStep, generateCodexPlanReview, generateCodexDocReview, generatePlanCompletionAuditShip, generatePlanCompletionAuditReview, generatePlanVerificationExec, generateScopeDrift, generateCrossReviewDedup } from './review';
-import { generateSlugEval, generateSlugSetup, generateBaseBranchDetect, generateDeployBootstrap, generateQAMethodology, generateCoAuthorTrailer, generateChangelogWorkflow } from './utility';
-import { generateLearningsSearch, generateLearningsLog } from './learnings';
-import { generateConfidenceCalibration } from './confidence';
-import { generateInvokeSkill } from './composition';
-import { generateReviewArmy } from './review-army';
-import { generateDxFramework } from './dx';
-import { generateModelOverlay } from './model-overlay';
-import { generateGBrainContextLoad, generateGBrainSaveResults, generateBrainPreflight, generateBrainCacheRefresh, generateBrainWriteBack } from './gbrain';
-import { generateQuestionPreferenceCheck, generateQuestionLog, generateInlineTuneFeedback } from './question-tuning';
-import { generateMakePdfSetup } from './make-pdf';
-import { generateTasksSectionEmit, generateTasksSectionAggregate } from './tasks-section';
-import { SECTION, SECTION_INDEX } from './sections';
-import { generateRedactTaxonomyTable, generateRedactInvocationBlock } from './redact-doc';
+import { generatePreamble } from "./preamble";
+import { generateTestFailureTriage } from "./preamble";
+import {
+  generateCommandReference,
+  generateSnapshotFlags,
+  generateBrowseSetup,
+} from "./browse";
+import {
+  generateDesignMethodology,
+  generateDesignHardRules,
+  generateDesignOutsideVoices,
+  generateDesignReviewLite,
+  generateDesignSketch,
+  generateDesignSetup,
+  generateDesignMockup,
+  generateDesignShotgunLoop,
+  generateTasteProfile,
+  generateUXPrinciples,
+} from "./design";
+import {
+  generateTestBootstrap,
+  generateTestCoverageAuditPlan,
+  generateTestCoverageAuditShip,
+  generateTestCoverageAuditReview,
+} from "./testing";
+import {
+  generateReviewDashboard,
+  generatePlanFileReviewReport,
+  generateExitPlanModeGate,
+  generateAntiShortcutClause,
+  generateSpecReviewLoop,
+  generateBenefitsFrom,
+  generateCodexSecondOpinion,
+  generateAdversarialStep,
+  generateCodexPlanReview,
+  generateCodexDocReview,
+  generatePlanCompletionAuditShip,
+  generatePlanCompletionAuditReview,
+  generatePlanVerificationExec,
+  generateScopeDrift,
+  generateCrossReviewDedup,
+} from "./review";
+import {
+  generateSlugEval,
+  generateSlugSetup,
+  generateBaseBranchDetect,
+  generateDeployBootstrap,
+  generateQAMethodology,
+  generateCoAuthorTrailer,
+  generateChangelogWorkflow,
+} from "./utility";
+import { generateLearningsSearch, generateLearningsLog } from "./learnings";
+import { generateConfidenceCalibration } from "./confidence";
+import { generateInvokeSkill } from "./composition";
+import { generateReviewArmy } from "./review-army";
+import { generateDxFramework } from "./dx";
+import { generateModelOverlay } from "./model-overlay";
+import {
+  generateGBrainContextLoad,
+  generateGBrainSaveResults,
+  generateBrainPreflight,
+  generateBrainCacheRefresh,
+  generateBrainWriteBack,
+} from "./gbrain";
+import {
+  generateQuestionPreferenceCheck,
+  generateQuestionLog,
+  generateInlineTuneFeedback,
+} from "./question-tuning";
+import { generateMakePdfSetup } from "./make-pdf";
+import {
+  generateTasksSectionEmit,
+  generateTasksSectionAggregate,
+} from "./tasks-section";
+import { SECTION, SECTION_INDEX } from "./sections";
+import {
+  generateRedactTaxonomyTable,
+  generateRedactInvocationBlock,
+} from "./redact-doc";
 
 export const RESOLVERS: Record<string, ResolverValue> = {
   SLUG_EVAL: generateSlugEval,

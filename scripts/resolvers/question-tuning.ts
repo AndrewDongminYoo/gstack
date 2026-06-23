@@ -9,10 +9,10 @@
  * All sections are runtime-gated by the `QUESTION_TUNING` preamble echo.
  * When `QUESTION_TUNING: false`, agents skip the entire section.
  */
-import type { TemplateContext } from './types';
+import type { TemplateContext } from "./types";
 
 function binDir(ctx: TemplateContext): string {
-  return ctx.host === 'codex' ? '$GSTACK_BIN' : ctx.paths.binDir;
+  return ctx.host === "codex" ? "$GSTACK_BIN" : ctx.paths.binDir;
 }
 
 /**

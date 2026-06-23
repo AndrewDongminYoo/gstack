@@ -12,12 +12,12 @@
  */
 
 export const ALL_MODEL_NAMES = [
-  'claude',
-  'opus-4-7',
-  'gpt',
-  'gpt-5.4',
-  'gemini',
-  'o-series',
+  "claude",
+  "opus-4-7",
+  "gpt",
+  "gpt-5.4",
+  "gemini",
+  "o-series",
 ] as const;
 
 export type Model = (typeof ALL_MODEL_NAMES)[number];
@@ -49,12 +49,12 @@ export function resolveModel(input: string): Model | null {
   }
 
   // Family heuristics
-  if (/^gpt-5\.4(-|$)/.test(s)) return 'gpt-5.4';
-  if (/^gpt(-|$)/.test(s)) return 'gpt';
-  if (/^o[0-9]+(-|$)/.test(s)) return 'o-series';
-  if (/^claude-opus-4-7(-|$)/.test(s)) return 'opus-4-7';
-  if (/^claude(-|$)/.test(s)) return 'claude';
-  if (/^gemini(-|$)/.test(s)) return 'gemini';
+  if (/^gpt-5\.4(-|$)/.test(s)) return "gpt-5.4";
+  if (/^gpt(-|$)/.test(s)) return "gpt";
+  if (/^o[0-9]+(-|$)/.test(s)) return "o-series";
+  if (/^claude-opus-4-7(-|$)/.test(s)) return "opus-4-7";
+  if (/^claude(-|$)/.test(s)) return "claude";
+  if (/^gemini(-|$)/.test(s)) return "gemini";
 
   return null;
 }
@@ -66,5 +66,5 @@ export function resolveModel(input: string): Model | null {
  */
 export function validateModel(input: string): string | null {
   if ((ALL_MODEL_NAMES as readonly string[]).includes(input)) return null;
-  return `'${input}' is not a known model. Use ${ALL_MODEL_NAMES.join(', ')}.`;
+  return `'${input}' is not a known model. Use ${ALL_MODEL_NAMES.join(", ")}.`;
 }

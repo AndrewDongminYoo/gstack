@@ -7,14 +7,24 @@
  * Schema for the JSONL artifact lives in scripts/task-emission-schema.ts.
  */
 
-import type { TemplateContext, ResolverFn } from './types';
+import type { TemplateContext, ResolverFn } from "./types";
 
-const VALID_PHASES = new Set(['ceo-review', 'design-review', 'eng-review', 'devex-review']);
+const VALID_PHASES = new Set([
+  "ceo-review",
+  "design-review",
+  "eng-review",
+  "devex-review",
+]);
 
-export const generateTasksSectionEmit: ResolverFn = (_ctx: TemplateContext, args?: string[]) => {
+export const generateTasksSectionEmit: ResolverFn = (
+  _ctx: TemplateContext,
+  args?: string[],
+) => {
   const phase = args?.[0];
   if (!phase || !VALID_PHASES.has(phase)) {
-    throw new Error(`TASKS_SECTION_EMIT requires one of ${[...VALID_PHASES].join(', ')} — got ${phase}`);
+    throw new Error(
+      `TASKS_SECTION_EMIT requires one of ${[...VALID_PHASES].join(", ")} — got ${phase}`,
+    );
   }
 
   return `## Implementation Tasks
@@ -90,7 +100,9 @@ this run (an empty file means "ran, no findings" — distinct from "didn't run")
 `;
 };
 
-export const generateTasksSectionAggregate: ResolverFn = (_ctx: TemplateContext) => {
+export const generateTasksSectionAggregate: ResolverFn = (
+  _ctx: TemplateContext,
+) => {
   return `## Implementation Tasks aggregator
 
 Before rendering the Final Approval Gate output block below, aggregate the

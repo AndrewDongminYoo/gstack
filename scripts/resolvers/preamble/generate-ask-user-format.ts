@@ -1,4 +1,4 @@
-import type { TemplateContext } from '../types';
+import type { TemplateContext } from "../types";
 
 export function generateAskUserFormat(_ctx: TemplateContext): string {
   return `## AskUserQuestion Format

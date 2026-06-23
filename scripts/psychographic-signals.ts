@@ -36,29 +36,29 @@
  *   architecture_care:  0 = pragmatic, ship it      ↔  1 = principled, get it right
  */
 
-import { QUESTIONS } from './question-registry';
+import { QUESTIONS } from "./question-registry";
 
 /** The 5 dimensions of the developer psychographic. */
 export type Dimension =
-  | 'scope_appetite'
-  | 'risk_tolerance'
-  | 'detail_preference'
-  | 'autonomy'
-  | 'architecture_care';
+  | "scope_appetite"
+  | "risk_tolerance"
+  | "detail_preference"
+  | "autonomy"
+  | "architecture_care";
 
 export const ALL_DIMENSIONS: readonly Dimension[] = [
-  'scope_appetite',
-  'risk_tolerance',
-  'detail_preference',
-  'autonomy',
-  'architecture_care',
+  "scope_appetite",
+  "risk_tolerance",
+  "detail_preference",
+  "autonomy",
+  "architecture_care",
 ] as const;
 
 /**
  * Semantic version of the signal map. Increment when deltas change so that
  * cached profiles can detect staleness and recompute from events.
  */
-export const SIGNAL_MAP_VERSION = '0.1.0';
+export const SIGNAL_MAP_VERSION = "0.1.0";
 
 export interface DimensionDelta {
   dim: Dimension;
@@ -77,114 +77,114 @@ export const SIGNAL_MAP: Record<string, Record<string, DimensionDelta[]>> = {
   // -----------------------------------------------------------------------
   // scope-appetite — how much the user likes to expand scope
   // -----------------------------------------------------------------------
-  'scope-appetite': {
+  "scope-appetite": {
     // plan-ceo-review mode choice
-    expand: [{ dim: 'scope_appetite', delta: +0.06 }],
-    selective: [{ dim: 'scope_appetite', delta: +0.03 }],
-    hold: [{ dim: 'scope_appetite', delta: -0.01 }],
-    reduce: [{ dim: 'scope_appetite', delta: -0.06 }],
+    expand: [{ dim: "scope_appetite", delta: +0.06 }],
+    selective: [{ dim: "scope_appetite", delta: +0.03 }],
+    hold: [{ dim: "scope_appetite", delta: -0.01 }],
+    reduce: [{ dim: "scope_appetite", delta: -0.06 }],
     // plan-ceo-review expansion proposal accepted/deferred/skipped
-    accept: [{ dim: 'scope_appetite', delta: +0.04 }],
-    defer: [{ dim: 'scope_appetite', delta: -0.01 }],
-    skip: [{ dim: 'scope_appetite', delta: -0.03 }],
+    accept: [{ dim: "scope_appetite", delta: +0.04 }],
+    defer: [{ dim: "scope_appetite", delta: -0.01 }],
+    skip: [{ dim: "scope_appetite", delta: -0.03 }],
     // office-hours approach choice
-    minimal: [{ dim: 'scope_appetite', delta: -0.04 }],
-    ideal: [{ dim: 'scope_appetite', delta: +0.05 }],
-    creative: [{ dim: 'scope_appetite', delta: +0.02 }],
+    minimal: [{ dim: "scope_appetite", delta: -0.04 }],
+    ideal: [{ dim: "scope_appetite", delta: +0.05 }],
+    creative: [{ dim: "scope_appetite", delta: +0.02 }],
   },
 
   // -----------------------------------------------------------------------
   // architecture-care — how much the user sweats the details
   // -----------------------------------------------------------------------
-  'architecture-care': {
-    'fix-now': [
-      { dim: 'architecture_care', delta: +0.05 },
-      { dim: 'risk_tolerance', delta: -0.02 },
+  "architecture-care": {
+    "fix-now": [
+      { dim: "architecture_care", delta: +0.05 },
+      { dim: "risk_tolerance", delta: -0.02 },
     ],
-    defer: [{ dim: 'architecture_care', delta: -0.02 }],
-    'accept-risk': [
-      { dim: 'architecture_care', delta: -0.04 },
-      { dim: 'risk_tolerance', delta: +0.04 },
+    defer: [{ dim: "architecture_care", delta: -0.02 }],
+    "accept-risk": [
+      { dim: "architecture_care", delta: -0.04 },
+      { dim: "risk_tolerance", delta: +0.04 },
     ],
   },
 
   // -----------------------------------------------------------------------
   // code-quality-care — proxies detail_preference + architecture_care
   // -----------------------------------------------------------------------
-  'code-quality-care': {
-    'fix-now': [
-      { dim: 'detail_preference', delta: +0.02 },
-      { dim: 'architecture_care', delta: +0.03 },
+  "code-quality-care": {
+    "fix-now": [
+      { dim: "detail_preference", delta: +0.02 },
+      { dim: "architecture_care", delta: +0.03 },
     ],
-    'ack-and-ship': [
-      { dim: 'risk_tolerance', delta: +0.03 },
-      { dim: 'architecture_care', delta: -0.02 },
+    "ack-and-ship": [
+      { dim: "risk_tolerance", delta: +0.03 },
+      { dim: "architecture_care", delta: -0.02 },
     ],
-    'false-positive': [{ dim: 'architecture_care', delta: +0.01 }],
-    defer: [{ dim: 'architecture_care', delta: -0.02 }],
-    skip: [{ dim: 'detail_preference', delta: -0.03 }],
+    "false-positive": [{ dim: "architecture_care", delta: +0.01 }],
+    defer: [{ dim: "architecture_care", delta: -0.02 }],
+    skip: [{ dim: "detail_preference", delta: -0.03 }],
   },
 
   // -----------------------------------------------------------------------
   // test-discipline — proxies architecture_care + detail_preference
   // -----------------------------------------------------------------------
-  'test-discipline': {
-    'fix-now': [
-      { dim: 'architecture_care', delta: +0.04 },
-      { dim: 'detail_preference', delta: +0.02 },
+  "test-discipline": {
+    "fix-now": [
+      { dim: "architecture_care", delta: +0.04 },
+      { dim: "detail_preference", delta: +0.02 },
     ],
-    investigate: [{ dim: 'architecture_care', delta: +0.02 }],
-    'ack-and-ship': [
-      { dim: 'risk_tolerance', delta: +0.04 },
-      { dim: 'architecture_care', delta: -0.03 },
+    investigate: [{ dim: "architecture_care", delta: +0.02 }],
+    "ack-and-ship": [
+      { dim: "risk_tolerance", delta: +0.04 },
+      { dim: "architecture_care", delta: -0.03 },
     ],
-    'add-test': [
-      { dim: 'architecture_care', delta: +0.03 },
-      { dim: 'detail_preference', delta: +0.02 },
+    "add-test": [
+      { dim: "architecture_care", delta: +0.03 },
+      { dim: "detail_preference", delta: +0.02 },
     ],
-    defer: [{ dim: 'architecture_care', delta: -0.01 }],
-    skip: [{ dim: 'architecture_care', delta: -0.04 }],
+    defer: [{ dim: "architecture_care", delta: -0.01 }],
+    skip: [{ dim: "architecture_care", delta: -0.04 }],
   },
 
   // -----------------------------------------------------------------------
   // detail-preference — direct signal for verbosity
   // -----------------------------------------------------------------------
-  'detail-preference': {
-    accept: [{ dim: 'detail_preference', delta: +0.03 }],
-    skip: [{ dim: 'detail_preference', delta: -0.03 }],
+  "detail-preference": {
+    accept: [{ dim: "detail_preference", delta: +0.03 }],
+    skip: [{ dim: "detail_preference", delta: -0.03 }],
   },
 
   // -----------------------------------------------------------------------
   // design-care — proxies architecture_care for UI-facing work
   // -----------------------------------------------------------------------
-  'design-care': {
-    expand: [{ dim: 'architecture_care', delta: +0.04 }],
-    polish: [{ dim: 'architecture_care', delta: +0.02 }],
-    triage: [{ dim: 'architecture_care', delta: -0.02 }],
-    'fix-now': [{ dim: 'architecture_care', delta: +0.02 }],
-    defer: [{ dim: 'architecture_care', delta: -0.01 }],
-    skip: [{ dim: 'architecture_care', delta: -0.03 }],
+  "design-care": {
+    expand: [{ dim: "architecture_care", delta: +0.04 }],
+    polish: [{ dim: "architecture_care", delta: +0.02 }],
+    triage: [{ dim: "architecture_care", delta: -0.02 }],
+    "fix-now": [{ dim: "architecture_care", delta: +0.02 }],
+    defer: [{ dim: "architecture_care", delta: -0.01 }],
+    skip: [{ dim: "architecture_care", delta: -0.03 }],
   },
 
   // -----------------------------------------------------------------------
   // devex-care — DX is UX for developers; proxies architecture_care
   // -----------------------------------------------------------------------
-  'devex-care': {
-    expand: [{ dim: 'architecture_care', delta: +0.04 }],
-    polish: [{ dim: 'architecture_care', delta: +0.02 }],
-    triage: [{ dim: 'architecture_care', delta: -0.02 }],
-    'fix-now': [{ dim: 'architecture_care', delta: +0.02 }],
-    defer: [{ dim: 'architecture_care', delta: -0.01 }],
-    skip: [{ dim: 'architecture_care', delta: -0.03 }],
+  "devex-care": {
+    expand: [{ dim: "architecture_care", delta: +0.04 }],
+    polish: [{ dim: "architecture_care", delta: +0.02 }],
+    triage: [{ dim: "architecture_care", delta: -0.02 }],
+    "fix-now": [{ dim: "architecture_care", delta: +0.02 }],
+    defer: [{ dim: "architecture_care", delta: -0.01 }],
+    skip: [{ dim: "architecture_care", delta: -0.03 }],
   },
 
   // -----------------------------------------------------------------------
   // distribution-care — does the user care about how code reaches users?
   // -----------------------------------------------------------------------
-  'distribution-care': {
-    accept: [{ dim: 'architecture_care', delta: +0.03 }],
-    defer: [{ dim: 'architecture_care', delta: -0.02 }],
-    skip: [{ dim: 'architecture_care', delta: -0.04 }],
+  "distribution-care": {
+    accept: [{ dim: "architecture_care", delta: +0.03 }],
+    defer: [{ dim: "architecture_care", delta: -0.02 }],
+    skip: [{ dim: "architecture_care", delta: -0.04 }],
   },
 
   // -----------------------------------------------------------------------
@@ -193,33 +193,33 @@ export const SIGNAL_MAP: Record<string, Record<string, DimensionDelta[]>> = {
   // 'autonomy' dimension; added so /plan-tune annotations can render
   // 'consult me' vs 'delegate' guidance on merge/rollback questions.)
   // -----------------------------------------------------------------------
-  'decision-autonomy': {
-    accept: [{ dim: 'autonomy', delta: +0.04 }],
-    reject: [{ dim: 'autonomy', delta: -0.04 }],
+  "decision-autonomy": {
+    accept: [{ dim: "autonomy", delta: +0.04 }],
+    reject: [{ dim: "autonomy", delta: -0.04 }],
     // common option keys for "I'll review first" vs "go ahead":
-    'review-first': [{ dim: 'autonomy', delta: -0.05 }],
-    proceed: [{ dim: 'autonomy', delta: +0.05 }],
+    "review-first": [{ dim: "autonomy", delta: -0.05 }],
+    proceed: [{ dim: "autonomy", delta: +0.05 }],
     // /investigate-style: "agent applies fix" vs "show me the diff first"
-    'apply-fix': [{ dim: 'autonomy', delta: +0.04 }],
-    'show-diff': [{ dim: 'autonomy', delta: -0.04 }],
+    "apply-fix": [{ dim: "autonomy", delta: +0.04 }],
+    "show-diff": [{ dim: "autonomy", delta: -0.04 }],
   },
 
   // -----------------------------------------------------------------------
   // session-mode — office-hours goal selection
   // -----------------------------------------------------------------------
-  'session-mode': {
+  "session-mode": {
     startup: [
-      { dim: 'scope_appetite', delta: +0.02 },
-      { dim: 'architecture_care', delta: +0.02 },
+      { dim: "scope_appetite", delta: +0.02 },
+      { dim: "architecture_care", delta: +0.02 },
     ],
-    intrapreneur: [{ dim: 'scope_appetite', delta: +0.02 }],
+    intrapreneur: [{ dim: "scope_appetite", delta: +0.02 }],
     hackathon: [
-      { dim: 'risk_tolerance', delta: +0.03 },
-      { dim: 'architecture_care', delta: -0.02 },
+      { dim: "risk_tolerance", delta: +0.03 },
+      { dim: "architecture_care", delta: -0.02 },
     ],
-    'oss-research': [{ dim: 'architecture_care', delta: +0.02 }],
-    learning: [{ dim: 'detail_preference', delta: +0.02 }],
-    fun: [{ dim: 'risk_tolerance', delta: +0.02 }],
+    "oss-research": [{ dim: "architecture_care", delta: +0.02 }],
+    learning: [{ dim: "detail_preference", delta: +0.02 }],
+    fun: [{ dim: "risk_tolerance", delta: +0.02 }],
   },
 };
 
