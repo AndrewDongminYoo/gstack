@@ -42,23 +42,23 @@ shift || true
 # Migration: builder-profile.jsonl → developer-profile.json
 # -----------------------------------------------------------------------
 do_migrate() {
-  if [ ! -f "$LEGACY_FILE" ]; then
-    echo "MIGRATE: no legacy file to migrate"
-    return 0
-  fi
+	if [ ! -f "$LEGACY_FILE" ]; then
+		echo "MIGRATE: no legacy file to migrate"
+		return 0
+	fi
 
-  if [ -f "$PROFILE_FILE" ]; then
-    # Already migrated — no-op (idempotent).
-    echo "MIGRATE: already migrated (developer-profile.json exists)"
-    return 0
-  fi
+	if [ -f "$PROFILE_FILE" ]; then
+		# Already migrated — no-op (idempotent).
+		echo "MIGRATE: already migrated (developer-profile.json exists)"
+		return 0
+	fi
 
-  # Run migration in a temp file, then atomic rename.
-  local TMPOUT
-  TMPOUT=$(mktemp "$GSTACK_HOME/developer-profile.json.XXXXXX.tmp")
-  trap 'rm -f "$TMPOUT"' EXIT
+	# Run migration in a temp file, then atomic rename.
+	local TMPOUT
+	TMPOUT=$(mktemp "$GSTACK_HOME/developer-profile.json.XXXXXX.tmp")
+	trap 'rm -f "$TMPOUT"' EXIT
 
-  cat "$LEGACY_FILE" | bun -e "
+	cat "$LEGACY_FILE" | bun -e "
     const lines = (await Bun.stdin.text()).trim().split('\n').filter(Boolean);
     const sessions = [];
     const signalsAcc = {};
@@ -99,24 +99,24 @@ do_migrate() {
       schema_version: 1,
     };
     console.log(JSON.stringify(profile, null, 2));
-  " > "$TMPOUT"
+  " >"$TMPOUT"
 
-  # Atomic rename.
-  mv "$TMPOUT" "$PROFILE_FILE"
-  trap - EXIT
+	# Atomic rename.
+	mv "$TMPOUT" "$PROFILE_FILE"
+	trap - EXIT
 
-  # gbrain-sync: enqueue the migrated file for cross-machine sync (no-op if off).
-  SCRIPT_DIR_E="$(cd "$(dirname "$0")" && pwd)"
-  "$SCRIPT_DIR_E/gstack-brain-enqueue" "developer-profile.json" 2>/dev/null &
+	# gbrain-sync: enqueue the migrated file for cross-machine sync (no-op if off).
+	SCRIPT_DIR_E="$(cd "$(dirname "$0")" && pwd)"
+	"$SCRIPT_DIR_E/gstack-brain-enqueue" "developer-profile.json" 2>/dev/null &
 
-  # Archive the legacy file.
-  local TS
-  TS="$(date +%Y-%m-%d-%H%M%S)"
-  mv "$LEGACY_FILE" "$LEGACY_FILE.migrated-$TS"
+	# Archive the legacy file.
+	local TS
+	TS="$(date +%Y-%m-%d-%H%M%S)"
+	mv "$LEGACY_FILE" "$LEGACY_FILE.migrated-$TS"
 
-  local COUNT
-  COUNT=$(bun -e "console.log(JSON.parse(require('fs').readFileSync('$PROFILE_FILE','utf-8')).sessions.length)" 2>/dev/null || echo "?")
-  echo "MIGRATE: ok — migrated $COUNT sessions from builder-profile.jsonl"
+	local COUNT
+	COUNT=$(bun -e "console.log(JSON.parse(require('fs').readFileSync('$PROFILE_FILE','utf-8')).sessions.length)" 2>/dev/null || echo "?")
+	echo "MIGRATE: ok — migrated $COUNT sessions from builder-profile.jsonl"
 }
 
 # -----------------------------------------------------------------------
@@ -125,16 +125,16 @@ do_migrate() {
 # Returns path to profile file via stdout. Creates a minimal stub if nothing exists.
 # -----------------------------------------------------------------------
 ensure_profile() {
-  if [ -f "$PROFILE_FILE" ]; then
-    return 0
-  fi
-  if [ -f "$LEGACY_FILE" ]; then
-    do_migrate >/dev/null
-    return 0
-  fi
-  # Nothing yet — create a stub.
-  mkdir -p "$GSTACK_HOME"
-  cat > "$PROFILE_FILE" <<EOF
+	if [ -f "$PROFILE_FILE" ]; then
+		return 0
+	fi
+	if [ -f "$LEGACY_FILE" ]; then
+		do_migrate >/dev/null
+		return 0
+	fi
+	# Nothing yet — create a stub.
+	mkdir -p "$GSTACK_HOME"
+	cat >"$PROFILE_FILE" <<EOF
 {
   "identity": {},
   "declared": {},
@@ -166,26 +166,26 @@ EOF
 # Silent skip on invalid input (matches gstack-timeline-log:22-26 pattern).
 # -----------------------------------------------------------------------
 do_log_session() {
-  local INPUT="${1:-}"
-  if [ -z "$INPUT" ]; then
-    return 0
-  fi
+	local INPUT="${1-}"
+	if [ -z "$INPUT" ]; then
+		return 0
+	fi
 
-  # Validate: input must be parseable JSON with required fields (date, mode).
-  if ! printf '%s' "$INPUT" | bun -e "
+	# Validate: input must be parseable JSON with required fields (date, mode).
+	if ! printf '%s' "$INPUT" | bun -e "
     const j = JSON.parse(await Bun.stdin.text());
     if (!j.date || !j.mode) process.exit(1);
   " 2>/dev/null; then
-    return 0
-  fi
+		return 0
+	fi
 
-  ensure_profile
+	ensure_profile
 
-  local TMPOUT
-  TMPOUT=$(mktemp "$GSTACK_HOME/developer-profile.json.XXXXXX.tmp")
-  trap 'rm -f "$TMPOUT"' EXIT
+	local TMPOUT
+	TMPOUT=$(mktemp "$GSTACK_HOME/developer-profile.json.XXXXXX.tmp")
+	trap 'rm -f "$TMPOUT"' EXIT
 
-  PROFILE_FILE_PATH="$PROFILE_FILE" RECORD_INPUT="$INPUT" TMPOUT_PATH="$TMPOUT" bun -e "
+	PROFILE_FILE_PATH="$PROFILE_FILE" RECORD_INPUT="$INPUT" TMPOUT_PATH="$TMPOUT" bun -e "
     const fs = require('fs');
     const entry = JSON.parse(process.env.RECORD_INPUT);
     if (!entry.ts) entry.ts = new Date().toISOString();
@@ -212,17 +212,17 @@ do_log_session() {
     fs.writeFileSync(process.env.TMPOUT_PATH, JSON.stringify(profile, null, 2));
   "
 
-  mv "$TMPOUT" "$PROFILE_FILE"
-  trap - EXIT
-  "$SCRIPT_DIR/gstack-brain-enqueue" "developer-profile.json" 2>/dev/null &
+	mv "$TMPOUT" "$PROFILE_FILE"
+	trap - EXIT
+	"$SCRIPT_DIR/gstack-brain-enqueue" "developer-profile.json" 2>/dev/null &
 }
 
 # -----------------------------------------------------------------------
 # Read: emit legacy KEY: VALUE output for /office-hours compat.
 # -----------------------------------------------------------------------
 do_read() {
-  ensure_profile
-  cat "$PROFILE_FILE" | bun -e "
+	ensure_profile
+	cat "$PROFILE_FILE" | bun -e "
     const p = JSON.parse(await Bun.stdin.text());
     const sessions = p.sessions || [];
     const count = sessions.length;
@@ -279,16 +279,16 @@ do_read() {
 # Profile: emit the full JSON
 # -----------------------------------------------------------------------
 do_profile() {
-  ensure_profile
-  cat "$PROFILE_FILE"
+	ensure_profile
+	cat "$PROFILE_FILE"
 }
 
 # -----------------------------------------------------------------------
 # Gap: declared vs inferred diff
 # -----------------------------------------------------------------------
 do_gap() {
-  ensure_profile
-  cat "$PROFILE_FILE" | bun -e "
+	ensure_profile
+	cat "$PROFILE_FILE" | bun -e "
     const p = JSON.parse(await Bun.stdin.text());
     const declared = p.declared || {};
     const inferred = (p.inferred && p.inferred.values) || {};
@@ -307,17 +307,17 @@ do_gap() {
 # Derive: recompute inferred dimensions from question-events.jsonl
 # -----------------------------------------------------------------------
 do_derive() {
-  ensure_profile
-  local EVENTS="$GSTACK_HOME/projects/$SLUG/question-log.jsonl"
-  local REGISTRY="$ROOT_DIR/scripts/question-registry.ts"
-  local SIGNALS="$ROOT_DIR/scripts/psychographic-signals.ts"
-  if [ ! -f "$REGISTRY" ] || [ ! -f "$SIGNALS" ]; then
-    echo "DERIVE: registry or signals file missing, cannot derive" >&2
-    exit 1
-  fi
+	ensure_profile
+	local EVENTS="$GSTACK_HOME/projects/$SLUG/question-log.jsonl"
+	local REGISTRY="$ROOT_DIR/scripts/question-registry.ts"
+	local SIGNALS="$ROOT_DIR/scripts/psychographic-signals.ts"
+	if [ ! -f "$REGISTRY" ] || [ ! -f "$SIGNALS" ]; then
+		echo "DERIVE: registry or signals file missing, cannot derive" >&2
+		exit 1
+	fi
 
-  cd "$ROOT_DIR"
-  PROFILE_FILE_PATH="$PROFILE_FILE" EVENTS_PATH="$EVENTS" bun -e "
+	cd "$ROOT_DIR"
+	PROFILE_FILE_PATH="$PROFILE_FILE" EVENTS_PATH="$EVENTS" bun -e "
     import('./scripts/question-registry.ts').then(async (regmod) => {
       const sigmod = await import('./scripts/psychographic-signals.ts');
       const fs = require('fs');
@@ -389,18 +389,18 @@ do_derive() {
 # Trace: show events contributing to a dimension
 # -----------------------------------------------------------------------
 do_trace() {
-  local DIM="${1:-}"
-  if [ -z "$DIM" ]; then
-    echo "TRACE: missing dimension argument" >&2
-    exit 1
-  fi
-  local EVENTS="$GSTACK_HOME/projects/$SLUG/question-log.jsonl"
-  if [ ! -f "$EVENTS" ]; then
-    echo "TRACE: no events for this project"
-    return 0
-  fi
-  cd "$ROOT_DIR"
-  EVENTS_PATH="$EVENTS" TRACE_DIM="$DIM" bun -e "
+	local DIM="${1-}"
+	if [ -z "$DIM" ]; then
+		echo "TRACE: missing dimension argument" >&2
+		exit 1
+	fi
+	local EVENTS="$GSTACK_HOME/projects/$SLUG/question-log.jsonl"
+	if [ ! -f "$EVENTS" ]; then
+		echo "TRACE: no events for this project"
+		return 0
+	fi
+	cd "$ROOT_DIR"
+	EVENTS_PATH="$EVENTS" TRACE_DIM="$DIM" bun -e "
     import('./scripts/question-registry.ts').then(async (regmod) => {
       const sigmod = await import('./scripts/psychographic-signals.ts');
       const fs = require('fs');
@@ -437,8 +437,8 @@ do_trace() {
 # Check mismatch: flag when declared ≠ inferred by > threshold
 # -----------------------------------------------------------------------
 do_check_mismatch() {
-  ensure_profile
-  cat "$PROFILE_FILE" | bun -e "
+	ensure_profile
+	cat "$PROFILE_FILE" | bun -e "
     const p = JSON.parse(await Bun.stdin.text());
     const declared = p.declared || {};
     const inferred = (p.inferred && p.inferred.values) || {};
@@ -476,13 +476,13 @@ do_check_mismatch() {
 # Narrative + Vibe (v2 stubs)
 # -----------------------------------------------------------------------
 do_narrative() {
-  echo "NARRATIVE: (v2 — not yet implemented; use /plan-tune profile for now)"
+	echo "NARRATIVE: (v2 — not yet implemented; use /plan-tune profile for now)"
 }
 
 do_vibe() {
-  ensure_profile
-  cd "$ROOT_DIR"
-  cat "$PROFILE_FILE" | PROFILE_DATA="$(cat "$PROFILE_FILE")" bun -e "
+	ensure_profile
+	cd "$ROOT_DIR"
+	cat "$PROFILE_FILE" | PROFILE_DATA="$(cat "$PROFILE_FILE")" bun -e "
     import('./scripts/archetypes.ts').then(async (mod) => {
       const p = JSON.parse(process.env.PROFILE_DATA);
       const dims = (p.inferred && p.inferred.values) || {
@@ -500,20 +500,20 @@ do_vibe() {
 # Dispatch
 # -----------------------------------------------------------------------
 case "$CMD" in
-  --read) do_read ;;
-  --profile) do_profile ;;
-  --gap) do_gap ;;
-  --derive) do_derive ;;
-  --trace) do_trace "$@" ;;
-  --narrative) do_narrative ;;
-  --vibe) do_vibe ;;
-  --check-mismatch) do_check_mismatch ;;
-  --migrate) do_migrate ;;
-  --log-session) do_log_session "$@" ;;
-  --help|-h) sed -n '1,/^set -euo/p' "$0" | sed 's|^# \?||' ;;
-  *)
-    echo "gstack-developer-profile: unknown subcommand '$CMD'" >&2
-    echo "run --help for usage" >&2
-    exit 1
-    ;;
+--read) do_read ;;
+--profile) do_profile ;;
+--gap) do_gap ;;
+--derive) do_derive ;;
+--trace) do_trace "$@" ;;
+--narrative) do_narrative ;;
+--vibe) do_vibe ;;
+--check-mismatch) do_check_mismatch ;;
+--migrate) do_migrate ;;
+--log-session) do_log_session "$@" ;;
+--help | -h) sed -n '1,/^set -euo/p' "$0" | sed 's|^# \?||' ;;
+*)
+	echo "gstack-developer-profile: unknown subcommand '$CMD'" >&2
+	echo "run --help for usage" >&2
+	exit 1
+	;;
 esac

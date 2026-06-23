@@ -16,13 +16,25 @@ LIMIT=10
 CROSS_PROJECT=false
 
 while [[ $# -gt 0 ]]; do
-  case "$1" in
-    --type) TYPE="$2"; shift 2 ;;
-    --query) QUERY="$2"; shift 2 ;;
-    --limit) LIMIT="$2"; shift 2 ;;
-    --cross-project) CROSS_PROJECT=true; shift ;;
-    *) shift ;;
-  esac
+	case "$1" in
+	--type)
+		TYPE="$2"
+		shift 2
+		;;
+	--query)
+		QUERY="$2"
+		shift 2
+		;;
+	--limit)
+		LIMIT="$2"
+		shift 2
+		;;
+	--cross-project)
+		CROSS_PROJECT=true
+		shift
+		;;
+	*) shift ;;
+	esac
 done
 
 LEARNINGS_FILE="$GSTACK_HOME/projects/$SLUG/learnings.jsonl"
@@ -32,34 +44,34 @@ LEARNINGS_FILE="$GSTACK_HOME/projects/$SLUG/learnings.jsonl"
 CROSS_FILES=()
 
 if [ "$CROSS_PROJECT" = true ]; then
-  # Add other projects' learnings (max 5)
-  while IFS= read -r f; do
-    CROSS_FILES+=("$f")
-    [ ${#CROSS_FILES[@]} -ge 5 ] && break
-  done < <(find "$GSTACK_HOME/projects" -name "learnings.jsonl" -not -path "*/$SLUG/*" 2>/dev/null)
+	# Add other projects' learnings (max 5)
+	while IFS= read -r f; do
+		CROSS_FILES+=("$f")
+		[ ${#CROSS_FILES[@]} -ge 5 ] && break
+	done < <(find "$GSTACK_HOME/projects" -name "learnings.jsonl" -not -path "*/$SLUG/*" 2>/dev/null)
 fi
 
 if [ ! -f "$LEARNINGS_FILE" ] && [ ${#CROSS_FILES[@]} -eq 0 ]; then
-  exit 0
+	exit 0
 fi
 
 emit_tagged_file() {
-  local tag="$1"
-  local file="$2"
-  local line
-  while IFS= read -r line || [ -n "$line" ]; do
-    [ -n "$line" ] && printf '%s\t%s\n' "$tag" "$line"
-  done < "$file"
+	local tag="$1"
+	local file="$2"
+	local line
+	while IFS= read -r line || [ -n "$line" ]; do
+		[ -n "$line" ] && printf '%s\t%s\n' "$tag" "$line"
+	done <"$file"
 }
 
 # Process all files through bun for JSON parsing, decay, dedup, filtering
 {
-  [ -f "$LEARNINGS_FILE" ] && emit_tagged_file current "$LEARNINGS_FILE"
-  if [ ${#CROSS_FILES[@]} -gt 0 ]; then
-    for f in "${CROSS_FILES[@]}"; do
-      emit_tagged_file cross "$f"
-    done
-  fi
+	[ -f "$LEARNINGS_FILE" ] && emit_tagged_file current "$LEARNINGS_FILE"
+	if [ ${#CROSS_FILES[@]} -gt 0 ]; then
+		for f in "${CROSS_FILES[@]}"; do
+			emit_tagged_file cross "$f"
+		done
+	fi
 } | GSTACK_SEARCH_TYPE="$TYPE" GSTACK_SEARCH_QUERY="$QUERY" GSTACK_SEARCH_LIMIT="$LIMIT" GSTACK_SEARCH_CROSS="$CROSS_PROJECT" bun -e "
 const lines = (await Bun.stdin.text()).trim().split('\n').filter(Boolean);
 const now = Date.now();

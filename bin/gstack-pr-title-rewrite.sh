@@ -17,8 +17,8 @@
 set -euo pipefail
 
 if [ $# -lt 2 ]; then
-  echo "usage: $0 <NEW_VERSION> <CURRENT_TITLE>" >&2
-  exit 2
+	echo "usage: $0 <NEW_VERSION> <CURRENT_TITLE>" >&2
+	exit 2
 fi
 
 NEW_VERSION="$1"
@@ -27,17 +27,17 @@ TITLE="$2"
 # Reject malformed NEW_VERSION early. Real values are dot-separated digits;
 # anything with shell pattern metacharacters or whitespace is a caller bug.
 if ! printf '%s' "$NEW_VERSION" | grep -qE '^[0-9]+(\.[0-9]+)*$'; then
-  echo "error: NEW_VERSION must be dot-separated digits, got: $NEW_VERSION" >&2
-  exit 2
+	echo "error: NEW_VERSION must be dot-separated digits, got: $NEW_VERSION" >&2
+	exit 2
 fi
 
 # Literal prefix match (case statement is glob-quoted by bash, but our
 # regex-validated NEW_VERSION has no glob metacharacters so this is safe).
 case "$TITLE" in
-  "v$NEW_VERSION "*)
-    printf '%s\n' "$TITLE"
-    exit 0
-    ;;
+"v$NEW_VERSION "*)
+	printf '%s\n' "$TITLE"
+	exit 0
+	;;
 esac
 
 REST=$(printf '%s' "$TITLE" | sed -E 's/^v[0-9]+(\.[0-9]+)+ //')

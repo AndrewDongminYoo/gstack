@@ -27,9 +27,9 @@ mkdir -p "${MIGRATION_DIR}" 2>/dev/null || true
 [ -f "${DONE}" ] && exit 0
 
 # Only relevant inside Conductor — the prose-default behavior is Conductor-scoped.
-if [ -z "${CONDUCTOR_WORKSPACE_PATH:-}" ] && [ -z "${CONDUCTOR_PORT:-}" ]; then
-  touch "${DONE}"
-  exit 0
+if [ -z "${CONDUCTOR_WORKSPACE_PATH-}" ] && [ -z "${CONDUCTOR_PORT-}" ]; then
+	touch "${DONE}"
+	exit 0
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -41,22 +41,22 @@ CONFIG_BIN="${SCRIPT_DIR}/bin/gstack-config"
 _PT=$("${CONFIG_BIN}" get plan_tune_hooks 2>/dev/null || echo "")
 _PT=$(printf '%s' "${_PT}" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')
 case "${_PT}" in
-  n|no|false|skip|off|0)
-    echo "  [v1.58.0.0] plan_tune_hooks opted out — leaving Conductor on guidance-only prose." >&2
-    touch "${DONE}"
-    exit 0
-    ;;
+n | no | false | skip | off | 0)
+	echo "  [v1.58.0.0] plan_tune_hooks opted out — leaving Conductor on guidance-only prose." >&2
+	touch "${DONE}"
+	exit 0
+	;;
 esac
 
 if [ -x "${SETTINGS_HOOK}" ] && [ -x "${PREF_HOOK}" ]; then
-  "${SETTINGS_HOOK}" add-event \
-    --event PreToolUse \
-    --matcher '(AskUserQuestion|mcp__.*__AskUserQuestion)' \
-    --command "${PREF_HOOK}" \
-    --source plan-tune-cathedral \
-    --timeout 5 2>/dev/null \
-    && echo "  [v1.58.0.0] Conductor AskUserQuestion prose hook registered (PreToolUse)." >&2 \
-    || echo "  [v1.58.0.0] WARN: could not register the PreToolUse hook; run ./setup --plan-tune-hooks." >&2
+	"${SETTINGS_HOOK}" add-event \
+		--event PreToolUse \
+		--matcher '(AskUserQuestion|mcp__.*__AskUserQuestion)' \
+		--command "${PREF_HOOK}" \
+		--source plan-tune-cathedral \
+		--timeout 5 2>/dev/null &&
+		echo "  [v1.58.0.0] Conductor AskUserQuestion prose hook registered (PreToolUse)." >&2 ||
+		echo "  [v1.58.0.0] WARN: could not register the PreToolUse hook; run ./setup --plan-tune-hooks." >&2
 fi
 
 touch "${DONE}"

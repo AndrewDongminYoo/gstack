@@ -10,12 +10,12 @@ mkdir -p "$GSTACK_HOME/projects/$SLUG"
 # Validate: input must be parseable JSON (reject malformed or injection attempts)
 INPUT="$1"
 if ! printf '%s' "$INPUT" | bun -e "JSON.parse(await Bun.stdin.text())" 2>/dev/null; then
-  # Not valid JSON — refuse to append
-  echo "gstack-review-log: invalid JSON, skipping" >&2
-  exit 1
+	# Not valid JSON — refuse to append
+	echo "gstack-review-log: invalid JSON, skipping" >&2
+	exit 1
 fi
 
-echo "$INPUT" >> "$GSTACK_HOME/projects/$SLUG/$BRANCH-reviews.jsonl"
+echo "$INPUT" >>"$GSTACK_HOME/projects/$SLUG/$BRANCH-reviews.jsonl"
 
 # gbrain-sync: enqueue for cross-machine sync (no-op if sync is off).
 "$SCRIPT_DIR/gstack-brain-enqueue" "projects/$SLUG/$BRANCH-reviews.jsonl" 2>/dev/null &

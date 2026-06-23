@@ -20,13 +20,13 @@ echo "Building Node-compatible server bundle..."
 # add it here. Otherwise `bun build --outfile` will fail with
 # "cannot write multiple output files without an output directory".
 bun build "$SRC_DIR/server.ts" \
-  --target=node \
-  --outfile "$DIST_DIR/server-node.mjs" \
-  --external playwright \
-  --external playwright-core \
-  --external diff \
-  --external "bun:sqlite" \
-  --external "@ngrok/ngrok"
+	--target=node \
+	--outfile "$DIST_DIR/server-node.mjs" \
+	--external playwright \
+	--external playwright-core \
+	--external diff \
+	--external "bun:sqlite" \
+	--external "@ngrok/ngrok"
 
 # Step 2: Post-process
 # Replace import.meta.dir with a resolvable reference
@@ -36,15 +36,15 @@ perl -pi -e 's|import { Database } from "bun:sqlite";|const Database = null; // 
 
 # Step 3: Create the final file with polyfill header injected after the first line
 {
-  head -1 "$DIST_DIR/server-node.mjs"
-  echo '// ── Windows Node.js compatibility (auto-generated) ──'
-  echo 'import { fileURLToPath as _ftp } from "node:url";'
-  echo 'import { dirname as _dn } from "node:path";'
-  echo 'const __browseNodeSrcDir = _dn(_dn(_ftp(import.meta.url))) + "/src";'
-  echo '{ const _r = createRequire(import.meta.url); _r("./bun-polyfill.cjs"); }'
-  echo '// ── end compatibility ──'
-  tail -n +2 "$DIST_DIR/server-node.mjs"
-} > "$DIST_DIR/server-node.tmp.mjs"
+	head -1 "$DIST_DIR/server-node.mjs"
+	echo '// ── Windows Node.js compatibility (auto-generated) ──'
+	echo 'import { fileURLToPath as _ftp } from "node:url";'
+	echo 'import { dirname as _dn } from "node:path";'
+	echo 'const __browseNodeSrcDir = _dn(_dn(_ftp(import.meta.url))) + "/src";'
+	echo '{ const _r = createRequire(import.meta.url); _r("./bun-polyfill.cjs"); }'
+	echo '// ── end compatibility ──'
+	tail -n +2 "$DIST_DIR/server-node.mjs"
+} >"$DIST_DIR/server-node.tmp.mjs"
 
 mv "$DIST_DIR/server-node.tmp.mjs" "$DIST_DIR/server-node.mjs"
 

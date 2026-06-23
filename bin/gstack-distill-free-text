@@ -32,22 +32,25 @@ COST_LOG="$GSTACK_HOME/distill-cost.jsonl"
 mkdir -p "$PROJECT_DIR"
 
 MODE="sync"
-case "${1:-}" in
-  --background) MODE="background" ;;
-  --dry-run)    MODE="dry-run" ;;
-  --status)     MODE="status" ;;
-  --help|-h)
-    sed -n '1,/^set -euo/p' "$0" | sed 's|^# \?||'
-    exit 0
-    ;;
-  '') ;;
-  *) echo "unknown arg: $1" >&2; exit 1 ;;
+case "${1-}" in
+--background) MODE="background" ;;
+--dry-run) MODE="dry-run" ;;
+--status) MODE="status" ;;
+--help | -h)
+	sed -n '1,/^set -euo/p' "$0" | sed 's|^# \?||'
+	exit 0
+	;;
+'') ;;
+*)
+	echo "unknown arg: $1" >&2
+	exit 1
+	;;
 esac
 
 # --- Status subcommand --------------------------------------------------
 
 if [ "$MODE" = "status" ]; then
-  COST_LOG_PATH="$COST_LOG" SLUG_PATH="$SLUG" bun -e '
+	COST_LOG_PATH="$COST_LOG" SLUG_PATH="$SLUG" bun -e '
     const fs = require("fs");
     const slug = process.env.SLUG_PATH;
     const path = process.env.COST_LOG_PATH;
@@ -65,15 +68,15 @@ if [ "$MODE" = "status" ]; then
     const last = mine[mine.length - 1];
     console.log("LAST_RUN: " + (last.ts || "?") + " | " + (last.proposals_count || 0) + " proposals");
   '
-  exit 0
+	exit 0
 fi
 
 # --- Background mode: detach + invoke self synchronously ---------------
 
 if [ "$MODE" = "background" ]; then
-  nohup "$0" >/dev/null 2>&1 &
-  echo "DISTILL_SPAWNED: pid=$!"
-  exit 0
+	nohup "$0" >/dev/null 2>&1 &
+	echo "DISTILL_SPAWNED: pid=$!"
+	exit 0
 fi
 
 # No rate cap. Natural input rate (free-text events are rare) + Haiku price
@@ -82,8 +85,8 @@ fi
 # --- Gather unprocessed auq-other events from this project -------------
 
 if [ ! -f "$LOG_FILE" ]; then
-  echo "NO_LOG: no question-log.jsonl in $PROJECT_DIR"
-  exit 0
+	echo "NO_LOG: no question-log.jsonl in $PROJECT_DIR"
+	exit 0
 fi
 
 EVENTS_JSON=$(LOG_FILE_PATH="$LOG_FILE" bun -e '
@@ -109,8 +112,8 @@ EVENTS_JSON=$(LOG_FILE_PATH="$LOG_FILE" bun -e '
 
 EVENT_COUNT=$(printf '%s' "$EVENTS_JSON" | bun -e 'const a = JSON.parse(await Bun.stdin.text()); console.log(a.length);')
 if [ "$EVENT_COUNT" -eq 0 ]; then
-  echo "NO_FREE_TEXT: nothing to distill"
-  exit 0
+	echo "NO_FREE_TEXT: nothing to distill"
+	exit 0
 fi
 
 # --- Build distill prompt ---------------------------------------------
@@ -119,7 +122,7 @@ fi
 # bash parser on apostrophes elsewhere in the script).
 DISTILL_PROMPT_FILE=$(mktemp)
 trap 'rm -f "$DISTILL_PROMPT_FILE"' EXIT
-cat > "$DISTILL_PROMPT_FILE" <<'PROMPT'
+cat >"$DISTILL_PROMPT_FILE" <<'PROMPT'
 You are gstack dream-cycle distiller. Below are free-text responses the
 user typed into AskUserQuestion prompts (option "Other") across recent gstack
 sessions. For each response, extract structured signal that should update the
@@ -156,18 +159,18 @@ DISTILL_PROMPT=$(cat "$DISTILL_PROMPT_FILE")
 # --- Dry-run: emit prompt + events, exit ------------------------------
 
 if [ "$MODE" = "dry-run" ]; then
-  echo "=== DISTILL PROMPT ==="
-  echo "$DISTILL_PROMPT"
-  echo
-  echo "=== EVENTS ($EVENT_COUNT) ==="
-  echo "$EVENTS_JSON" | bun -e 'console.log(JSON.stringify(JSON.parse(await Bun.stdin.text()), null, 2));'
-  exit 0
+	echo "=== DISTILL PROMPT ==="
+	echo "$DISTILL_PROMPT"
+	echo
+	echo "=== EVENTS ($EVENT_COUNT) ==="
+	echo "$EVENTS_JSON" | bun -e 'console.log(JSON.stringify(JSON.parse(await Bun.stdin.text()), null, 2));'
+	exit 0
 fi
 
 # --- SDK call: fail-loud on missing key -------------------------------
 
-if [ -z "${ANTHROPIC_API_KEY:-}" ]; then
-  cat <<EOF >&2
+if [ -z "${ANTHROPIC_API_KEY-}" ]; then
+	cat <<EOF >&2
 gstack-distill-free-text: ANTHROPIC_API_KEY not set.
 
 Dream-cycle distillation needs an API key for the SDK call. Set
@@ -177,14 +180,14 @@ what would be sent without actually calling.
 Note: this is a separate billing/auth surface from your interactive
 Claude Code session (per Codex correction in D6).
 EOF
-  exit 1
+	exit 1
 fi
 
 # Run the SDK call in bun. Emits JSON: {proposals_count, cost_usd_est}.
 RESULT=$(EVENTS_JSON="$EVENTS_JSON" DISTILL_PROMPT="$DISTILL_PROMPT" \
-         PROPOSAL_FILE_PATH="$PROPOSAL_FILE" LOG_FILE_PATH="$LOG_FILE" \
-         ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" \
-         bun --cwd "$ROOT_DIR" -e '
+	PROPOSAL_FILE_PATH="$PROPOSAL_FILE" LOG_FILE_PATH="$LOG_FILE" \
+	ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" \
+	bun --cwd "$ROOT_DIR" -e '
   const fs = require("fs");
   const Anthropic = require("@anthropic-ai/sdk").default;
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -265,7 +268,7 @@ RESULT=$(EVENTS_JSON="$EVENTS_JSON" DISTILL_PROMPT="$DISTILL_PROMPT" \
 
 # Append cost log line.
 TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-echo "{\"ts\":\"$TS\",\"slug\":\"$SLUG\",$(echo "$RESULT" | sed 's/^{//; s/}$//')}" >> "$COST_LOG"
+echo "{\"ts\":\"$TS\",\"slug\":\"$SLUG\",$(echo "$RESULT" | sed 's/^{//; s/}$//')}" >>"$COST_LOG"
 
 echo "DISTILL_COMPLETE:"
 echo "  proposals_file: $PROPOSAL_FILE"

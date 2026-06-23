@@ -21,15 +21,15 @@ mkdir -p "$GSTACK_HOME"
 
 # If the user has already answered the prompt at any point, skip.
 if [ -f "$PROMPTED_FLAG" ]; then
-  exit 0
+	exit 0
 fi
 
 # If the user has already explicitly set explain_level (either way), count that
 # as an answer — they've made their choice, don't ask again.
 EXPLAIN_LEVEL_SET="$("${HOME}/.claude/skills/gstack/bin/gstack-config" get explain_level 2>/dev/null || true)"
 if [ -n "$EXPLAIN_LEVEL_SET" ]; then
-  touch "$PROMPTED_FLAG"
-  exit 0
+	touch "$PROMPTED_FLAG"
+	exit 0
 fi
 
 # Write the pending flag — preamble will see it on the first tier-≥2 skill invocation.

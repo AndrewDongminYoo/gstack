@@ -16,13 +16,13 @@ GSTACK_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 ENTRY="$GSTACK_DIR/ios-qa/daemon/src/cli-mint.ts"
 
 if [ ! -f "$ENTRY" ]; then
-  echo "gstack-ios-qa-mint: missing $ENTRY (gstack install incomplete?)" >&2
-  exit 1
+	echo "gstack-ios-qa-mint: missing $ENTRY (gstack install incomplete?)" >&2
+	exit 1
 fi
 
 if ! command -v bun >/dev/null 2>&1; then
-  echo "gstack-ios-qa-mint: bun runtime not on PATH — install from https://bun.sh" >&2
-  exit 1
+	echo "gstack-ios-qa-mint: bun runtime not on PATH — install from https://bun.sh" >&2
+	exit 1
 fi
 
 exec bun run "$ENTRY" "$@"

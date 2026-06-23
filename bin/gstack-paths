@@ -19,41 +19,41 @@
 set -u
 
 # State root: where gstack writes projects/, sessions/, analytics/.
-if [ -n "${GSTACK_HOME:-}" ]; then
-  _state_root="$GSTACK_HOME"
-elif [ -n "${CLAUDE_PLUGIN_DATA:-}" ] && echo "${CLAUDE_PLUGIN_ROOT:-}" | grep -qi "gstack"; then
-  # Guard: only trust CLAUDE_PLUGIN_DATA when CLAUDE_PLUGIN_ROOT confirms we are
-  # running as the gstack plugin. Without this, a CLAUDE_PLUGIN_DATA from another
-  # plugin (e.g. codex) that leaked into the session env via CLAUDE_ENV_FILE would
-  # be picked up, writing all gstack state into the wrong directory.
-  _state_root="$CLAUDE_PLUGIN_DATA"
-elif [ -n "${HOME:-}" ]; then
-  _state_root="$HOME/.gstack"
+if [ -n "${GSTACK_HOME-}" ]; then
+	_state_root="$GSTACK_HOME"
+elif [ -n "${CLAUDE_PLUGIN_DATA-}" ] && echo "${CLAUDE_PLUGIN_ROOT-}" | grep -qi "gstack"; then
+	# Guard: only trust CLAUDE_PLUGIN_DATA when CLAUDE_PLUGIN_ROOT confirms we are
+	# running as the gstack plugin. Without this, a CLAUDE_PLUGIN_DATA from another
+	# plugin (e.g. codex) that leaked into the session env via CLAUDE_ENV_FILE would
+	# be picked up, writing all gstack state into the wrong directory.
+	_state_root="$CLAUDE_PLUGIN_DATA"
+elif [ -n "${HOME-}" ]; then
+	_state_root="$HOME/.gstack"
 else
-  _state_root=".gstack"
+	_state_root=".gstack"
 fi
 
 # Plan root: where /context-save and /codex consult write plan files.
-if [ -n "${GSTACK_PLAN_DIR:-}" ]; then
-  _plan_root="$GSTACK_PLAN_DIR"
-elif [ -n "${CLAUDE_PLANS_DIR:-}" ]; then
-  _plan_root="$CLAUDE_PLANS_DIR"
-elif [ -n "${HOME:-}" ]; then
-  _plan_root="$HOME/.claude/plans"
+if [ -n "${GSTACK_PLAN_DIR-}" ]; then
+	_plan_root="$GSTACK_PLAN_DIR"
+elif [ -n "${CLAUDE_PLANS_DIR-}" ]; then
+	_plan_root="$CLAUDE_PLANS_DIR"
+elif [ -n "${HOME-}" ]; then
+	_plan_root="$HOME/.claude/plans"
 else
-  _plan_root=".claude/plans"
+	_plan_root=".claude/plans"
 fi
 
 # Tmp root: where ephemeral files (codex stderr captures, etc.) live.
 # Honor TMPDIR / TMP for Windows + container compat; fall back to a
 # project-local .gstack/tmp so we never write to a system /tmp that may
 # be read-only or shared.
-if [ -n "${TMPDIR:-}" ]; then
-  _tmp_root="$TMPDIR"
-elif [ -n "${TMP:-}" ]; then
-  _tmp_root="$TMP"
+if [ -n "${TMPDIR-}" ]; then
+	_tmp_root="$TMPDIR"
+elif [ -n "${TMP-}" ]; then
+	_tmp_root="$TMP"
 else
-  _tmp_root=".gstack/tmp"
+	_tmp_root=".gstack/tmp"
 fi
 
 # Best-effort mkdir; if it fails (read-only fs, permission denied), the caller

@@ -31,27 +31,27 @@ PREF_FILE="$GSTACK_HOME/projects/$SLUG/question-preferences.json"
 EVENT_FILE="$GSTACK_HOME/projects/$SLUG/question-events.jsonl"
 mkdir -p "$GSTACK_HOME/projects/$SLUG"
 
-CMD="${1:-}"
+CMD="${1-}"
 shift || true
 
 ensure_file() {
-  if [ ! -f "$PREF_FILE" ]; then
-    echo '{}' > "$PREF_FILE"
-  fi
+	if [ ! -f "$PREF_FILE" ]; then
+		echo '{}' >"$PREF_FILE"
+	fi
 }
 
 # -----------------------------------------------------------------------
 # --check <question_id>
 # -----------------------------------------------------------------------
 do_check() {
-  local QID="${1:-}"
-  if [ -z "$QID" ]; then
-    echo "ASK_NORMALLY"
-    return 0
-  fi
-  ensure_file
-  cd "$ROOT_DIR"
-  PREF_FILE_PATH="$PREF_FILE" QID="$QID" bun -e "
+	local QID="${1-}"
+	if [ -z "$QID" ]; then
+		echo "ASK_NORMALLY"
+		return 0
+	fi
+	ensure_file
+	cd "$ROOT_DIR"
+	PREF_FILE_PATH="$PREF_FILE" QID="$QID" bun -e "
     import('./scripts/one-way-doors.ts').then((oneway) => {
       const fs = require('fs');
       const qid = process.env.QID;
@@ -109,21 +109,21 @@ do_check() {
 # --write '{...}' (with user-origin gate)
 # -----------------------------------------------------------------------
 do_write() {
-  local INPUT="${1:-}"
-  if [ -z "$INPUT" ]; then
-    echo "gstack-question-preference: --write requires a JSON payload" >&2
-    exit 1
-  fi
-  ensure_file
-  local TMPERR
-  TMPERR=$(mktemp)
-  # Use function-local cleanup via RETURN trap so variable lookup only happens
-  # while the function is on the stack (avoids EXIT-trap unbound-var race).
-  trap "rm -f '$TMPERR'" RETURN
+	local INPUT="${1-}"
+	if [ -z "$INPUT" ]; then
+		echo "gstack-question-preference: --write requires a JSON payload" >&2
+		exit 1
+	fi
+	ensure_file
+	local TMPERR
+	TMPERR=$(mktemp)
+	# Use function-local cleanup via RETURN trap so variable lookup only happens
+	# while the function is on the stack (avoids EXIT-trap unbound-var race).
+	trap "rm -f '$TMPERR'" RETURN
 
-  set +e
-  local RESULT
-  RESULT=$(printf '%s' "$INPUT" | PREF_FILE_PATH="$PREF_FILE" EVENT_FILE_PATH="$EVENT_FILE" bun -e "
+	set +e
+	local RESULT
+	RESULT=$(printf '%s' "$INPUT" | PREF_FILE_PATH="$PREF_FILE" EVENT_FILE_PATH="$EVENT_FILE" bun -e "
     const fs = require('fs');
     const raw = await Bun.stdin.text();
     let j;
@@ -201,35 +201,35 @@ do_write() {
 
     console.log('OK: ' + j.question_id + ' → ' + j.preference + ' (source: ' + j.source + ')');
   " 2>"$TMPERR")
-  local RC=$?
-  set -e
+	local RC=$?
+	set -e
 
-  if [ $RC -ne 0 ]; then
-    cat "$TMPERR" >&2
-    exit $RC
-  fi
-  echo "$RESULT"
+	if [ $RC -ne 0 ]; then
+		cat "$TMPERR" >&2
+		exit $RC
+	fi
+	echo "$RESULT"
 }
 
 # -----------------------------------------------------------------------
 # --read
 # -----------------------------------------------------------------------
 do_read() {
-  ensure_file
-  cat "$PREF_FILE"
+	ensure_file
+	cat "$PREF_FILE"
 }
 
 # -----------------------------------------------------------------------
 # --clear [<id>]
 # -----------------------------------------------------------------------
 do_clear() {
-  local QID="${1:-}"
-  ensure_file
-  if [ -z "$QID" ]; then
-    echo '{}' > "$PREF_FILE"
-    echo "OK: cleared all preferences"
-  else
-    PREF_FILE_PATH="$PREF_FILE" QID="$QID" bun -e "
+	local QID="${1-}"
+	ensure_file
+	if [ -z "$QID" ]; then
+		echo '{}' >"$PREF_FILE"
+		echo "OK: cleared all preferences"
+	else
+		PREF_FILE_PATH="$PREF_FILE" QID="$QID" bun -e "
       const fs = require('fs');
       const prefs = JSON.parse(fs.readFileSync(process.env.PREF_FILE_PATH, 'utf-8'));
       if (prefs[process.env.QID] !== undefined) {
@@ -240,15 +240,15 @@ do_clear() {
         console.log('NOOP: no preference set for ' + process.env.QID);
       }
     "
-  fi
+	fi
 }
 
 # -----------------------------------------------------------------------
 # --stats
 # -----------------------------------------------------------------------
 do_stats() {
-  ensure_file
-  cat "$PREF_FILE" | bun -e "
+	ensure_file
+	cat "$PREF_FILE" | bun -e "
     const prefs = JSON.parse(await Bun.stdin.text());
     const entries = Object.entries(prefs);
     const counts = { 'always-ask': 0, 'never-ask': 0, 'ask-only-for-one-way': 0, other: 0 };
@@ -265,14 +265,14 @@ do_stats() {
 }
 
 case "$CMD" in
-  --check) do_check "$@" ;;
-  --write) do_write "$@" ;;
-  --read|"") do_read ;;
-  --clear) do_clear "$@" ;;
-  --stats) do_stats ;;
-  --help|-h) sed -n '1,/^set -euo/p' "$0" | sed 's|^# \?||' ;;
-  *)
-    echo "gstack-question-preference: unknown subcommand '$CMD'" >&2
-    exit 1
-    ;;
+--check) do_check "$@" ;;
+--write) do_write "$@" ;;
+--read | "") do_read ;;
+--clear) do_clear "$@" ;;
+--stats) do_stats ;;
+--help | -h) sed -n '1,/^set -euo/p' "$0" | sed 's|^# \?||' ;;
+*)
+	echo "gstack-question-preference: unknown subcommand '$CMD'" >&2
+	exit 1
+	;;
 esac

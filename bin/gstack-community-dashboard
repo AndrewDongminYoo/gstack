@@ -13,21 +13,21 @@ set -uo pipefail
 GSTACK_DIR="${GSTACK_DIR:-$(cd "$(dirname "$0")/.." && pwd)}"
 
 # Source Supabase config if not overridden by env
-if [ -z "${GSTACK_SUPABASE_URL:-}" ] && [ -f "$GSTACK_DIR/supabase/config.sh" ]; then
-  . "$GSTACK_DIR/supabase/config.sh"
+if [ -z "${GSTACK_SUPABASE_URL-}" ] && [ -f "$GSTACK_DIR/supabase/config.sh" ]; then
+	. "$GSTACK_DIR/supabase/config.sh"
 fi
-SUPABASE_URL="${GSTACK_SUPABASE_URL:-}"
-ANON_KEY="${GSTACK_SUPABASE_ANON_KEY:-}"
+SUPABASE_URL="${GSTACK_SUPABASE_URL-}"
+ANON_KEY="${GSTACK_SUPABASE_ANON_KEY-}"
 
 if [ -z "$SUPABASE_URL" ] || [ -z "$ANON_KEY" ]; then
-  echo "gstack community dashboard"
-  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-  echo ""
-  echo "Supabase not configured yet. The community dashboard will be"
-  echo "available once the gstack Supabase project is set up."
-  echo ""
-  echo "For local analytics, run: gstack-analytics"
-  exit 0
+	echo "gstack community dashboard"
+	echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	echo ""
+	echo "Supabase not configured yet. The community dashboard will be"
+	echo "available once the gstack Supabase project is set up."
+	echo ""
+	echo "For local analytics, run: gstack-analytics"
+	exit 0
 fi
 
 # ─── Fetch aggregated stats from edge function ────────────────
@@ -36,9 +36,9 @@ fi
 TMPBODY="$(mktemp)"
 trap 'rm -f "$TMPBODY"' EXIT
 HTTP_CODE="$(curl -s --max-time 15 -w '%{http_code}' -o "$TMPBODY" \
-  "${SUPABASE_URL}/functions/v1/community-pulse" \
-  -H "apikey: ${ANON_KEY}" \
-  2>/dev/null || true)"
+	"${SUPABASE_URL}/functions/v1/community-pulse" \
+	-H "apikey: ${ANON_KEY}" \
+	2>/dev/null || true)"
 # curl prints its own 000 before a non-zero exit — a `|| echo` here would
 # double it to "000000" in user-facing output. Normalize to the last 3 chars.
 HTTP_CODE="$(printf '%s' "$HTTP_CODE" | tr -d '[:space:]' | tail -c 3)"
@@ -50,10 +50,10 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo ""
 
 if [ "$HTTP_CODE" != "200" ] || [ -z "$DATA" ] || ! printf '%s' "$DATA" | grep -q '"weekly_active"'; then
-  echo "Community stats: unknown — backend error (HTTP ${HTTP_CODE})"
-  echo ""
-  echo "For local analytics: gstack-analytics"
-  exit 0
+	echo "Community stats: unknown — backend error (HTTP ${HTTP_CODE})"
+	echo ""
+	echo "For local analytics: gstack-analytics"
+	exit 0
 fi
 
 # ─── Weekly active installs ──────────────────────────────────
@@ -65,22 +65,22 @@ echo "Weekly active installs: ${WEEKLY}"
 # grep fallback tolerates optional whitespace around the colon.
 _STALE="false"
 if command -v jq >/dev/null 2>&1; then
-  _MARKER="$(printf '%s' "$DATA" | jq -r '.status // empty' 2>/dev/null)"
-  _STALE="$(printf '%s' "$DATA" | jq -r '.stale // false' 2>/dev/null)"
+	_MARKER="$(printf '%s' "$DATA" | jq -r '.status // empty' 2>/dev/null)"
+	_STALE="$(printf '%s' "$DATA" | jq -r '.stale // false' 2>/dev/null)"
 else
-  _MARKER="$(printf '%s' "$DATA" | grep -Eq '"status"[[:space:]]*:[[:space:]]*"ok"' && echo ok || true)"
+	_MARKER="$(printf '%s' "$DATA" | grep -Eq '"status"[[:space:]]*:[[:space:]]*"ok"' && echo ok || true)"
 fi
 if [ "$_MARKER" != "ok" ]; then
-  echo "  (unverified — legacy backend response; deploy the latest community-pulse for verified figures)"
+	echo "  (unverified — legacy backend response; deploy the latest community-pulse for verified figures)"
 elif [ "$_STALE" = "true" ]; then
-  # Backend serves its last good snapshot when recompute fails — real but
-  # frozen figures must not read as current (matches security-dashboard).
-  echo "  (stale snapshot — backend recompute failing; figures may be out of date)"
+	# Backend serves its last good snapshot when recompute fails — real but
+	# frozen figures must not read as current (matches security-dashboard).
+	echo "  (stale snapshot — backend recompute failing; figures may be out of date)"
 fi
 if [ "$CHANGE" -gt 0 ] 2>/dev/null; then
-  echo "  Change: +${CHANGE}%"
+	echo "  Change: +${CHANGE}%"
 elif [ "$CHANGE" -lt 0 ] 2>/dev/null; then
-  echo "  Change: ${CHANGE}%"
+	echo "  Change: ${CHANGE}%"
 fi
 echo ""
 
@@ -91,14 +91,14 @@ echo "────────────────────────"
 # Parse top_skills array from JSON
 SKILLS="$(echo "$DATA" | grep -o '"top_skills":\[[^]]*\]' || echo "")"
 if [ -n "$SKILLS" ] && [ "$SKILLS" != '"top_skills":[]' ]; then
-  # Parse each object — handle any key order (JSONB doesn't preserve order)
-  echo "$SKILLS" | grep -o '{[^}]*}' | while read -r OBJ; do
-    SKILL="$(echo "$OBJ" | grep -o '"skill":"[^"]*"' | awk -F'"' '{print $4}')"
-    COUNT="$(echo "$OBJ" | grep -o '"count":[0-9]*' | grep -o '[0-9]*')"
-    [ -n "$SKILL" ] && [ -n "$COUNT" ] && printf "  /%-20s %s runs\n" "$SKILL" "$COUNT"
-  done
+	# Parse each object — handle any key order (JSONB doesn't preserve order)
+	echo "$SKILLS" | grep -o '{[^}]*}' | while read -r OBJ; do
+		SKILL="$(echo "$OBJ" | grep -o '"skill":"[^"]*"' | awk -F'"' '{print $4}')"
+		COUNT="$(echo "$OBJ" | grep -o '"count":[0-9]*' | grep -o '[0-9]*')"
+		[ -n "$SKILL" ] && [ -n "$COUNT" ] && printf "  /%-20s %s runs\n" "$SKILL" "$COUNT"
+	done
 else
-  echo "  No data yet"
+	echo "  No data yet"
 fi
 echo ""
 
@@ -108,13 +108,13 @@ echo "──────────────────"
 
 CRASHES="$(echo "$DATA" | grep -o '"crashes":\[[^]]*\]' || echo "")"
 if [ -n "$CRASHES" ] && [ "$CRASHES" != '"crashes":[]' ]; then
-  echo "$CRASHES" | grep -o '{[^}]*}' | head -5 | while read -r OBJ; do
-    ERR="$(echo "$OBJ" | grep -o '"error_class":"[^"]*"' | awk -F'"' '{print $4}')"
-    C="$(echo "$OBJ" | grep -o '"total_occurrences":[0-9]*' | grep -o '[0-9]*')"
-    [ -n "$ERR" ] && printf "  %-30s %s occurrences\n" "$ERR" "${C:-?}"
-  done
+	echo "$CRASHES" | grep -o '{[^}]*}' | head -5 | while read -r OBJ; do
+		ERR="$(echo "$OBJ" | grep -o '"error_class":"[^"]*"' | awk -F'"' '{print $4}')"
+		C="$(echo "$OBJ" | grep -o '"total_occurrences":[0-9]*' | grep -o '[0-9]*')"
+		[ -n "$ERR" ] && printf "  %-30s %s occurrences\n" "$ERR" "${C:-?}"
+	done
 else
-  echo "  No crashes reported"
+	echo "  No crashes reported"
 fi
 echo ""
 
@@ -124,13 +124,13 @@ echo "────────────────────────�
 
 VERSIONS="$(echo "$DATA" | grep -o '"versions":\[[^]]*\]' || echo "")"
 if [ -n "$VERSIONS" ] && [ "$VERSIONS" != '"versions":[]' ]; then
-  echo "$VERSIONS" | grep -o '{[^}]*}' | head -5 | while read -r OBJ; do
-    VER="$(echo "$OBJ" | grep -o '"version":"[^"]*"' | awk -F'"' '{print $4}')"
-    COUNT="$(echo "$OBJ" | grep -o '"count":[0-9]*' | grep -o '[0-9]*')"
-    [ -n "$VER" ] && [ -n "$COUNT" ] && printf "  v%-15s %s events\n" "$VER" "$COUNT"
-  done
+	echo "$VERSIONS" | grep -o '{[^}]*}' | head -5 | while read -r OBJ; do
+		VER="$(echo "$OBJ" | grep -o '"version":"[^"]*"' | awk -F'"' '{print $4}')"
+		COUNT="$(echo "$OBJ" | grep -o '"count":[0-9]*' | grep -o '[0-9]*')"
+		[ -n "$VER" ] && [ -n "$COUNT" ] && printf "  v%-15s %s events\n" "$VER" "$COUNT"
+	done
 else
-  echo "  No data yet"
+	echo "  No data yet"
 fi
 
 echo ""

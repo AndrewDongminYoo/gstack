@@ -37,25 +37,37 @@ PROPOSAL_IDX=""
 GBRAIN_PUBLISHED="false"
 
 while [ $# -gt 0 ]; do
-  case "$1" in
-    --proposal) PROPOSAL_IDX="$2"; shift 2 ;;
-    --gbrain-published) GBRAIN_PUBLISHED="$2"; shift 2 ;;
-    --list) ACTION="list"; shift ;;
-    --help|-h)
-      sed -n '1,/^set -euo/p' "$0" | sed 's|^# \?||'
-      exit 0
-      ;;
-    *) echo "unknown arg: $1" >&2; exit 1 ;;
-  esac
+	case "$1" in
+	--proposal)
+		PROPOSAL_IDX="$2"
+		shift 2
+		;;
+	--gbrain-published)
+		GBRAIN_PUBLISHED="$2"
+		shift 2
+		;;
+	--list)
+		ACTION="list"
+		shift
+		;;
+	--help | -h)
+		sed -n '1,/^set -euo/p' "$0" | sed 's|^# \?||'
+		exit 0
+		;;
+	*)
+		echo "unknown arg: $1" >&2
+		exit 1
+		;;
+	esac
 done
 
 if [ ! -f "$PROPOSAL_FILE" ]; then
-  echo "NO_PROPOSALS: $PROPOSAL_FILE missing — run gstack-distill-free-text first"
-  exit 0
+	echo "NO_PROPOSALS: $PROPOSAL_FILE missing — run gstack-distill-free-text first"
+	exit 0
 fi
 
 if [ "$ACTION" = "list" ]; then
-  PROPOSAL_FILE_PATH="$PROPOSAL_FILE" bun -e '
+	PROPOSAL_FILE_PATH="$PROPOSAL_FILE" bun -e '
     const fs = require("fs");
     const p = JSON.parse(fs.readFileSync(process.env.PROPOSAL_FILE_PATH, "utf-8"));
     const proposals = p.proposals || [];
@@ -82,23 +94,23 @@ if [ "$ACTION" = "list" ]; then
       }
     });
   '
-  exit 0
+	exit 0
 fi
 
 if [ -z "$PROPOSAL_IDX" ]; then
-  echo "--proposal <N> required" >&2
-  exit 1
+	echo "--proposal <N> required" >&2
+	exit 1
 fi
 
 # Apply via bun. Each kind has its own surface.
 mkdir -p "$PROJECT_DIR"
 PROPOSAL_IDX="$PROPOSAL_IDX" \
-PROPOSAL_FILE_PATH="$PROPOSAL_FILE" \
-MEMORY_FILE_PATH="$MEMORY_FILE" \
-PROFILE_FILE_PATH="$PROFILE_FILE" \
-PREF_BIN="$SCRIPT_DIR/gstack-question-preference" \
-GBRAIN_PUBLISHED="$GBRAIN_PUBLISHED" \
-bun -e '
+	PROPOSAL_FILE_PATH="$PROPOSAL_FILE" \
+	MEMORY_FILE_PATH="$MEMORY_FILE" \
+	PROFILE_FILE_PATH="$PROFILE_FILE" \
+	PREF_BIN="$SCRIPT_DIR/gstack-question-preference" \
+	GBRAIN_PUBLISHED="$GBRAIN_PUBLISHED" \
+	bun -e '
   const fs = require("fs");
   const { spawnSync } = require("child_process");
   const idx = parseInt(process.env.PROPOSAL_IDX, 10);

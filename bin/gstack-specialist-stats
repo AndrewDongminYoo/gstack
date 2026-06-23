@@ -12,21 +12,21 @@ GSTACK_HOME="${GSTACK_HOME:-$HOME/.gstack}"
 PROJECT_DIR="$GSTACK_HOME/projects/$SLUG"
 
 if [ ! -d "$PROJECT_DIR" ]; then
-  echo "SPECIALIST_STATS: 0 reviews analyzed"
-  exit 0
+	echo "SPECIALIST_STATS: 0 reviews analyzed"
+	exit 0
 fi
 
 # Collect all review JSONL files (strip ---CONFIG--- and ---HEAD--- footers)
 COMBINED=""
 for f in "$PROJECT_DIR"/*-reviews.jsonl; do
-  [ -f "$f" ] || continue
-  COMBINED="$COMBINED$(sed '/^---/,$d' "$f" 2>/dev/null)
+	[ -f "$f" ] || continue
+	COMBINED="$COMBINED$(sed '/^---/,$d' "$f" 2>/dev/null)
 "
 done
 
 if [ -z "$COMBINED" ]; then
-  echo "SPECIALIST_STATS: 0 reviews analyzed"
-  exit 0
+	echo "SPECIALIST_STATS: 0 reviews analyzed"
+	exit 0
 fi
 
 printf '%s' "$COMBINED" | bun -e "
@@ -62,4 +62,7 @@ for (const [name, s] of sorted) {
   }
   console.log(name + ': ' + s.dispatched + '/' + reviewed + ' dispatched, ' + s.findings + ' findings (' + pct + '%)' + tag);
 }
-" 2>/dev/null || { echo "SPECIALIST_STATS: 0 reviews analyzed"; exit 0; }
+" 2>/dev/null || {
+	echo "SPECIALIST_STATS: 0 reviews analyzed"
+	exit 0
+}

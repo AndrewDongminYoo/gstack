@@ -29,63 +29,63 @@ EXPLICIT_PATH=""
 SINCE_ISO=""
 
 if [ $# -gt 0 ]; then
-  case "$1" in
-    --since)
-      MODE="since"
-      SINCE_ISO="${2:-}"
-      ;;
-    --help|-h)
-      sed -n '1,/^set -euo/p' "$0" | sed 's|^# \?||'
-      exit 0
-      ;;
-    -*)
-      echo "unknown flag: $1" >&2
-      exit 1
-      ;;
-    *)
-      MODE="explicit"
-      EXPLICIT_PATH="$1"
-      ;;
-  esac
+	case "$1" in
+	--since)
+		MODE="since"
+		SINCE_ISO="${2-}"
+		;;
+	--help | -h)
+		sed -n '1,/^set -euo/p' "$0" | sed 's|^# \?||'
+		exit 0
+		;;
+	-*)
+		echo "unknown flag: $1" >&2
+		exit 1
+		;;
+	*)
+		MODE="explicit"
+		EXPLICIT_PATH="$1"
+		;;
+	esac
 fi
 
 # Resolve list of session files to process.
 SESSION_FILES=()
 case "$MODE" in
-  explicit)
-    if [ ! -f "$EXPLICIT_PATH" ]; then
-      echo "gstack-codex-session-import: file not found: $EXPLICIT_PATH" >&2
-      exit 1
-    fi
-    SESSION_FILES=("$EXPLICIT_PATH")
-    ;;
-  latest)
-    if [ ! -d "$CODEX_SESSIONS_ROOT" ]; then
-      echo "NO_SESSIONS: $CODEX_SESSIONS_ROOT does not exist"
-      exit 0
-    fi
-    LATEST=$(find "$CODEX_SESSIONS_ROOT" -type f -name "rollout-*.jsonl" -print 2>/dev/null \
-      | xargs ls -t 2>/dev/null | head -1 || true)
-    if [ -z "$LATEST" ]; then
-      echo "NO_SESSIONS: no rollout-*.jsonl files under $CODEX_SESSIONS_ROOT"
-      exit 0
-    fi
-    SESSION_FILES=("$LATEST")
-    ;;
-  since)
-    if [ -z "$SINCE_ISO" ]; then
-      echo "--since requires an ISO 8601 timestamp" >&2
-      exit 1
-    fi
-    while IFS= read -r f; do
-      SESSION_FILES+=("$f")
-    done < <(find "$CODEX_SESSIONS_ROOT" -type f -name "rollout-*.jsonl" -newer <(date -u -d "$SINCE_ISO" 2>/dev/null || date -u) 2>/dev/null)
-    ;;
+explicit)
+	if [ ! -f "$EXPLICIT_PATH" ]; then
+		echo "gstack-codex-session-import: file not found: $EXPLICIT_PATH" >&2
+		exit 1
+	fi
+	SESSION_FILES=("$EXPLICIT_PATH")
+	;;
+latest)
+	if [ ! -d "$CODEX_SESSIONS_ROOT" ]; then
+		echo "NO_SESSIONS: $CODEX_SESSIONS_ROOT does not exist"
+		exit 0
+	fi
+	LATEST=$(find "$CODEX_SESSIONS_ROOT" -type f -name "rollout-*.jsonl" -print 2>/dev/null |
+		xargs ls -t 2>/dev/null | head -1 || true)
+	if [ -z "$LATEST" ]; then
+		echo "NO_SESSIONS: no rollout-*.jsonl files under $CODEX_SESSIONS_ROOT"
+		exit 0
+	fi
+	SESSION_FILES=("$LATEST")
+	;;
+since)
+	if [ -z "$SINCE_ISO" ]; then
+		echo "--since requires an ISO 8601 timestamp" >&2
+		exit 1
+	fi
+	while IFS= read -r f; do
+		SESSION_FILES+=("$f")
+	done < <(find "$CODEX_SESSIONS_ROOT" -type f -name "rollout-*.jsonl" -newer <(date -u -d "$SINCE_ISO" 2>/dev/null || date -u) 2>/dev/null)
+	;;
 esac
 
 if [ ${#SESSION_FILES[@]} -eq 0 ]; then
-  echo "NO_SESSIONS: nothing to import"
-  exit 0
+	echo "NO_SESSIONS: nothing to import"
+	exit 0
 fi
 
 # Parse + extract via bun. Emits one line per question found, ready to pipe
@@ -96,7 +96,7 @@ IMPORTED=0
 SKIPPED_NO_ANSWER=0
 
 for SESSION_FILE in "${SESSION_FILES[@]}"; do
-  COUNT_LINE=$(SESSION_FILE_PATH="$SESSION_FILE" QLOG_BIN="$SCRIPT_DIR/gstack-question-log" bun -e '
+	COUNT_LINE=$(SESSION_FILE_PATH="$SESSION_FILE" QLOG_BIN="$SCRIPT_DIR/gstack-question-log" bun -e '
     const fs = require("fs");
     const path = require("path");
     const { spawnSync } = require("child_process");
@@ -216,8 +216,8 @@ for SESSION_FILE in "${SESSION_FILES[@]}"; do
     console.log(imported + " 0");
   ' 2>&1)
 
-  IMP=$(echo "$COUNT_LINE" | awk "{print \$1}")
-  IMPORTED=$((IMPORTED + IMP))
+	IMP=$(echo "$COUNT_LINE" | awk '{print $1}')
+	IMPORTED=$((IMPORTED + IMP))
 done
 
 echo "IMPORTED: $IMPORTED events from ${#SESSION_FILES[@]} session(s)"

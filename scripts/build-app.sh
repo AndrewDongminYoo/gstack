@@ -37,15 +37,15 @@ PW_CACHE="$HOME/Library/Caches/ms-playwright"
 CHROMIUM_DIR=$(ls -d "$PW_CACHE"/chromium-*/chrome-mac-arm64 2>/dev/null | sort -V | tail -1)
 
 if [ -z "$CHROMIUM_DIR" ]; then
-  echo "ERROR: Playwright Chromium not found in $PW_CACHE"
-  echo "Run: bunx playwright install chromium"
-  exit 1
+	echo "ERROR: Playwright Chromium not found in $PW_CACHE"
+	echo "Run: bunx playwright install chromium"
+	exit 1
 fi
 
 CHROME_APP=$(ls -d "$CHROMIUM_DIR"/*.app 2>/dev/null | head -1)
 if [ -z "$CHROME_APP" ]; then
-  echo "ERROR: Chrome .app not found in $CHROMIUM_DIR"
-  exit 1
+	echo "ERROR: Chrome .app not found in $CHROMIUM_DIR"
+	exit 1
 fi
 echo "  Found: $(basename "$CHROME_APP")"
 
@@ -86,43 +86,43 @@ cp -a "$CHROME_APP" "$APP_DIR/Contents/Resources/chromium/"
 # in the menu bar, Dock, and Cmd+Tab instead of "Google Chrome for Testing"
 CHROMIUM_PLIST="$APP_DIR/Contents/Resources/chromium/$(basename "$CHROME_APP")/Contents/Info.plist"
 if [ -f "$CHROMIUM_PLIST" ]; then
-  echo "  Rebranding Chromium → $APP_NAME..."
-  /usr/libexec/PlistBuddy -c "Set :CFBundleName '$APP_NAME'" "$CHROMIUM_PLIST"
-  /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName '$APP_NAME'" "$CHROMIUM_PLIST"
-  # Also update the localized strings if present
-  CHROMIUM_STRINGS="$APP_DIR/Contents/Resources/chromium/$(basename "$CHROME_APP")/Contents/Resources/en.lproj/InfoPlist.strings"
-  if [ -f "$CHROMIUM_STRINGS" ]; then
-    # InfoPlist.strings may be binary plist, convert to xml first
-    plutil -convert xml1 "$CHROMIUM_STRINGS" 2>/dev/null || true
-    # Escape sed replacement metachars (& / \) in $APP_NAME so unusual names can't break or inject into the s/// command.
-    APP_NAME_SED_ESCAPED=$(printf '%s' "$APP_NAME" | sed 's/[&/\]/\\&/g')
-    sed -i '' "s/Google Chrome for Testing/${APP_NAME_SED_ESCAPED}/g" "$CHROMIUM_STRINGS" 2>/dev/null || true
-  fi
-  # Replace Chromium's icon with ours so the Dock shows the GStack icon
-  # (Chromium's process owns the Dock icon, not our launcher)
-  ICON_SRC="$SCRIPT_DIR/app/icon.icns"
-  if [ -f "$ICON_SRC" ]; then
-    CHROMIUM_RESOURCES="$APP_DIR/Contents/Resources/chromium/$(basename "$CHROME_APP")/Contents/Resources"
-    # Find the original icon filename from Chromium's plist
-    ORIG_ICON=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIconFile" "$CHROMIUM_PLIST" 2>/dev/null || echo "app")
-    # Add .icns extension if not present
-    [[ "$ORIG_ICON" != *.icns ]] && ORIG_ICON="${ORIG_ICON}.icns"
-    cp "$ICON_SRC" "$CHROMIUM_RESOURCES/$ORIG_ICON"
-    echo "  Replaced Chromium icon → $ORIG_ICON"
-  fi
+	echo "  Rebranding Chromium → $APP_NAME..."
+	/usr/libexec/PlistBuddy -c "Set :CFBundleName '$APP_NAME'" "$CHROMIUM_PLIST"
+	/usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName '$APP_NAME'" "$CHROMIUM_PLIST"
+	# Also update the localized strings if present
+	CHROMIUM_STRINGS="$APP_DIR/Contents/Resources/chromium/$(basename "$CHROME_APP")/Contents/Resources/en.lproj/InfoPlist.strings"
+	if [ -f "$CHROMIUM_STRINGS" ]; then
+		# InfoPlist.strings may be binary plist, convert to xml first
+		plutil -convert xml1 "$CHROMIUM_STRINGS" 2>/dev/null || true
+		# Escape sed replacement metachars (& / \) in $APP_NAME so unusual names can't break or inject into the s/// command.
+		APP_NAME_SED_ESCAPED=$(printf '%s' "$APP_NAME" | sed 's/[&/\]/\\&/g')
+		sed -i '' "s/Google Chrome for Testing/${APP_NAME_SED_ESCAPED}/g" "$CHROMIUM_STRINGS" 2>/dev/null || true
+	fi
+	# Replace Chromium's icon with ours so the Dock shows the GStack icon
+	# (Chromium's process owns the Dock icon, not our launcher)
+	ICON_SRC="$SCRIPT_DIR/app/icon.icns"
+	if [ -f "$ICON_SRC" ]; then
+		CHROMIUM_RESOURCES="$APP_DIR/Contents/Resources/chromium/$(basename "$CHROME_APP")/Contents/Resources"
+		# Find the original icon filename from Chromium's plist
+		ORIG_ICON=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIconFile" "$CHROMIUM_PLIST" 2>/dev/null || echo "app")
+		# Add .icns extension if not present
+		[[ $ORIG_ICON != *.icns ]] && ORIG_ICON="${ORIG_ICON}.icns"
+		cp "$ICON_SRC" "$CHROMIUM_RESOURCES/$ORIG_ICON"
+		echo "  Replaced Chromium icon → $ORIG_ICON"
+	fi
 fi
 
 # ─── Step 3c: App icon ────────────────────────────────────────────
 ICON_SRC="$SCRIPT_DIR/app/icon.icns"
 if [ -f "$ICON_SRC" ]; then
-  cp "$ICON_SRC" "$APP_DIR/Contents/Resources/icon.icns"
-  echo "  App icon installed"
+	cp "$ICON_SRC" "$APP_DIR/Contents/Resources/icon.icns"
+	echo "  App icon installed"
 else
-  echo "  WARNING: No icon.icns found at $ICON_SRC — app will use default icon"
+	echo "  WARNING: No icon.icns found at $ICON_SRC — app will use default icon"
 fi
 
 # ─── Step 4: Info.plist ──────────────────────────────────────────
-cat > "$APP_DIR/Contents/Info.plist" << PLIST
+cat >"$APP_DIR/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -167,10 +167,10 @@ echo "    Contents/Resources/extension/      ($(du -sh "$APP_DIR/Contents/Resour
 echo "    Contents/Resources/chromium/       ($(du -sh "$APP_DIR/Contents/Resources/chromium" | cut -f1))"
 
 # ─── Step 6: DMG (optional) ─────────────────────────────────────
-if [ "${1:-}" = "--no-dmg" ]; then
-  echo ""
-  echo "Done. App at: $APP_DIR"
-  exit 0
+if [ "${1-}" = "--no-dmg" ]; then
+	echo ""
+	echo "Done. App at: $APP_DIR"
+	exit 0
 fi
 
 DMG_PATH="$BUILD_DIR/GStack-Browser.dmg"
@@ -179,19 +179,22 @@ echo "  Creating DMG..."
 rm -f "$DMG_PATH"
 
 # Create a temporary directory for DMG contents
-DMG_TMP=$(mktemp -d) || { echo "ERROR: mktemp -d failed — refusing to continue so we don't cp into the filesystem root." >&2; exit 1; }
+DMG_TMP=$(mktemp -d) || {
+	echo "ERROR: mktemp -d failed — refusing to continue so we don't cp into the filesystem root." >&2
+	exit 1
+}
 if [ -z "$DMG_TMP" ] || [ ! -d "$DMG_TMP" ]; then
-  echo "ERROR: mktemp -d returned an invalid path ('$DMG_TMP')." >&2
-  exit 1
+	echo "ERROR: mktemp -d returned an invalid path ('$DMG_TMP')." >&2
+	exit 1
 fi
 cp -a "$APP_DIR" "$DMG_TMP/"
 ln -s /Applications "$DMG_TMP/Applications"
 
 hdiutil create -volname "$APP_NAME" \
-  -srcfolder "$DMG_TMP" \
-  -ov -format UDZO \
-  "$DMG_PATH" \
-  > /dev/null 2>&1
+	-srcfolder "$DMG_TMP" \
+	-ov -format UDZO \
+	"$DMG_PATH" \
+	>/dev/null 2>&1
 
 rm -rf "$DMG_TMP"
 

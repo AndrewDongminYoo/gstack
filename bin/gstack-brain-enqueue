@@ -24,7 +24,7 @@
 # No `-e` — writer shims rely on this never failing loudly.
 set -uo pipefail
 
-FILE="${1:-}"
+FILE="${1-}"
 [ -z "$FILE" ] && exit 0
 
 GSTACK_HOME="${GSTACK_HOME:-$HOME/.gstack}"
@@ -41,15 +41,15 @@ MODE=$("$SCRIPT_DIR/gstack-config" get artifacts_sync_mode 2>/dev/null || echo o
 
 # User-maintained skip list (for secret-scan false positives).
 if [ -f "$SKIP_FILE" ]; then
-  if grep -Fxq "$FILE" "$SKIP_FILE" 2>/dev/null; then
-    exit 0
-  fi
+	if grep -Fxq "$FILE" "$SKIP_FILE" 2>/dev/null; then
+		exit 0
+	fi
 fi
 
 # JSON-escape the file path (backslash + quotes only; paths shouldn't have other specials).
 ESC_FILE=$(printf '%s' "$FILE" | sed 's/\\/\\\\/g; s/"/\\"/g')
 TS=$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo "")
 
-printf '{"file":"%s","ts":"%s"}\n' "$ESC_FILE" "$TS" >> "$QUEUE" 2>/dev/null
+printf '{"file":"%s","ts":"%s"}\n' "$ESC_FILE" "$TS" >>"$QUEUE" 2>/dev/null
 
 exit 0

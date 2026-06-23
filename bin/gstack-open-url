@@ -7,8 +7,8 @@ set -euo pipefail
 URL="${1:?Usage: gstack-open-url <url>}"
 
 case "$(uname -s)" in
-  Darwin)  open "$URL" ;;
-  Linux)   xdg-open "$URL" 2>/dev/null || echo "$URL" ;;
-  MINGW*|MSYS*|CYGWIN*) start "$URL" ;;
-  *)       echo "$URL" ;;
+Darwin) open "$URL" ;;
+Linux) xdg-open "$URL" 2>/dev/null || echo "$URL" ;;
+MINGW* | MSYS* | CYGWIN*) start "$URL" ;;
+*) echo "$URL" ;;
 esac

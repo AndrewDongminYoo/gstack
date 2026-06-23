@@ -44,32 +44,44 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 CONFIG_BIN="$SCRIPT_DIR/gstack-config"
 # v1.27.0.0+ canonical name; brain-remote is the legacy fallback during migration.
 if [ -f "$HOME/.gstack-artifacts-remote.txt" ]; then
-  REMOTE_FILE="$HOME/.gstack-artifacts-remote.txt"
+	REMOTE_FILE="$HOME/.gstack-artifacts-remote.txt"
 else
-  REMOTE_FILE="$HOME/.gstack-brain-remote.txt"
+	REMOTE_FILE="$HOME/.gstack-brain-remote.txt"
 fi
 
 ASSUME_YES=0
 DELETE_REMOTE=0
 while [ $# -gt 0 ]; do
-  case "$1" in
-    --yes|-y) ASSUME_YES=1; shift ;;
-    --delete-remote) DELETE_REMOTE=1; shift ;;
-    --help|-h) sed -n '2,30p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
-    *) echo "Unknown flag: $1" >&2; exit 1 ;;
-  esac
+	case "$1" in
+	--yes | -y)
+		ASSUME_YES=1
+		shift
+		;;
+	--delete-remote)
+		DELETE_REMOTE=1
+		shift
+		;;
+	--help | -h)
+		sed -n '2,30p' "$0" | sed 's/^# \{0,1\}//'
+		exit 0
+		;;
+	*)
+		echo "Unknown flag: $1" >&2
+		exit 1
+		;;
+	esac
 done
 
 if [ ! -d "$GSTACK_HOME/.git" ]; then
-  echo "gstack-brain-uninstall: nothing to do (~/.gstack/.git doesn't exist)."
-  exit 0
+	echo "gstack-brain-uninstall: nothing to do (~/.gstack/.git doesn't exist)."
+	exit 0
 fi
 
 REMOTE_URL=$(git -C "$GSTACK_HOME" remote get-url origin 2>/dev/null || echo "")
 
 # ---- confirmation ----
 if [ "$ASSUME_YES" != "1" ]; then
-  cat <<EOF
+	cat <<EOF
 This will remove gstack-brain sync from this machine:
   - Remove ~/.gstack/.git and sync config files
   - Clear artifacts_sync_mode in gstack-config
@@ -78,37 +90,40 @@ This will remove gstack-brain sync from this machine:
 Local memory (learnings, plans, etc.) is NOT touched.
 
 EOF
-  printf "Proceed? [y/N] "
-  read -r reply
-  case "$reply" in
-    y|Y|yes|Yes) ;;
-    *) echo "Aborted."; exit 0 ;;
-  esac
+	printf "Proceed? [y/N] "
+	read -r reply
+	case "$reply" in
+	y | Y | yes | Yes) ;;
+	*)
+		echo "Aborted."
+		exit 0
+		;;
+	esac
 fi
 
 # ---- delete remote if requested ----
 if [ "$DELETE_REMOTE" = "1" ] && [ -n "$REMOTE_URL" ]; then
-  case "$REMOTE_URL" in
-    *github.com*|*@github*)
-      if command -v gh >/dev/null 2>&1; then
-        # Extract owner/repo from URL.
-        REPO_SLUG=$(echo "$REMOTE_URL" | sed -E 's#.*[:/]([^/:]+/[^/]+)(\.git)?$#\1#' | sed 's/\.git$//')
-        if [ -n "$REPO_SLUG" ]; then
-          echo "Deleting GitHub repo: $REPO_SLUG"
-          if [ "$ASSUME_YES" = "1" ]; then
-            gh repo delete "$REPO_SLUG" --yes 2>/dev/null || echo "gh repo delete failed; continuing local uninstall"
-          else
-            gh repo delete "$REPO_SLUG" 2>/dev/null || echo "gh repo delete failed; continuing local uninstall"
-          fi
-        fi
-      else
-        echo "--delete-remote requires the gh CLI. Skipping remote deletion."
-      fi
-      ;;
-    *)
-      echo "--delete-remote only supports github.com remotes. Delete manually if needed: $REMOTE_URL"
-      ;;
-  esac
+	case "$REMOTE_URL" in
+	*github.com* | *@github*)
+		if command -v gh >/dev/null 2>&1; then
+			# Extract owner/repo from URL.
+			REPO_SLUG=$(echo "$REMOTE_URL" | sed -E 's#.*[:/]([^/:]+/[^/]+)(\.git)?$#\1#' | sed 's/\.git$//')
+			if [ -n "$REPO_SLUG" ]; then
+				echo "Deleting GitHub repo: $REPO_SLUG"
+				if [ "$ASSUME_YES" = "1" ]; then
+					gh repo delete "$REPO_SLUG" --yes 2>/dev/null || echo "gh repo delete failed; continuing local uninstall"
+				else
+					gh repo delete "$REPO_SLUG" 2>/dev/null || echo "gh repo delete failed; continuing local uninstall"
+				fi
+			fi
+		else
+			echo "--delete-remote requires the gh CLI. Skipping remote deletion."
+		fi
+		;;
+	*)
+		echo "--delete-remote only supports github.com remotes. Delete manually if needed: $REMOTE_URL"
+		;;
+	esac
 fi
 
 # ---- remove sync files ----
@@ -131,7 +146,7 @@ rm -rf "$GSTACK_HOME/.brain-sync.lock.d" 2>/dev/null || true
 # launchd plist (future). All best-effort; uninstall continues on failure.
 WIREUP_BIN="$SCRIPT_DIR/gstack-gbrain-source-wireup"
 if [ -x "$WIREUP_BIN" ]; then
-  "$WIREUP_BIN" --uninstall 2>/dev/null || true
+	"$WIREUP_BIN" --uninstall 2>/dev/null || true
 fi
 
 # ---- legacy consumers.json (no longer written by gstack-brain-init since v1.17.0.0) ----
@@ -143,11 +158,11 @@ rm -f "$GSTACK_HOME/consumers.json" 2>/dev/null || true
 
 # ---- leave remote-helper file alone unless user asked to delete remote ----
 if [ "$DELETE_REMOTE" = "1" ]; then
-  rm -f "$REMOTE_FILE" 2>/dev/null || true
+	rm -f "$REMOTE_FILE" 2>/dev/null || true
 else
-  if [ -f "$REMOTE_FILE" ]; then
-    echo "(keeping $REMOTE_FILE — remove manually if you want to forget the URL)"
-  fi
+	if [ -f "$REMOTE_FILE" ]; then
+		echo "(keeping $REMOTE_FILE — remove manually if you want to forget the URL)"
+	fi
 fi
 
 cat <<EOF

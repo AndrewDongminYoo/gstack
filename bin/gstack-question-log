@@ -31,7 +31,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # on Windows cannot resolve as an ES module specifier in bun -e imports.
 # cygpath -m converts to C:/Users/... which Bun accepts.
 case "$(uname -s)" in
-  MINGW*|MSYS*|CYGWIN*) command -v cygpath >/dev/null 2>&1 && SCRIPT_DIR="$(cygpath -m "$SCRIPT_DIR")" ;;
+MINGW* | MSYS* | CYGWIN*) command -v cygpath >/dev/null 2>&1 && SCRIPT_DIR="$(cygpath -m "$SCRIPT_DIR")" ;;
 esac
 eval "$("$SCRIPT_DIR/gstack-slug" 2>/dev/null)"
 # GSTACK_STATE_ROOT takes precedence over GSTACK_HOME (test isolation per D16).
@@ -191,10 +191,10 @@ VALIDATE_RC=$?
 set -e
 
 if [ $VALIDATE_RC -ne 0 ] || [ -z "$VALIDATED" ]; then
-  if [ -s "$TMPERR" ]; then
-    cat "$TMPERR" >&2
-  fi
-  exit 1
+	if [ -s "$TMPERR" ]; then
+		cat "$TMPERR" >&2
+	fi
+	exit 1
 fi
 
 LOG_FILE="$GSTACK_HOME/projects/$SLUG/question-log.jsonl"
@@ -205,7 +205,7 @@ LOG_FILE="$GSTACK_HOME/projects/$SLUG/question-log.jsonl"
 # Lookup is bounded so the bin stays cheap on hot paths.
 DEDUP_SKIP=""
 if [ -f "$LOG_FILE" ]; then
-  DEDUP_SKIP=$(VALIDATED_JSON="$VALIDATED" LOG_FILE_PATH="$LOG_FILE" bun -e '
+	DEDUP_SKIP=$(VALIDATED_JSON="$VALIDATED" LOG_FILE_PATH="$LOG_FILE" bun -e '
     const fs = require("fs");
     const j = JSON.parse(process.env.VALIDATED_JSON);
     if (!j.tool_use_id) { console.log(""); process.exit(0); }
@@ -225,20 +225,20 @@ if [ -f "$LOG_FILE" ]; then
 fi
 
 if [ "$DEDUP_SKIP" = "dup" ]; then
-  echo "DEDUP: skipped (source=$(echo "$VALIDATED" | bun -e 'const j=JSON.parse(await Bun.stdin.text()); console.log(j.source);'), tool_use_id duplicate)"
-  exit 0
+	echo "DEDUP: skipped (source=$(echo "$VALIDATED" | bun -e 'const j=JSON.parse(await Bun.stdin.text()); console.log(j.source);'), tool_use_id duplicate)"
+	exit 0
 fi
 
-echo "$VALIDATED" >> "$LOG_FILE"
+echo "$VALIDATED" >>"$LOG_FILE"
 
 # Cathedral T5: fire-and-forget --derive so inferred dimensions stay current
 # without per-event latency (D17). Sub-second op; output suppressed; never
 # blocks the hook caller. Skipped via GSTACK_QUESTION_LOG_NO_DERIVE=1 for
 # tests that don't want the side effect.
-if [ -z "${GSTACK_QUESTION_LOG_NO_DERIVE:-}" ]; then
-  (
-    nohup "$SCRIPT_DIR/gstack-developer-profile" --derive >/dev/null 2>&1 &
-  ) >/dev/null 2>&1
+if [ -z "${GSTACK_QUESTION_LOG_NO_DERIVE-}" ]; then
+	(
+		nohup "$SCRIPT_DIR/gstack-developer-profile" --derive >/dev/null 2>&1 &
+	) >/dev/null 2>&1
 fi
 
 # NOTE: question-log.jsonl is deliberately NOT enqueued for gbrain-sync.

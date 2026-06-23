@@ -32,28 +32,37 @@
 set -euo pipefail
 
 die_usage() {
-  echo "Usage: GBRAIN_MCP_TOKEN=<bearer> gstack-gbrain-mcp-verify <url>" >&2
-  exit 2
+	echo "Usage: GBRAIN_MCP_TOKEN=<bearer> gstack-gbrain-mcp-verify <url>" >&2
+	exit 2
 }
 
 [ $# -eq 1 ] || die_usage
 URL="$1"
-[ -n "${GBRAIN_MCP_TOKEN:-}" ] || { echo "gstack-gbrain-mcp-verify: GBRAIN_MCP_TOKEN env var required" >&2; exit 2; }
+[ -n "${GBRAIN_MCP_TOKEN-}" ] || {
+	echo "gstack-gbrain-mcp-verify: GBRAIN_MCP_TOKEN env var required" >&2
+	exit 2
+}
 
-command -v curl >/dev/null 2>&1 || { echo "gstack-gbrain-mcp-verify: curl is required" >&2; exit 2; }
-command -v jq >/dev/null 2>&1 || { echo "gstack-gbrain-mcp-verify: jq is required (brew install jq)" >&2; exit 2; }
+command -v curl >/dev/null 2>&1 || {
+	echo "gstack-gbrain-mcp-verify: curl is required" >&2
+	exit 2
+}
+command -v jq >/dev/null 2>&1 || {
+	echo "gstack-gbrain-mcp-verify: jq is required (brew install jq)" >&2
+	exit 2
+}
 
 emit() {
-  # emit <status> <server_name> <server_version> <error_class> <error_text> <url_supported> <raw_body>
-  jq -n \
-    --arg status "$1" \
-    --arg server_name "${2:-}" \
-    --arg server_version "${3:-}" \
-    --arg error_class "${4:-}" \
-    --arg error_text "${5:-}" \
-    --argjson url_supported "${6:-false}" \
-    --arg raw "${7:-}" \
-    '{
+	# emit <status> <server_name> <server_version> <error_class> <error_text> <url_supported> <raw_body>
+	jq -n \
+		--arg status "$1" \
+		--arg server_name "${2-}" \
+		--arg server_version "${3-}" \
+		--arg error_class "${4-}" \
+		--arg error_text "${5-}" \
+		--argjson url_supported "${6:-false}" \
+		--arg raw "${7-}" \
+		'{
       status: $status,
       server_name: (if $server_name == "" then null else $server_name end),
       server_version: (if $server_version == "" then null else $server_version end),
@@ -75,13 +84,13 @@ trap 'rm -f "$TMPBODY"' EXIT
 
 set +e
 HTTP_CODE=$(curl -s -o "$TMPBODY" -w '%{http_code}' \
-  --max-time 10 \
-  -X POST \
-  -H 'Content-Type: application/json' \
-  -H 'Accept: application/json, text/event-stream' \
-  -H "Authorization: Bearer $GBRAIN_MCP_TOKEN" \
-  -d "$INIT_BODY" \
-  "$URL" 2>/dev/null)
+	--max-time 10 \
+	-X POST \
+	-H 'Content-Type: application/json' \
+	-H 'Accept: application/json, text/event-stream' \
+	-H "Authorization: Bearer $GBRAIN_MCP_TOKEN" \
+	-d "$INIT_BODY" \
+	"$URL" 2>/dev/null)
 CURL_EXIT=$?
 set -e
 
@@ -89,56 +98,56 @@ BODY=$(cat "$TMPBODY" 2>/dev/null || echo "")
 
 # --- NETWORK class: curl exited nonzero, no HTTP response ---
 if [ "$CURL_EXIT" -ne 0 ] || [ -z "$HTTP_CODE" ] || [ "$HTTP_CODE" = "000" ]; then
-  HOST=$(echo "$URL" | sed -E 's|^https?://([^/:]+).*|\1|')
-  emit "network" "" "" "NETWORK" "check Tailscale/DNS to ${HOST} (curl exit=${CURL_EXIT})" false "$BODY"
-  exit 1
+	HOST=$(echo "$URL" | sed -E 's|^https?://([^/:]+).*|\1|')
+	emit "network" "" "" "NETWORK" "check Tailscale/DNS to ${HOST} (curl exit=${CURL_EXIT})" false "$BODY"
+	exit 1
 fi
 
 # --- AUTH class: 401, 403, or 500 with stale-token-shaped body ---
 case "$HTTP_CODE" in
-  401|403)
-    emit "auth" "" "" "AUTH" "rotate token on the brain host, re-run /setup-gbrain (HTTP $HTTP_CODE)" false "$BODY"
-    exit 1
-    ;;
-  500)
-    if echo "$BODY" | grep -qiE '"(error_description|message)":[[:space:]]*"[^"]*(auth|token|unauthorized)' 2>/dev/null; then
-      emit "auth" "" "" "AUTH" "rotate token on the brain host, re-run /setup-gbrain (HTTP 500 stale-token shape)" false "$BODY"
-      exit 1
-    fi
-    ;;
+401 | 403)
+	emit "auth" "" "" "AUTH" "rotate token on the brain host, re-run /setup-gbrain (HTTP $HTTP_CODE)" false "$BODY"
+	exit 1
+	;;
+500)
+	if echo "$BODY" | grep -qiE '"(error_description|message)":[[:space:]]*"[^"]*(auth|token|unauthorized)' 2>/dev/null; then
+		emit "auth" "" "" "AUTH" "rotate token on the brain host, re-run /setup-gbrain (HTTP 500 stale-token shape)" false "$BODY"
+		exit 1
+	fi
+	;;
 esac
 
 # Anything not 2xx that isn't auth-shaped → MALFORMED with raw HTTP code.
 case "$HTTP_CODE" in
-  2*) ;;
-  *)
-    emit "malformed" "" "" "MALFORMED" "server returned HTTP $HTTP_CODE; verify URL + version compatibility" false "$BODY"
-    exit 1
-    ;;
+2*) ;;
+*)
+	emit "malformed" "" "" "MALFORMED" "server returned HTTP $HTTP_CODE; verify URL + version compatibility" false "$BODY"
+	exit 1
+	;;
 esac
 
 # --- 2xx path: body may be JSON or SSE-wrapped JSON. Strip SSE if present. ---
 # MCP servers return SSE format: `event: message\ndata: {...}\n\n`. Extract
 # just the JSON payload from the data: line, falling back to the body as-is.
 if echo "$BODY" | head -1 | grep -q '^event:'; then
-  JSON_BODY=$(echo "$BODY" | sed -n 's/^data: //p' | head -1)
+	JSON_BODY=$(echo "$BODY" | sed -n 's/^data: //p' | head -1)
 else
-  JSON_BODY="$BODY"
+	JSON_BODY="$BODY"
 fi
 
 # `Not Acceptable` is a JSON-RPC error from the MCP server itself, returned
 # with HTTP 200 if the SSE Accept header was missing. Detect it explicitly.
 if echo "$JSON_BODY" | jq -e '.error.message | test("[Nn]ot [Aa]cceptable")' >/dev/null 2>&1; then
-  emit "malformed" "" "" "MALFORMED" "Accept-header gotcha: pass both 'application/json' AND 'text/event-stream'" false "$BODY"
-  exit 1
+	emit "malformed" "" "" "MALFORMED" "Accept-header gotcha: pass both 'application/json' AND 'text/event-stream'" false "$BODY"
+	exit 1
 fi
 
 SERVER_NAME=$(echo "$JSON_BODY" | jq -r '.result.serverInfo.name // empty' 2>/dev/null)
 SERVER_VERSION=$(echo "$JSON_BODY" | jq -r '.result.serverInfo.version // empty' 2>/dev/null)
 
 if [ -z "$SERVER_NAME" ] || [ -z "$SERVER_VERSION" ]; then
-  emit "malformed" "" "" "MALFORMED" "server may be on a newer gbrain version; missing result.serverInfo. Verify with: curl -H 'Accept: application/json, text/event-stream'" false "$BODY"
-  exit 1
+	emit "malformed" "" "" "MALFORMED" "server may be on a newer gbrain version; missing result.serverInfo. Verify with: curl -H 'Accept: application/json, text/event-stream'" false "$BODY"
+	exit 1
 fi
 
 # --- Capability probe: tools/list to detect sources_add ---
@@ -152,26 +161,26 @@ TOOLS_REQ='{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}'
 
 set +e
 curl -s -o "$TOOLS_BODY_FILE" \
-  --max-time 10 \
-  -X POST \
-  -H 'Content-Type: application/json' \
-  -H 'Accept: application/json, text/event-stream' \
-  -H "Authorization: Bearer $GBRAIN_MCP_TOKEN" \
-  -d "$TOOLS_REQ" \
-  "$URL" >/dev/null 2>&1
+	--max-time 10 \
+	-X POST \
+	-H 'Content-Type: application/json' \
+	-H 'Accept: application/json, text/event-stream' \
+	-H "Authorization: Bearer $GBRAIN_MCP_TOKEN" \
+	-d "$TOOLS_REQ" \
+	"$URL" >/dev/null 2>&1
 TOOLS_EXIT=$?
 set -e
 
 if [ "$TOOLS_EXIT" -eq 0 ]; then
-  TOOLS_BODY=$(cat "$TOOLS_BODY_FILE" 2>/dev/null || echo "")
-  if echo "$TOOLS_BODY" | head -1 | grep -q '^event:'; then
-    TOOLS_JSON=$(echo "$TOOLS_BODY" | sed -n 's/^data: //p' | head -1)
-  else
-    TOOLS_JSON="$TOOLS_BODY"
-  fi
-  if echo "$TOOLS_JSON" | jq -e '.result.tools[] | select(.name | test("sources_add"))' >/dev/null 2>&1; then
-    URL_SUPPORTED=true
-  fi
+	TOOLS_BODY=$(cat "$TOOLS_BODY_FILE" 2>/dev/null || echo "")
+	if echo "$TOOLS_BODY" | head -1 | grep -q '^event:'; then
+		TOOLS_JSON=$(echo "$TOOLS_BODY" | sed -n 's/^data: //p' | head -1)
+	else
+		TOOLS_JSON="$TOOLS_BODY"
+	fi
+	if echo "$TOOLS_JSON" | jq -e '.result.tools[] | select(.name | test("sources_add"))' >/dev/null 2>&1; then
+		URL_SUPPORTED=true
+	fi
 fi
 rm -f "$TOOLS_BODY_FILE"
 

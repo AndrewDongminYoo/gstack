@@ -15,6 +15,6 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 
 if [ -x "$SCRIPT_DIR/bin/gstack-relink" ]; then
-  echo "  [v0.15.2.0] Fixing skill directory structure..."
-  "$SCRIPT_DIR/bin/gstack-relink" 2>/dev/null || true
+	echo "  [v0.15.2.0] Fixing skill directory structure..."
+	"$SCRIPT_DIR/bin/gstack-relink" 2>/dev/null || true
 fi

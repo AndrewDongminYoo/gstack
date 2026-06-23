@@ -23,9 +23,9 @@
 
 set -euo pipefail
 
-if [ -z "${HOME:-}" ]; then
-  echo "  [v1.37.0.0] HOME is unset — skipping migration." >&2
-  exit 0
+if [ -z "${HOME-}" ]; then
+	echo "  [v1.37.0.0] HOME is unset — skipping migration." >&2
+	exit 0
 fi
 
 GSTACK_HOME="${GSTACK_HOME:-$HOME/.gstack}"
@@ -39,38 +39,38 @@ mkdir -p "$MIGRATIONS_DIR"
 
 # Idempotency: already-ran skips silently.
 if [ -f "$DONE_TOUCH" ]; then
-  exit 0
+	exit 0
 fi
 
 # User opt-out skips silently AND records done.
 if [ -x "$CONFIG_BIN" ]; then
-  if [ "$("$CONFIG_BIN" get local_code_index_offered 2>/dev/null)" = "true" ]; then
-    touch "$DONE_TOUCH"
-    exit 0
-  fi
+	if [ "$("$CONFIG_BIN" get local_code_index_offered 2>/dev/null)" = "true" ]; then
+		touch "$DONE_TOUCH"
+		exit 0
+	fi
 fi
 
 # State match: remote-http MCP active?
 is_remote_http_mcp() {
-  [ -f "$CLAUDE_JSON" ] || return 1
-  command -v jq >/dev/null 2>&1 || return 1
-  local mtype murl
-  mtype=$(jq -r '.mcpServers.gbrain.type // .mcpServers.gbrain.transport // empty' "$CLAUDE_JSON" 2>/dev/null)
-  murl=$(jq -r '.mcpServers.gbrain.url // empty' "$CLAUDE_JSON" 2>/dev/null)
-  case "$mtype" in
-    url|http|sse) return 0 ;;
-  esac
-  [ -n "$murl" ] && return 0
-  return 1
+	[ -f "$CLAUDE_JSON" ] || return 1
+	command -v jq >/dev/null 2>&1 || return 1
+	local mtype murl
+	mtype=$(jq -r '.mcpServers.gbrain.type // .mcpServers.gbrain.transport // empty' "$CLAUDE_JSON" 2>/dev/null)
+	murl=$(jq -r '.mcpServers.gbrain.url // empty' "$CLAUDE_JSON" 2>/dev/null)
+	case "$mtype" in
+	url | http | sse) return 0 ;;
+	esac
+	[ -n "$murl" ] && return 0
+	return 1
 }
 
 # State match: local engine absent?
 is_local_engine_missing() {
-  [ ! -f "$GBRAIN_CONFIG" ]
+	[ ! -f "$GBRAIN_CONFIG" ]
 }
 
 if is_remote_http_mcp && is_local_engine_missing; then
-  cat <<'NOTICE'
+	cat <<'NOTICE'
 
   ┌──────────────────────────────────────────────────────────────────┐
   │  gstack v1.37.0.0 — split-engine gbrain                          │

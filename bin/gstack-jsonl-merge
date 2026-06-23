@@ -27,8 +27,8 @@
 set -uo pipefail
 
 if [ "$#" -lt 3 ]; then
-  echo "gstack-jsonl-merge: expected 3 args (base ours theirs), got $#" >&2
-  exit 1
+	echo "gstack-jsonl-merge: expected 3 args (base ours theirs), got $#" >&2
+	exit 1
 fi
 
 BASE="$1"
@@ -38,7 +38,7 @@ THEIRS="$3"
 TMP=$(mktemp /tmp/gstack-jsonl-merge.XXXXXX) || exit 1
 trap 'rm -f "$TMP" 2>/dev/null || true' EXIT
 
-python3 - "$BASE" "$OURS" "$THEIRS" > "$TMP" <<'PYEOF'
+python3 - "$BASE" "$OURS" "$THEIRS" >"$TMP" <<'PYEOF'
 import sys, json, hashlib
 
 paths = sys.argv[1:4]  # base, ours, theirs
@@ -87,7 +87,7 @@ PYEOF
 
 _PYEXIT=$?
 if [ "$_PYEXIT" != "0" ]; then
-  exit 1
+	exit 1
 fi
 
 mv "$TMP" "$OURS" || exit 1

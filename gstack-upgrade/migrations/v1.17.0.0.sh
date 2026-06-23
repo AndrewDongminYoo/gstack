@@ -16,9 +16,9 @@
 # CLI is a benign skip rather than blocking the rest of /gstack-upgrade.
 set -euo pipefail
 
-if [ -z "${HOME:-}" ]; then
-  echo "  [v1.17.0.0] HOME is unset or empty — skipping migration." >&2
-  exit 0
+if [ -z "${HOME-}" ]; then
+	echo "  [v1.17.0.0] HOME is unset or empty — skipping migration." >&2
+	exit 0
 fi
 
 SKILLS_DIR="${HOME}/.claude/skills"
@@ -29,28 +29,28 @@ WIREUP_BIN="${BIN_DIR}/gstack-gbrain-source-wireup"
 # Skip if user never opted into brain-sync.
 SYNC_MODE=""
 if [ -x "$CONFIG_BIN" ]; then
-  # Trim whitespace defensively: gstack-config can emit trailing newlines,
-  # which would mis-classify "off\n" as a non-empty non-off mode.
-  SYNC_MODE=$("$CONFIG_BIN" get gbrain_sync_mode 2>/dev/null | tr -d '[:space:]' || echo "")
+	# Trim whitespace defensively: gstack-config can emit trailing newlines,
+	# which would mis-classify "off\n" as a non-empty non-off mode.
+	SYNC_MODE=$("$CONFIG_BIN" get gbrain_sync_mode 2>/dev/null | tr -d '[:space:]' || echo "")
 fi
 if [ "$SYNC_MODE" = "off" ] || [ -z "$SYNC_MODE" ]; then
-  exit 0
+	exit 0
 fi
 
 # Skip if no brain-sync git repo exists.
 if [ ! -d "${HOME}/.gstack/.git" ]; then
-  exit 0
+	exit 0
 fi
 
 # Skip if helper missing (defensive — should always be present post-upgrade).
 if [ ! -x "$WIREUP_BIN" ]; then
-  echo "  [v1.17.0.0] $WIREUP_BIN missing or non-executable — skipping wireup." >&2
-  exit 0
+	echo "  [v1.17.0.0] $WIREUP_BIN missing or non-executable — skipping wireup." >&2
+	exit 0
 fi
 
 echo "  [v1.17.0.0] Wiring brain-sync repo into gbrain (federated source + initial sync)..."
 
 # No --strict: missing/old gbrain is a benign skip during a batch upgrade.
 "$WIREUP_BIN" || {
-  echo "  [v1.17.0.0] Wireup exited non-zero — re-run manually with: $WIREUP_BIN" >&2
+	echo "  [v1.17.0.0] Wireup exited non-zero — re-run manually with: $WIREUP_BIN" >&2
 }

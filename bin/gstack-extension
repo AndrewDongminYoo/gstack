@@ -12,15 +12,15 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 # Find the extension directory
 EXT_DIR=""
 if [ -f "$REPO_ROOT/extension/manifest.json" ]; then
-  EXT_DIR="$REPO_ROOT/extension"
+	EXT_DIR="$REPO_ROOT/extension"
 elif [ -f "$HOME/.claude/skills/gstack/extension/manifest.json" ]; then
-  EXT_DIR="$HOME/.claude/skills/gstack/extension"
+	EXT_DIR="$HOME/.claude/skills/gstack/extension"
 fi
 
 if [ -z "$EXT_DIR" ]; then
-  echo "Error: extension/ directory not found."
-  echo "Expected at: $REPO_ROOT/extension/ or ~/.claude/skills/gstack/extension/"
-  exit 1
+	echo "Error: extension/ directory not found."
+	echo "Expected at: $REPO_ROOT/extension/ or ~/.claude/skills/gstack/extension/"
+	exit 1
 fi
 
 # Copy path to clipboard
@@ -30,7 +30,7 @@ echo -n "$EXT_DIR" | pbcopy 2>/dev/null
 PORT=""
 STATE_FILE="$REPO_ROOT/.gstack/browse.json"
 if [ -f "$STATE_FILE" ]; then
-  PORT=$(grep -o '"port":[0-9]*' "$STATE_FILE" | grep -o '[0-9]*')
+	PORT=$(grep -o '"port":[0-9]*' "$STATE_FILE" | grep -o '[0-9]*')
 fi
 
 echo "gstack Chrome Extension Setup"
@@ -41,12 +41,12 @@ echo "  $EXT_DIR"
 echo ""
 
 if [ -n "$PORT" ]; then
-  echo "Browse server port: $PORT"
-  echo ""
+	echo "Browse server port: $PORT"
+	echo ""
 fi
 
-echo "Quick install (if using \$B connect):"
-echo "  The extension auto-loads when you run \$B connect."
+echo 'Quick install (if using $B connect):'
+echo '  The extension auto-loads when you run $B connect.'
 echo "  No manual installation needed!"
 echo ""
 echo "Manual install (for your regular Chrome):"
@@ -54,9 +54,9 @@ echo ""
 echo "  1. Opening chrome://extensions now..."
 
 # Open chrome://extensions
-osascript -e 'tell application "Google Chrome" to open location "chrome://extensions"' 2>/dev/null || \
-  open "chrome://extensions" 2>/dev/null || \
-  echo "     Could not open Chrome. Navigate to chrome://extensions manually."
+osascript -e 'tell application "Google Chrome" to open location "chrome://extensions"' 2>/dev/null ||
+	open "chrome://extensions" 2>/dev/null ||
+	echo "     Could not open Chrome. Navigate to chrome://extensions manually."
 
 echo "  2. Toggle 'Developer mode' ON (top-right)"
 echo "  3. Click 'Load unpacked'"

@@ -31,9 +31,12 @@
 # refer to "the URL" generically.
 set -euo pipefail
 
-die()   { echo "gstack-gbrain-supabase-verify: $*" >&2; exit 2; }
+die() {
+	echo "gstack-gbrain-supabase-verify: $*" >&2
+	exit 2
+}
 reject_direct() {
-  cat >&2 <<EOF
+	cat >&2 <<EOF
 gstack-gbrain-supabase-verify: rejected direct-connection URL
 
   You pasted a Supabase direct-connection URL (db.*.supabase.co on port
@@ -46,14 +49,14 @@ gstack-gbrain-supabase-verify: rejected direct-connection URL
   Expected shape:
     postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:6543/postgres
 EOF
-  exit 3
+	exit 3
 }
 
 URL=""
-case "${1:-}" in
-  -)   URL=$(cat) ;;
-  "")  URL=$(cat) ;;
-  *)   URL="$1" ;;
+case "${1-}" in
+-) URL=$(cat) ;;
+"") URL=$(cat) ;;
+*) URL="$1" ;;
 esac
 
 URL=$(printf '%s' "$URL" | tr -d '[:space:]')
@@ -62,8 +65,8 @@ URL=$(printf '%s' "$URL" | tr -d '[:space:]')
 # Scheme: must be postgresql:// or postgres://. Explicitly reject other
 # schemes rather than guess.
 case "$URL" in
-  postgresql://*|postgres://*) ;;
-  *) die "bad scheme (must start with postgresql:// or postgres://)" ;;
+postgresql://* | postgres://*) ;;
+*) die "bad scheme (must start with postgresql:// or postgres://)" ;;
 esac
 
 # Strip scheme to expose userinfo + host + port + path.
@@ -71,16 +74,16 @@ rest="${URL#*://}"
 
 # Userinfo portion: everything before the first @. Must contain a : (user:pass).
 case "$rest" in
-  *@*) ;;
-  *) die "missing userinfo (expected postgres.<ref>:<password>@host)" ;;
+*@*) ;;
+*) die "missing userinfo (expected postgres.<ref>:<password>@host)" ;;
 esac
 userinfo="${rest%%@*}"
 after_at="${rest#*@}"
 
 # Userinfo must be user:password with neither part empty.
 case "$userinfo" in
-  *:*) ;;
-  *) die "userinfo missing password separator (expected user:password@)" ;;
+*:*) ;;
+*) die "userinfo missing password separator (expected user:password@)" ;;
 esac
 user_part="${userinfo%%:*}"
 pass_part="${userinfo#*:}"
@@ -90,14 +93,14 @@ pass_part="${userinfo#*:}"
 # Host + port + path.
 # Direct-connection detection FIRST (specific error beats generic).
 case "$after_at" in
-  db.*.supabase.co:5432*|db.*.supabase.co/*|db.*.supabase.co) reject_direct ;;
+db.*.supabase.co:5432* | db.*.supabase.co/* | db.*.supabase.co) reject_direct ;;
 esac
 
 # Extract host:port (before first / if present).
 hostport="${after_at%%/*}"
 case "$hostport" in
-  *:*) ;;
-  *) die "missing port (Session Pooler requires :6543)" ;;
+*:*) ;;
+*) die "missing port (Session Pooler requires :6543)" ;;
 esac
 host="${hostport%:*}"
 port="${hostport##*:}"
@@ -105,13 +108,13 @@ port="${hostport##*:}"
 # Host must be *.pooler.supabase.com (case-insensitive).
 host_lower=$(printf '%s' "$host" | tr '[:upper:]' '[:lower:]')
 case "$host_lower" in
-  *.pooler.supabase.com) ;;
-  *) die "host '$host' is not a Supabase Session Pooler (expected *.pooler.supabase.com)" ;;
+*.pooler.supabase.com) ;;
+*) die "host '$host' is not a Supabase Session Pooler (expected *.pooler.supabase.com)" ;;
 esac
 
 # Port must be 6543 (Session Pooler default).
 if [ "$port" != "6543" ]; then
-  die "port must be 6543 for Session Pooler (got $port)"
+	die "port must be 6543 for Session Pooler (got $port)"
 fi
 
 # User portion should look like postgres.<ref> (20-char lowercase ref,
@@ -119,8 +122,8 @@ fi
 # gbrain, but rejecting a plain "postgres" user catches a common paste
 # error where someone grabs the Direct URL userinfo by mistake.
 case "$user_part" in
-  postgres.*) ;;
-  *) die "user portion '$user_part' should be 'postgres.<project-ref>' (20-char ref)" ;;
+postgres.*) ;;
+*) die "user portion '$user_part' should be 'postgres.<project-ref>' (20-char ref)" ;;
 esac
 
 echo "ok"

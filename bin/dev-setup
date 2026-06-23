@@ -15,17 +15,17 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
 # 1. Copy .env from main worktree (if we're a worktree and don't have one)
 if [ ! -f "$REPO_ROOT/.env" ]; then
-  MAIN_WORKTREE="$(git -C "$REPO_ROOT" worktree list --porcelain 2>/dev/null | head -1 | sed 's/^worktree //')"
-  if [ -n "$MAIN_WORKTREE" ] && [ "$MAIN_WORKTREE" != "$REPO_ROOT" ] && [ -f "$MAIN_WORKTREE/.env" ]; then
-    cp "$MAIN_WORKTREE/.env" "$REPO_ROOT/.env"
-    echo "Copied .env from main worktree ($MAIN_WORKTREE)"
-  fi
+	MAIN_WORKTREE="$(git -C "$REPO_ROOT" worktree list --porcelain 2>/dev/null | head -1 | sed 's/^worktree //')"
+	if [ -n "$MAIN_WORKTREE" ] && [ "$MAIN_WORKTREE" != "$REPO_ROOT" ] && [ -f "$MAIN_WORKTREE/.env" ]; then
+		cp "$MAIN_WORKTREE/.env" "$REPO_ROOT/.env"
+		echo "Copied .env from main worktree ($MAIN_WORKTREE)"
+	fi
 fi
 
 # 2. Install dependencies
 if [ ! -d "$REPO_ROOT/node_modules" ]; then
-  echo "Installing dependencies..."
-  (cd "$REPO_ROOT" && bun install)
+	echo "Installing dependencies..."
+	(cd "$REPO_ROOT" && bun install)
 fi
 
 # 3. Create .claude/skills/ inside the repo
@@ -35,12 +35,12 @@ mkdir -p "$REPO_ROOT/.claude/skills"
 # This makes setup think it's inside a real .claude/skills/ directory
 GSTACK_LINK="$REPO_ROOT/.claude/skills/gstack"
 if [ -L "$GSTACK_LINK" ]; then
-  echo "Updating existing symlink..."
-  rm "$GSTACK_LINK"
+	echo "Updating existing symlink..."
+	rm "$GSTACK_LINK"
 elif [ -d "$GSTACK_LINK" ]; then
-  echo "Error: .claude/skills/gstack is a real directory, not a symlink." >&2
-  echo "Remove it manually if you want to use dev mode." >&2
-  exit 1
+	echo "Error: .claude/skills/gstack is a real directory, not a symlink." >&2
+	echo "Remove it manually if you want to use dev mode." >&2
+	exit 1
 fi
 ln -s "$REPO_ROOT" "$GSTACK_LINK"
 
@@ -48,12 +48,12 @@ ln -s "$REPO_ROOT" "$GSTACK_LINK"
 mkdir -p "$REPO_ROOT/.agents/skills"
 AGENTS_LINK="$REPO_ROOT/.agents/skills/gstack"
 if [ -L "$AGENTS_LINK" ]; then
-  rm "$AGENTS_LINK"
+	rm "$AGENTS_LINK"
 elif [ -d "$AGENTS_LINK" ]; then
-  echo "Warning: .agents/skills/gstack is a real directory, skipping." >&2
+	echo "Warning: .agents/skills/gstack is a real directory, skipping." >&2
 fi
 if [ ! -e "$AGENTS_LINK" ]; then
-  ln -s "$REPO_ROOT" "$AGENTS_LINK"
+	ln -s "$REPO_ROOT" "$AGENTS_LINK"
 fi
 
 # 6. Run setup via the symlink so it detects .claude/skills/ as its parent.
@@ -93,26 +93,29 @@ GSTACK_SKIP_GBRAIN_REGEN=1 "$GSTACK_LINK/setup" --plan-tune-hooks=prompt </dev/n
 GBRAIN_DETECT="$REPO_ROOT/bin/gstack-gbrain-detect"
 RENDER_DIR="$REPO_ROOT/.claude/gstack-rendered"
 if [ -x "$GBRAIN_DETECT" ] && "$GBRAIN_DETECT" --is-ok 2>/dev/null; then
-  echo ""
-  echo "gbrain detected — rendering brain-aware skills into .claude/gstack-rendered (workspace-only, untracked)..."
-  rm -rf "$RENDER_DIR"
-  if ( cd "$REPO_ROOT" && bun run gen:skill-docs:user --host claude --out-dir "$RENDER_DIR" >/dev/null 2>&1 ); then
-    # Repoint each project-local SKILL.md symlink whose worktree target has a
-    # rendered counterpart. The skill DIRECTORY name (basename of the symlink
-    # target's dir) maps to RENDER_DIR/<dir>/SKILL.md, which is robust to
-    # frontmatter renames and the gstack- prefix on the link name.
-    repointed=0
-    for skill_link in "$REPO_ROOT"/.claude/skills/*/SKILL.md; do
-      [ -L "$skill_link" ] || continue
-      target="$(readlink "$skill_link")"
-      skilldir="$(basename "$(dirname "$target")")"
-      rendered="$RENDER_DIR/$skilldir/SKILL.md"
-      if [ -f "$rendered" ]; then ln -snf "$rendered" "$skill_link"; repointed=$((repointed + 1)); fi
-    done
-    echo "  $repointed workspace skills now serve brain-aware blocks (worktree stays canonical)."
-  else
-    echo "  warning: brain-aware render failed — workspace uses canonical skills."
-  fi
+	echo ""
+	echo "gbrain detected — rendering brain-aware skills into .claude/gstack-rendered (workspace-only, untracked)..."
+	rm -rf "$RENDER_DIR"
+	if (cd "$REPO_ROOT" && bun run gen:skill-docs:user --host claude --out-dir "$RENDER_DIR" >/dev/null 2>&1); then
+		# Repoint each project-local SKILL.md symlink whose worktree target has a
+		# rendered counterpart. The skill DIRECTORY name (basename of the symlink
+		# target's dir) maps to RENDER_DIR/<dir>/SKILL.md, which is robust to
+		# frontmatter renames and the gstack- prefix on the link name.
+		repointed=0
+		for skill_link in "$REPO_ROOT"/.claude/skills/*/SKILL.md; do
+			[ -L "$skill_link" ] || continue
+			target="$(readlink "$skill_link")"
+			skilldir="$(basename "$(dirname "$target")")"
+			rendered="$RENDER_DIR/$skilldir/SKILL.md"
+			if [ -f "$rendered" ]; then
+				ln -snf "$rendered" "$skill_link"
+				repointed=$((repointed + 1))
+			fi
+		done
+		echo "  $repointed workspace skills now serve brain-aware blocks (worktree stays canonical)."
+	else
+		echo "  warning: brain-aware render failed — workspace uses canonical skills."
+	fi
 fi
 
 echo ""

@@ -8,18 +8,18 @@ BUN_CMD="${BUN_CMD:-bun}"
 BUN_CMD_WAS_COPIED=0
 
 case "$(uname -s)" in
-  MINGW*|MSYS*|CYGWIN*|Windows_NT)
-    bun_path="$(command -v "$BUN_CMD" 2>/dev/null || true)"
-    case "$bun_path" in
-      *[![:ascii:]]*)
-        bun_copy_dir="$ROOT/.tmp-bun-bin"
-        mkdir -p "$bun_copy_dir"
-        cp -f "$bun_path" "$bun_copy_dir/bun.exe"
-        BUN_CMD="$bun_copy_dir/bun.exe"
-        BUN_CMD_WAS_COPIED=1
-        ;;
-    esac
-    ;;
+MINGW* | MSYS* | CYGWIN* | Windows_NT)
+	bun_path="$(command -v "$BUN_CMD" 2>/dev/null || true)"
+	case "$bun_path" in
+	*[![:ascii:]]*)
+		bun_copy_dir="$ROOT/.tmp-bun-bin"
+		mkdir -p "$bun_copy_dir"
+		cp -f "$bun_path" "$bun_copy_dir/bun.exe"
+		BUN_CMD="$bun_copy_dir/bun.exe"
+		BUN_CMD_WAS_COPIED=1
+		;;
+	esac
+	;;
 esac
 
 "$BUN_CMD" run vendor:xterm
@@ -34,5 +34,5 @@ bash scripts/write-version-files.sh browse/dist/.version design/dist/.version ma
 chmod +x browse/dist/browse browse/dist/find-browse design/dist/design make-pdf/dist/pdf bin/gstack-global-discover
 rm -f .*.bun-build
 if [ "$BUN_CMD_WAS_COPIED" -eq 1 ]; then
-  rm -rf "$ROOT/.tmp-bun-bin"
+	rm -rf "$ROOT/.tmp-bun-bin"
 fi

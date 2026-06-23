@@ -11,7 +11,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # on Windows cannot resolve as an ES module specifier in the import below.
 # cygpath -m converts to C:/Users/... which Bun accepts.
 case "$(uname -s)" in
-  MINGW*|MSYS*|CYGWIN*) command -v cygpath >/dev/null 2>&1 && SCRIPT_DIR="$(cygpath -m "$SCRIPT_DIR")" ;;
+MINGW* | MSYS* | CYGWIN*) command -v cygpath >/dev/null 2>&1 && SCRIPT_DIR="$(cygpath -m "$SCRIPT_DIR")" ;;
 esac
 eval "$("$SCRIPT_DIR/gstack-slug" 2>/dev/null)"
 GSTACK_HOME="${GSTACK_HOME:-$HOME/.gstack}"
@@ -79,13 +79,13 @@ VALIDATE_RC=$?
 set -e
 
 if [ $VALIDATE_RC -ne 0 ] || [ -z "$VALIDATED" ]; then
-  if [ -s "$TMPERR" ]; then
-    cat "$TMPERR" >&2
-  fi
-  exit 1
+	if [ -s "$TMPERR" ]; then
+		cat "$TMPERR" >&2
+	fi
+	exit 1
 fi
 
-echo "$VALIDATED" >> "$GSTACK_HOME/projects/$SLUG/learnings.jsonl"
+echo "$VALIDATED" >>"$GSTACK_HOME/projects/$SLUG/learnings.jsonl"
 
 # gbrain-sync: enqueue for cross-machine sync (no-op if sync is off).
 "$SCRIPT_DIR/gstack-brain-enqueue" "projects/$SLUG/learnings.jsonl" 2>/dev/null &

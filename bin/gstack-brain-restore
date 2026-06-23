@@ -33,34 +33,34 @@ CONFIG_BIN="$SCRIPT_DIR/gstack-config"
 # v1.27.0.0+ canonical name; brain-remote is the legacy fallback during the
 # migration window. The migration script renames the file in place.
 if [ -f "$HOME/.gstack-artifacts-remote.txt" ]; then
-  REMOTE_FILE="$HOME/.gstack-artifacts-remote.txt"
+	REMOTE_FILE="$HOME/.gstack-artifacts-remote.txt"
 else
-  REMOTE_FILE="$HOME/.gstack-brain-remote.txt"
+	REMOTE_FILE="$HOME/.gstack-brain-remote.txt"
 fi
 
-REMOTE_URL="${1:-}"
+REMOTE_URL="${1-}"
 if [ -z "$REMOTE_URL" ]; then
-  if [ -f "$REMOTE_FILE" ]; then
-    REMOTE_URL=$(head -1 "$REMOTE_FILE" | tr -d '[:space:]')
-  fi
+	if [ -f "$REMOTE_FILE" ]; then
+		REMOTE_URL=$(head -1 "$REMOTE_FILE" | tr -d '[:space:]')
+	fi
 fi
 
 if [ -z "$REMOTE_URL" ]; then
-  cat >&2 <<EOF
+	cat >&2 <<EOF
 gstack-brain-restore: no remote URL provided.
 
 Provide one of:
   gstack-brain-restore <git-url>
   or put the URL in $REMOTE_FILE (copy from the original machine)
 EOF
-  exit 1
+	exit 1
 fi
 
 # ---- safety gates ----
 if [ -d "$GSTACK_HOME/.git" ]; then
-  EXISTING_REMOTE=$(git -C "$GSTACK_HOME" remote get-url origin 2>/dev/null || echo "")
-  if [ -n "$EXISTING_REMOTE" ] && [ "$EXISTING_REMOTE" != "$REMOTE_URL" ]; then
-    cat >&2 <<EOF
+	EXISTING_REMOTE=$(git -C "$GSTACK_HOME" remote get-url origin 2>/dev/null || echo "")
+	if [ -n "$EXISTING_REMOTE" ] && [ "$EXISTING_REMOTE" != "$REMOTE_URL" ]; then
+		cat >&2 <<EOF
 gstack-brain-restore: ~/.gstack/.git already points at:
   $EXISTING_REMOTE
 
@@ -69,8 +69,8 @@ You asked to restore from:
 
 Refusing to overwrite. Run 'gstack-brain-uninstall' first or pass a matching URL.
 EOF
-    exit 1
-  fi
+		exit 1
+	fi
 fi
 
 # ---- clone to staging ----
@@ -79,29 +79,30 @@ trap 'rm -rf "$STAGING" 2>/dev/null' EXIT
 
 echo "Cloning $REMOTE_URL to staging..."
 if ! git clone --quiet "$REMOTE_URL" "$STAGING/repo" 2>/dev/null; then
-  echo "Clone failed. Check:" >&2
-  echo "  - URL is correct: $REMOTE_URL" >&2
-  echo "  - Auth: gh auth status (github) / glab auth status (gitlab)" >&2
-  exit 1
+	echo "Clone failed. Check:" >&2
+	echo "  - URL is correct: $REMOTE_URL" >&2
+	echo "  - Auth: gh auth status (github) / glab auth status (gitlab)" >&2
+	exit 1
 fi
 
 # ---- validate shape ----
 if [ ! -f "$STAGING/repo/.brain-allowlist" ] || [ ! -f "$STAGING/repo/.gitattributes" ]; then
-  cat >&2 <<EOF
+	cat >&2 <<EOF
 gstack-brain-restore: $REMOTE_URL does not look like a gstack-brain repo.
 Missing: .brain-allowlist and/or .gitattributes
 
 This command only works on repos created by gstack-brain-init.
 EOF
-  exit 1
+	exit 1
 fi
 
 # ---- validate target ~/.gstack/ has no non-gitignored user files ----
 mkdir -p "$GSTACK_HOME"
 if [ ! -d "$GSTACK_HOME/.git" ]; then
-  # No existing git → check if we'd clobber anything allowlisted.
-  # Read the new allowlist globs and see if any existing files would collide.
-  CLOBBER_RISK=$(python3 - "$GSTACK_HOME" "$STAGING/repo/.brain-allowlist" <<'PYEOF'
+	# No existing git → check if we'd clobber anything allowlisted.
+	# Read the new allowlist globs and see if any existing files would collide.
+	CLOBBER_RISK=$(
+		python3 - "$GSTACK_HOME" "$STAGING/repo/.brain-allowlist" <<'PYEOF'
 import sys, os, fnmatch
 home, allowlist_path = sys.argv[1:3]
 try:
@@ -125,9 +126,9 @@ if len(risks) > 5:
     print(f"...and {len(risks) - 5} more")
 sys.exit(0 if not risks else 2)
 PYEOF
-  ) || true
-  if [ -n "$CLOBBER_RISK" ]; then
-    cat >&2 <<EOF
+	) || true
+	if [ -n "$CLOBBER_RISK" ]; then
+		cat >&2 <<EOF
 gstack-brain-restore: ~/.gstack/ has existing allowlisted files that would
 be clobbered by restore:
 
@@ -138,8 +139,8 @@ Back these up first, or run this command on a machine with an empty
 machine, you probably want to run gstack-brain-init instead (to create a
 new brain repo with this machine's state).
 EOF
-    exit 1
-  fi
+		exit 1
+	fi
 fi
 
 # ---- copy tracked files in ----
@@ -147,22 +148,22 @@ echo "Copying tracked files into ~/.gstack/ ..."
 # Use git-ls-tree to get exact tracked file list (avoids staged/untracked files).
 cd "$STAGING/repo"
 git ls-tree -r --name-only HEAD | while IFS= read -r rel_path; do
-  src="$STAGING/repo/$rel_path"
-  dst="$GSTACK_HOME/$rel_path"
-  mkdir -p "$(dirname "$dst")"
-  # Skip if identical (content hash). Otherwise copy.
-  if [ -f "$dst" ] && cmp -s "$src" "$dst"; then
-    continue
-  fi
-  cp "$src" "$dst"
+	src="$STAGING/repo/$rel_path"
+	dst="$GSTACK_HOME/$rel_path"
+	mkdir -p "$(dirname "$dst")"
+	# Skip if identical (content hash). Otherwise copy.
+	if [ -f "$dst" ] && cmp -s "$src" "$dst"; then
+		continue
+	fi
+	cp "$src" "$dst"
 done
 
 # ---- move .git into place ----
 if [ -d "$GSTACK_HOME/.git" ]; then
-  # Existing .git with matching remote — just fetch + fast-forward.
-  git -C "$GSTACK_HOME" fetch origin >/dev/null 2>&1 || true
+	# Existing .git with matching remote — just fetch + fast-forward.
+	git -C "$GSTACK_HOME" fetch origin >/dev/null 2>&1 || true
 else
-  mv "$STAGING/repo/.git" "$GSTACK_HOME/.git"
+	mv "$STAGING/repo/.git" "$GSTACK_HOME/.git"
 fi
 
 # ---- register merge drivers (local git config; don't survive clones) ----
@@ -174,7 +175,7 @@ git -C "$GSTACK_HOME" config merge.union.name "union concat"
 # ---- install pre-commit hook (same as init) ----
 HOOK="$GSTACK_HOME/.git/hooks/pre-commit"
 mkdir -p "$(dirname "$HOOK")"
-cat > "$HOOK" <<'HOOK_EOF'
+cat >"$HOOK" <<'HOOK_EOF'
 #!/usr/bin/env bash
 set -uo pipefail
 python3 -c "
@@ -204,16 +205,16 @@ chmod +x "$HOOK"
 
 # ---- write remote helper file if missing ----
 if [ ! -f "$REMOTE_FILE" ]; then
-  echo "$REMOTE_URL" > "$REMOTE_FILE"
-  chmod 600 "$REMOTE_FILE"
-  echo ""
-  echo "Wrote $REMOTE_FILE for future skill-run auto-detection."
+	echo "$REMOTE_URL" >"$REMOTE_FILE"
+	chmod 600 "$REMOTE_FILE"
+	echo ""
+	echo "Wrote $REMOTE_FILE for future skill-run auto-detection."
 fi
 
 # ---- wire the cloned brain into gbrain (best-effort) ----
 WIREUP_BIN="$SCRIPT_DIR/gstack-gbrain-source-wireup"
 if [ -x "$WIREUP_BIN" ]; then
-  "$WIREUP_BIN" || >&2 echo "WARNING: gbrain wireup failed; run $WIREUP_BIN manually after fixing prereqs"
+	"$WIREUP_BIN" || echo >&2 "WARNING: gbrain wireup failed; run $WIREUP_BIN manually after fixing prereqs"
 fi
 
 cat <<EOF

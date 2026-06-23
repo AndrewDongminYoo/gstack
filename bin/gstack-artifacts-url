@@ -24,10 +24,10 @@
 set -euo pipefail
 
 usage() {
-  echo "Usage: gstack-artifacts-url --to {ssh|https} <url>" >&2
-  echo "       gstack-artifacts-url --host <url>" >&2
-  echo "       gstack-artifacts-url --owner-repo <url>" >&2
-  exit 2
+	echo "Usage: gstack-artifacts-url --to {ssh|https} <url>" >&2
+	echo "       gstack-artifacts-url --host <url>" >&2
+	echo "       gstack-artifacts-url --owner-repo <url>" >&2
+	exit 2
 }
 
 [ $# -ge 2 ] || usage
@@ -35,10 +35,20 @@ usage() {
 mode=""
 to=""
 case "$1" in
-  --to) mode="to"; to="$2"; shift 2 ;;
-  --host) mode="host"; shift ;;
-  --owner-repo) mode="owner-repo"; shift ;;
-  *) usage ;;
+--to)
+	mode="to"
+	to="$2"
+	shift 2
+	;;
+--host)
+	mode="host"
+	shift
+	;;
+--owner-repo)
+	mode="owner-repo"
+	shift
+	;;
+*) usage ;;
 esac
 
 [ $# -eq 1 ] || usage
@@ -46,60 +56,60 @@ url="$1"
 
 # Strip trailing .git for normalization; reattach where needed.
 strip_git() {
-  echo "${1%.git}"
+	echo "${1%.git}"
 }
 
 valid_owner_repo() {
-  local owner_repo="$1"
-  case "$owner_repo" in
-    ""|/*|*/|*//*)
-      return 1
-      ;;
-  esac
-  case "$owner_repo" in
-    */*) return 0 ;;
-    *) return 1 ;;
-  esac
+	local owner_repo="$1"
+	case "$owner_repo" in
+	"" | /* | */ | *//*)
+		return 1
+		;;
+	esac
+	case "$owner_repo" in
+	*/*) return 0 ;;
+	*) return 1 ;;
+	esac
 }
 
 # Parse to (host, owner_repo) regardless of input shape.
 parse_url() {
-  local u="$1"
-  local host="" owner_repo=""
-  case "$u" in
-    https://*)
-      # https://host/owner/repo[.git]
-      local rest="${u#https://}"
-      host="${rest%%/*}"
-      owner_repo="${rest#*/}"
-      owner_repo=$(strip_git "$owner_repo")
-      ;;
-    ssh://*)
-      # ssh://git@host/owner/repo[.git] OR ssh://host/owner/repo[.git]
-      local rest="${u#ssh://}"
-      # Strip optional user@
-      rest="${rest#*@}"
-      host="${rest%%/*}"
-      owner_repo="${rest#*/}"
-      owner_repo=$(strip_git "$owner_repo")
-      ;;
-    git@*:*)
-      # git@host:owner/repo[.git]
-      local rest="${u#git@}"
-      host="${rest%%:*}"
-      owner_repo="${rest#*:}"
-      owner_repo=$(strip_git "$owner_repo")
-      ;;
-    *)
-      echo "gstack-artifacts-url: unrecognized URL form: $u" >&2
-      exit 3
-      ;;
-  esac
-  if [ -z "$host" ] || ! valid_owner_repo "$owner_repo"; then
-    echo "gstack-artifacts-url: failed to parse host/owner from: $u" >&2
-    exit 3
-  fi
-  printf '%s\n%s\n' "$host" "$owner_repo"
+	local u="$1"
+	local host="" owner_repo=""
+	case "$u" in
+	https://*)
+		# https://host/owner/repo[.git]
+		local rest="${u#https://}"
+		host="${rest%%/*}"
+		owner_repo="${rest#*/}"
+		owner_repo=$(strip_git "$owner_repo")
+		;;
+	ssh://*)
+		# ssh://git@host/owner/repo[.git] OR ssh://host/owner/repo[.git]
+		local rest="${u#ssh://}"
+		# Strip optional user@
+		rest="${rest#*@}"
+		host="${rest%%/*}"
+		owner_repo="${rest#*/}"
+		owner_repo=$(strip_git "$owner_repo")
+		;;
+	git@*:*)
+		# git@host:owner/repo[.git]
+		local rest="${u#git@}"
+		host="${rest%%:*}"
+		owner_repo="${rest#*:}"
+		owner_repo=$(strip_git "$owner_repo")
+		;;
+	*)
+		echo "gstack-artifacts-url: unrecognized URL form: $u" >&2
+		exit 3
+		;;
+	esac
+	if [ -z "$host" ] || ! valid_owner_repo "$owner_repo"; then
+		echo "gstack-artifacts-url: failed to parse host/owner from: $u" >&2
+		exit 3
+	fi
+	printf '%s\n%s\n' "$host" "$owner_repo"
 }
 
 parsed=$(parse_url "$url")
@@ -107,13 +117,13 @@ host=$(echo "$parsed" | head -1)
 owner_repo=$(echo "$parsed" | tail -1)
 
 case "$mode" in
-  to)
-    case "$to" in
-      ssh)   printf 'git@%s:%s.git\n' "$host" "$owner_repo" ;;
-      https) printf 'https://%s/%s\n' "$host" "$owner_repo" ;;
-      *) usage ;;
-    esac
-    ;;
-  host)       printf '%s\n' "$host" ;;
-  owner-repo) printf '%s\n' "$owner_repo" ;;
+to)
+	case "$to" in
+	ssh) printf 'git@%s:%s.git\n' "$host" "$owner_repo" ;;
+	https) printf 'https://%s/%s\n' "$host" "$owner_repo" ;;
+	*) usage ;;
+	esac
+	;;
+host) printf '%s\n' "$host" ;;
+owner-repo) printf '%s\n' "$owner_repo" ;;
 esac
