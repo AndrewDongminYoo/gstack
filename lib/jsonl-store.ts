@@ -63,7 +63,9 @@ export function firstInjectionMatch(text: string): RegExp | null {
 export function appendJsonl(path: string, obj: unknown): void {
   const line = JSON.stringify(obj);
   if (line.includes("\n")) {
-    throw new Error("jsonl-store: record serialized to multiple lines (embedded newline)");
+    throw new Error(
+      "jsonl-store: record serialized to multiple lines (embedded newline)",
+    );
   }
   appendFileSync(path, line + "\n", { encoding: "utf-8" });
 }

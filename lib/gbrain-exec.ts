@@ -34,7 +34,14 @@
 import { existsSync, readFileSync } from "fs";
 import { join } from "path";
 import { homedir } from "os";
-import { spawnSync, spawn, execFileSync, type SpawnSyncReturns, type ChildProcess, type SpawnOptions } from "child_process";
+import {
+  spawnSync,
+  spawn,
+  execFileSync,
+  type SpawnSyncReturns,
+  type ChildProcess,
+  type SpawnOptions,
+} from "child_process";
 
 interface GbrainConfig {
   database_url?: string;
@@ -93,7 +100,9 @@ export function isTransactionModePooler(url: string): boolean {
  * affects the caller's env. Tests assert on effective values, not
  * object identity.
  */
-export function buildGbrainEnv(opts: BuildGbrainEnvOptions = {}): NodeJS.ProcessEnv {
+export function buildGbrainEnv(
+  opts: BuildGbrainEnvOptions = {},
+): NodeJS.ProcessEnv {
   const baseEnv = opts.baseEnv || process.env;
   const out: NodeJS.ProcessEnv = { ...baseEnv };
   if (baseEnv.GSTACK_RESPECT_ENV_DATABASE_URL === "1") return out;
@@ -116,8 +125,12 @@ export function buildGbrainEnv(opts: BuildGbrainEnvOptions = {}): NodeJS.Process
   if (!alreadyMatch) {
     out.DATABASE_URL = cfg.database_url;
     if (opts.announce) {
-      const note = hadCaller ? " (overrode value from caller env / .env.local)" : "";
-      process.stderr.write(`[gbrain-exec] seeded DATABASE_URL from ${configPath}${note}\n`);
+      const note = hadCaller
+        ? " (overrode value from caller env / .env.local)"
+        : "";
+      process.stderr.write(
+        `[gbrain-exec] seeded DATABASE_URL from ${configPath}${note}\n`,
+      );
     }
   }
 
@@ -158,7 +171,10 @@ export interface SpawnGbrainOptions {
  * `SpawnSyncReturns<string>` so callers can inspect `status`, `stdout`,
  * `stderr` exactly as they would with `spawnSync` directly.
  */
-export function spawnGbrain(args: string[], opts: SpawnGbrainOptions = {}): SpawnSyncReturns<string> {
+export function spawnGbrain(
+  args: string[],
+  opts: SpawnGbrainOptions = {},
+): SpawnSyncReturns<string> {
   return spawnSync("gbrain", args, {
     encoding: "utf-8",
     timeout: opts.timeout ?? 30_000,
@@ -174,7 +190,10 @@ export function spawnGbrain(args: string[], opts: SpawnGbrainOptions = {}): Spaw
  * non-zero exit, parse failure, or timeout. Useful for `gbrain sources
  * list --json` and similar.
  */
-export function execGbrainJson<T = unknown>(args: string[], opts: SpawnGbrainOptions = {}): T | null {
+export function execGbrainJson<T = unknown>(
+  args: string[],
+  opts: SpawnGbrainOptions = {},
+): T | null {
   const r = spawnGbrain(args, opts);
   if (r.status !== 0) return null;
   try {
@@ -192,7 +211,11 @@ export function execGbrainJson<T = unknown>(args: string[], opts: SpawnGbrainOpt
  */
 export function spawnGbrainAsync(
   args: string[],
-  opts: { stdio?: SpawnOptions["stdio"]; cwd?: string; baseEnv?: NodeJS.ProcessEnv } = {},
+  opts: {
+    stdio?: SpawnOptions["stdio"];
+    cwd?: string;
+    baseEnv?: NodeJS.ProcessEnv;
+  } = {},
 ): ChildProcess {
   return spawn("gbrain", args, {
     stdio: opts.stdio || ["ignore", "pipe", "pipe"],
@@ -206,7 +229,10 @@ export function spawnGbrainAsync(
  * Run `gbrain <args>` via execFileSync. Throws on non-zero exit. Useful
  * for callers that want to surface gbrain's stderr as the error message.
  */
-export function execGbrainText(args: string[], opts: SpawnGbrainOptions = {}): string {
+export function execGbrainText(
+  args: string[],
+  opts: SpawnGbrainOptions = {},
+): string {
   return execFileSync("gbrain", args, {
     encoding: "utf-8",
     timeout: opts.timeout ?? 30_000,

@@ -17,7 +17,14 @@
  * helper warns once and returns an empty findings list — fail-safe defaults.
  */
 
-import { existsSync, readFileSync, writeFileSync, mkdirSync, statSync, appendFileSync } from "fs";
+import {
+  existsSync,
+  readFileSync,
+  writeFileSync,
+  mkdirSync,
+  statSync,
+  appendFileSync,
+} from "fs";
 import { dirname, join } from "path";
 import { execFileSync } from "child_process";
 import { homedir } from "os";
@@ -133,7 +140,7 @@ function gitleaksAvailable(): boolean {
     // Only warn once per process — Lane E will vendor the binary.
     process.stderr.write(
       "[gstack-memory-helpers] gitleaks not in PATH; secret scanning disabled. " +
-      "Run /setup-gbrain to install (or `brew install gitleaks`).\n"
+        "Run /setup-gbrain to install (or `brew install gitleaks`).\n",
     );
   }
   return _gitleaksAvailability;
@@ -160,8 +167,19 @@ export function secretScanFile(path: string): SecretScanResult {
     // Returns 0 on clean, 1 on findings, 126/127 on bad invocation.
     const out = execFileSync(
       "gitleaks",
-      ["detect", "--no-git", "--source", path, "--report-format", "json", "--report-path", "/dev/stdout", "--exit-code", "0"],
-      { encoding: "utf-8", env: process.env, maxBuffer: 16 * 1024 * 1024 }
+      [
+        "detect",
+        "--no-git",
+        "--source",
+        path,
+        "--report-format",
+        "json",
+        "--report-path",
+        "/dev/stdout",
+        "--exit-code",
+        "0",
+      ],
+      { encoding: "utf-8", env: process.env, maxBuffer: 16 * 1024 * 1024 },
     );
     const trimmed = out.trim();
     if (!trimmed) return { scanned: true, findings: [], scanner: "gitleaks" };
@@ -226,7 +244,9 @@ export function detectEngineTier(): EngineDetect {
       const stat = statSync(engineCachePath());
       const ageMs = Date.now() - stat.mtimeMs;
       if (ageMs < ENGINE_CACHE_TTL_MS) {
-        const cached = JSON.parse(readFileSync(engineCachePath(), "utf-8")) as EngineDetect;
+        const cached = JSON.parse(
+          readFileSync(engineCachePath(), "utf-8"),
+        ) as EngineDetect;
         if (cached.schema_version === 1) return cached;
       }
     } catch {
@@ -239,8 +259,12 @@ export function detectEngineTier(): EngineDetect {
     mkdirSync(dirname(engineCachePath()), { recursive: true });
     writeFileSync(
       engineCachePath(),
-      JSON.stringify({ ...fresh, last_writer: "gstack-memory-helpers.detectEngineTier" }, null, 2),
-      "utf-8"
+      JSON.stringify(
+        { ...fresh, last_writer: "gstack-memory-helpers.detectEngineTier" },
+        null,
+        2,
+      ),
+      "utf-8",
     );
   } catch {
     // Cache write failure is non-fatal.
@@ -264,10 +288,16 @@ function logGbrainError(kind: string, detail: string): void {
     mkdirSync(dirname(path), { recursive: true });
     appendFileSync(
       path,
-      JSON.stringify({ ts: new Date().toISOString(), kind, detail: detail.slice(0, 500) }) + "\n",
-      "utf-8"
+      JSON.stringify({
+        ts: new Date().toISOString(),
+        kind,
+        detail: detail.slice(0, 500),
+      }) + "\n",
+      "utf-8",
     );
-  } catch { /* logging is best-effort */ }
+  } catch {
+    /* logging is best-effort */
+  }
 }
 
 function freshDetectEngineTier(): EngineDetect {
@@ -291,7 +321,8 @@ function freshDetectEngineTier(): EngineDetect {
     // normal). Recover stdout and re-parse. See #1415.
     try {
       const stdout = (err as { stdout?: Buffer | string })?.stdout ?? "";
-      const stdoutStr = typeof stdout === "string" ? stdout : stdout.toString("utf-8");
+      const stdoutStr =
+        typeof stdout === "string" ? stdout : stdout.toString("utf-8");
       if (stdoutStr) parsed = JSON.parse(stdoutStr);
     } catch (parseErr) {
       logGbrainError("doctor_parse_failure", String(parseErr));
@@ -299,8 +330,11 @@ function freshDetectEngineTier(): EngineDetect {
   }
 
   let engine: EngineTier =
-    parsed?.engine === "supabase" ? "supabase" :
-    parsed?.engine === "pglite"   ? "pglite"   : "unknown";
+    parsed?.engine === "supabase"
+      ? "supabase"
+      : parsed?.engine === "pglite"
+        ? "pglite"
+        : "unknown";
 
   // gbrain >=0.25 ships schema_version:2 doctor output which dropped the
   // top-level `engine` field. Fall back to gbrain's config.json (respects
@@ -312,7 +346,8 @@ function freshDetectEngineTier(): EngineDetect {
     try {
       const cfg = JSON.parse(readFileSync(gbrainConfigPath(), "utf-8"));
       if (cfg?.engine === "pglite") engine = "pglite";
-      else if (cfg?.engine === "postgres" || cfg?.database_url) engine = "supabase";
+      else if (cfg?.engine === "postgres" || cfg?.database_url)
+        engine = "supabase";
     } catch (cfgErr) {
       logGbrainError("config_read_failure", String(cfgErr));
     }
@@ -337,7 +372,9 @@ function freshDetectEngineTier(): EngineDetect {
  * runtime read path used by gstack-brain-context-load; it tolerates extra
  * fields and relies on validation having already happened upstream.
  */
-export function parseSkillManifest(skillFilePath: string): GbrainManifest | null {
+export function parseSkillManifest(
+  skillFilePath: string,
+): GbrainManifest | null {
   if (!existsSync(skillFilePath)) return null;
   const content = readFileSync(skillFilePath, "utf-8");
   const frontmatter = extractFrontmatter(content);
@@ -390,7 +427,9 @@ function extractGbrainBlock(frontmatter: string): GbrainManifest | null {
       const body = item.replace(/^[ ]{4,6}-\s+/, "      ");
       const idM = body.match(/(?:^|\n)\s*id\s*:\s*([^\n]+)/);
       const kindM = body.match(/(?:^|\n)\s*kind\s*:\s*([^\n]+)/);
-      const renderM = body.match(/(?:^|\n)\s*render_as\s*:\s*"?([^"\n]+?)"?\s*$/m);
+      const renderM = body.match(
+        /(?:^|\n)\s*render_as\s*:\s*"?([^"\n]+?)"?\s*$/m,
+      );
       const queryM = body.match(/(?:^|\n)\s*query\s*:\s*"?([^"\n]+?)"?\s*$/m);
       const limitM = body.match(/(?:^|\n)\s*limit\s*:\s*(\d+)/);
       const globM = body.match(/(?:^|\n)\s*glob\s*:\s*"?([^"\n]+?)"?\s*$/m);
@@ -432,7 +471,7 @@ const ERROR_LOG_PATH = join(gstackHome(), ".gbrain-errors.jsonl");
 export async function withErrorContext<T>(
   op: string,
   fn: () => T | Promise<T>,
-  caller: string = "unknown"
+  caller: string = "unknown",
 ): Promise<T> {
   const t0 = Date.now();
   try {

@@ -35,7 +35,10 @@ export interface SemanticHit {
  * caller then searches unscoped (best-effort) rather than failing.
  */
 export function resolveMemorySourceId(env?: NodeJS.ProcessEnv): string | null {
-  const r = spawnGbrain(["sources", "list", "--json"], { baseEnv: env, timeout: TIMEOUT_MS });
+  const r = spawnGbrain(["sources", "list", "--json"], {
+    baseEnv: env,
+    timeout: TIMEOUT_MS,
+  });
   if (r.status !== 0) return null;
   let rows;
   try {
@@ -44,7 +47,9 @@ export function resolveMemorySourceId(env?: NodeJS.ProcessEnv): string | null {
     return null;
   }
   const atWorktree = rows.filter(
-    (s) => typeof s.local_path === "string" && s.local_path.endsWith(BRAIN_WORKTREE_SUFFIX),
+    (s) =>
+      typeof s.local_path === "string" &&
+      s.local_path.endsWith(BRAIN_WORKTREE_SUFFIX),
   );
   const pick = atWorktree.find((s) => s.id === "default") ?? atWorktree[0];
   return pick?.id ?? null;
@@ -56,7 +61,11 @@ export function resolveMemorySourceId(env?: NodeJS.ProcessEnv): string | null {
  * Non-matching lines (banners, blanks) are skipped. Exported for deterministic
  * unit testing of the parser without a live gbrain.
  */
-export function parseSearchHits(stdout: string, minScore: number, limit: number): SemanticHit[] {
+export function parseSearchHits(
+  stdout: string,
+  minScore: number,
+  limit: number,
+): SemanticHit[] {
   const hits: SemanticHit[] = [];
   for (const line of stdout.split("\n")) {
     const m = line.match(/^\[([\d.]+)\]\s+(\S+)\s+--\s+(.*)$/);
@@ -87,7 +96,10 @@ export function semanticRecall(
   // code/doc corpora that would be mislabeled as "related decisions" (Codex finding).
   const sourceId = resolveMemorySourceId(env);
   if (!sourceId) return null;
-  const r = spawnGbrain(["search", query, "--source", sourceId], { baseEnv: env, timeout: TIMEOUT_MS });
+  const r = spawnGbrain(["search", query, "--source", sourceId], {
+    baseEnv: env,
+    timeout: TIMEOUT_MS,
+  });
   if (r.status !== 0) return null; // gbrain down / not on PATH / errored → degrade
   return parseSearchHits(r.stdout || "", minScore, limit);
 }

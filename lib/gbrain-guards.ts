@@ -32,7 +32,11 @@ import { spawnSync } from "child_process";
 import { existsSync, realpathSync, readFileSync } from "fs";
 import { homedir } from "os";
 import { join, resolve, sep } from "path";
-import { execGbrainJson, execGbrainText, NEEDS_SHELL_ON_WINDOWS } from "./gbrain-exec";
+import {
+  execGbrainJson,
+  execGbrainText,
+  NEEDS_SHELL_ON_WINDOWS,
+} from "./gbrain-exec";
 import { parseSourcesList, type GbrainSourceRow } from "./gbrain-sources";
 
 export function gbrainHome(env: NodeJS.ProcessEnv = process.env): string {
@@ -46,15 +50,28 @@ export function gbrainHome(env: NodeJS.ProcessEnv = process.env): string {
  * checked because gbrain #1226 shows home-resolution is inconsistent.
  */
 function clonesDirs(env: NodeJS.ProcessEnv = process.env): string[] {
-  return [...new Set([join(gbrainHome(env), "clones"), join(homedir(), ".gbrain", "clones")])];
+  return [
+    ...new Set([
+      join(gbrainHome(env), "clones"),
+      join(homedir(), ".gbrain", "clones"),
+    ]),
+  ];
 }
 
 /** True if `p` resolves (symlinks + `..` collapsed) to a location inside `dir`. */
 export function isInside(p: string, dir: string): boolean {
   let rp: string;
   let rd: string;
-  try { rp = realpathSync(p); } catch { rp = resolve(p); }
-  try { rd = realpathSync(dir); } catch { rd = resolve(dir); }
+  try {
+    rp = realpathSync(p);
+  } catch {
+    rp = resolve(p);
+  }
+  try {
+    rd = realpathSync(dir);
+  } catch {
+    rd = resolve(dir);
+  }
   const base = rd.endsWith(sep) ? rd : rd + sep;
   return rp === rd || rp.startsWith(base);
 }
@@ -144,7 +161,10 @@ function isPidAlive(pid: number): boolean {
 function defaultProcessRunning(): boolean {
   // No reliable pgrep on Windows; rely on the lock-file signal there.
   if (process.platform === "win32") return false;
-  const r = spawnSync("pgrep", ["-f", "gbrain autopilot"], { encoding: "utf-8", timeout: 3_000 });
+  const r = spawnSync("pgrep", ["-f", "gbrain autopilot"], {
+    encoding: "utf-8",
+    timeout: 3_000,
+  });
   return r.status === 0 && (r.stdout || "").trim().length > 0;
 }
 
@@ -167,13 +187,20 @@ function gbrainIdentity(env: NodeJS.ProcessEnv): string {
   return (r.stdout || "").trim() || "unknown";
 }
 
-export function gbrainSupportsKeepStorage(env: NodeJS.ProcessEnv = process.env): boolean {
+export function gbrainSupportsKeepStorage(
+  env: NodeJS.ProcessEnv = process.env,
+): boolean {
   const key = gbrainIdentity(env);
-  if (_keepStorageMemo && _keepStorageMemo.key === key) return _keepStorageMemo.value;
+  if (_keepStorageMemo && _keepStorageMemo.key === key)
+    return _keepStorageMemo.value;
   let value = false;
   for (const args of [["sources", "remove", "--help"], ["--help"]]) {
     try {
-      if (/--keep-storage/.test(execGbrainText(args, { baseEnv: env, timeout: 5_000 }))) {
+      if (
+        /--keep-storage/.test(
+          execGbrainText(args, { baseEnv: env, timeout: 5_000 }),
+        )
+      ) {
         value = true;
         break;
       }
@@ -197,7 +224,9 @@ export function _resetCapabilityMemo(): void {
  * distinguish "couldn't read" (fail closed) from "empty list" (source absent).
  * Injectable for hermetic tests.
  */
-export function fetchSources(env: NodeJS.ProcessEnv = process.env): GbrainSourceRow[] {
+export function fetchSources(
+  env: NodeJS.ProcessEnv = process.env,
+): GbrainSourceRow[] {
   const raw = execGbrainJson(["sources", "list", "--json"], { baseEnv: env });
   if (raw === null) throw new Error("gbrain sources list returned no JSON");
   return parseSourcesList(raw);
@@ -241,19 +270,30 @@ export function decideSourceRemove(
   try {
     rows = (opts.fetchRows ?? fetchSources)(env);
   } catch {
-    return { allow: false, extraArgs: [], reason: "could not read sources list; refusing remove (fail closed)" };
+    return {
+      allow: false,
+      extraArgs: [],
+      reason: "could not read sources list; refusing remove (fail closed)",
+    };
   }
 
   const row = rows.find((r) => r.id === sourceId);
-  if (!row) return { allow: true, extraArgs: extra, reason: "source absent (no-op)" };
+  if (!row)
+    return { allow: true, extraArgs: extra, reason: "source absent (no-op)" };
 
   const remoteUrl = row.config?.remote_url;
   const userManaged =
-    !!remoteUrl && !!row.local_path && !clonesDirs(env).some((d) => isInside(row.local_path!, d));
+    !!remoteUrl &&
+    !!row.local_path &&
+    !clonesDirs(env).some((d) => isInside(row.local_path!, d));
 
   if (userManaged) {
     if (keepStorage) {
-      return { allow: true, extraArgs: ["--keep-storage"], reason: "user-managed; --keep-storage protects files" };
+      return {
+        allow: true,
+        extraArgs: ["--keep-storage"],
+        reason: "user-managed; --keep-storage protects files",
+      };
     }
     return {
       allow: false,
@@ -265,7 +305,11 @@ export function decideSourceRemove(
     };
   }
 
-  return { allow: true, extraArgs: extra, reason: "gbrain-managed or path-managed without remote_url" };
+  return {
+    allow: true,
+    extraArgs: extra,
+    reason: "gbrain-managed or path-managed without remote_url",
+  };
 }
 
 export interface SyncDecision {
@@ -292,7 +336,10 @@ export function decideCodeSync(
   try {
     rows = fetchRows(env);
   } catch {
-    return { allow: true, reason: "sources unreadable; proceeding (sync read is non-destructive)" };
+    return {
+      allow: true,
+      reason: "sources unreadable; proceeding (sync read is non-destructive)",
+    };
   }
   const row = rows.find((r) => r.id === sourceId);
   if (row?.config?.remote_url && !allowReclone) {
@@ -303,5 +350,8 @@ export function decideCodeSync(
         `delete the working tree. Re-run /sync-gbrain with --allow-reclone to proceed.`,
     };
   }
-  return { allow: true, reason: "no remote_url, or reclone explicitly allowed" };
+  return {
+    allow: true,
+    reason: "no remote_url, or reclone explicitly allowed",
+  };
 }

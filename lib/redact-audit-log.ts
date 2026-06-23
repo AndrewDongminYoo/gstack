@@ -77,13 +77,18 @@ if (import.meta.main) {
     process.stderr.write("redact-audit-log: invalid JSON\n");
     process.exit(1);
   }
-  const body = bodyFile && fs.existsSync(bodyFile) ? fs.readFileSync(bodyFile, "utf8") : "";
+  const body =
+    bodyFile && fs.existsSync(bodyFile)
+      ? fs.readFileSync(bodyFile, "utf8")
+      : "";
   appendSemanticReview({
     ts: now(),
     repo_visibility: partial.repo_visibility ?? "unknown",
     outcome: partial.outcome === "flagged" ? "flagged" : "clean",
     categories_flagged: partial.categories_flagged ?? [],
     body_sha256: sha256(body),
-    ...(partial.spec_archive_path ? { spec_archive_path: partial.spec_archive_path } : {}),
+    ...(partial.spec_archive_path
+      ? { spec_archive_path: partial.spec_archive_path }
+      : {}),
   });
 }

@@ -16,7 +16,9 @@ export function resolveSlug(slugBinPath: string): string {
 
 /** Current git branch, or undefined on detached HEAD / outside a repo. */
 export function gitBranch(): string | undefined {
-  const r = spawnSync("git", ["rev-parse", "--abbrev-ref", "HEAD"], { encoding: "utf-8" });
+  const r = spawnSync("git", ["rev-parse", "--abbrev-ref", "HEAD"], {
+    encoding: "utf-8",
+  });
   const b = (r.stdout || "").trim();
   return b && b !== "HEAD" ? b : undefined;
 }

@@ -81,7 +81,10 @@ export interface ScanResult {
 
 const DEFAULT_MAX_BYTES = 1024 * 1024; // 1 MiB
 
-const EMAIL_ALLOW_DOMAINS = [/@example\.(com|org|net)$/i, /@example\.[a-z]{2,}$/i];
+const EMAIL_ALLOW_DOMAINS = [
+  /@example\.(com|org|net)$/i,
+  /@example\.[a-z]{2,}$/i,
+];
 const EMAIL_ALLOW_LOCALPARTS = [/^noreply@/i, /^no-reply@/i, /^donotreply@/i];
 
 // ── Normalization ─────────────────────────────────────────────────────────────
@@ -152,7 +155,10 @@ export function normalizeWithMap(input: string): {
 
 // ── Offset → line/col on the ORIGINAL text ────────────────────────────────────
 
-function lineColAt(original: string, offset: number): { line: number; col: number } {
+function lineColAt(
+  original: string,
+  offset: number,
+): { line: number; col: number } {
   let line = 1;
   let col = 1;
   for (let i = 0; i < offset && i < original.length; i++) {
@@ -171,7 +177,8 @@ function lineColAt(original: string, offset: number): { line: number; col: numbe
 /** Show ≤4 leading chars, mask the rest. Never reconstructable. */
 export function maskPreview(span: string): string {
   const visible = span.slice(0, 4);
-  const masked = span.length > 4 ? "*".repeat(Math.min(span.length - 4, 8)) : "";
+  const masked =
+    span.length > 4 ? "*".repeat(Math.min(span.length - 4, 8)) : "";
   return `${visible}${masked}${span.length > 12 ? "…" : ""}`;
 }
 
@@ -243,7 +250,8 @@ function hasNear(
 function emailAllowed(email: string, opts: ScanOptions): boolean {
   const lower = email.toLowerCase();
   if (opts.selfEmail && lower === opts.selfEmail.toLowerCase()) return true;
-  if (opts.repoPublicEmails?.some((e) => e.toLowerCase() === lower)) return true;
+  if (opts.repoPublicEmails?.some((e) => e.toLowerCase() === lower))
+    return true;
   if (EMAIL_ALLOW_DOMAINS.some((re) => re.test(email))) return true;
   if (EMAIL_ALLOW_LOCALPARTS.some((re) => re.test(email))) return true;
   return false;
@@ -316,7 +324,13 @@ export function scan(input: string, opts: ScanOptions = {}): ScanResult {
       // Proximity requirement.
       if (
         pat.nearRegex &&
-        !hasNear(normalized, m.index, m.index + m[0].length, pat.nearRegex, pat.nearWindow ?? 100)
+        !hasNear(
+          normalized,
+          m.index,
+          m.index + m[0].length,
+          pat.nearRegex,
+          pat.nearWindow ?? 100,
+        )
       ) {
         continue;
       }
@@ -360,7 +374,9 @@ export function scan(input: string, opts: ScanOptions = {}): ScanResult {
   }
 
   // Stable order: by line, then col, then id.
-  findings.sort((a, b) => a.line - b.line || a.col - b.col || a.id.localeCompare(b.id));
+  findings.sort(
+    (a, b) => a.line - b.line || a.col - b.col || a.id.localeCompare(b.id),
+  );
 
   const counts = { HIGH: 0, MEDIUM: 0, LOW: 0, WARN: 0 };
   for (const f of findings) counts[f.severity] += 1;
@@ -433,7 +449,10 @@ export function applyRedactions(
  * would redact the header and forward the key body — so redactFindingSpans
  * drops the whole payload instead.
  */
-const MARKER_ONLY_PATTERN_IDS = new Set(["pem.private_key", "gcp.service_account"]);
+const MARKER_ONLY_PATTERN_IDS = new Set([
+  "pem.private_key",
+  "gcp.service_account",
+]);
 
 /**
  * Replace EVERY finding's span with `<REDACTED-{id}>`, regardless of tier or
@@ -449,7 +468,10 @@ const MARKER_ONLY_PATTERN_IDS = new Set(["pem.private_key", "gcp.service_account
  * (Contrast applyRedactions, which is the interactive, autoRedactable-only,
  * structure-preserving path.)
  */
-export function redactFindingSpans(input: string, opts: ScanOptions = {}): string | null {
+export function redactFindingSpans(
+  input: string,
+  opts: ScanOptions = {},
+): string | null {
   const { findings } = scan(input, opts);
   if (findings.some((f) => MARKER_ONLY_PATTERN_IDS.has(f.id))) return null;
   const targets = findings.map((f) => ({ f, ...locateSpan(input, f) }));
@@ -474,7 +496,10 @@ export function redactFindingSpans(input: string, opts: ScanOptions = {}): strin
   let body = input;
   for (let i = merged.length - 1; i >= 0; i--) {
     const m = merged[i];
-    body = body.slice(0, m.start) + `<REDACTED-${m.ids.join("+")}>` + body.slice(m.end);
+    body =
+      body.slice(0, m.start) +
+      `<REDACTED-${m.ids.join("+")}>` +
+      body.slice(m.end);
   }
   return body;
 }

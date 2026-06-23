@@ -52,7 +52,11 @@ export interface GbrainSourceRow {
  */
 export function parseSourcesList(raw: unknown): GbrainSourceRow[] {
   if (Array.isArray(raw)) return raw as GbrainSourceRow[];
-  if (raw && typeof raw === "object" && Array.isArray((raw as { sources?: unknown }).sources)) {
+  if (
+    raw &&
+    typeof raw === "object" &&
+    Array.isArray((raw as { sources?: unknown }).sources)
+  ) {
     return (raw as { sources: GbrainSourceRow[] }).sources;
   }
   return [];
@@ -96,7 +100,10 @@ export function probeSource(id: string, env?: NodeJS.ProcessEnv): SourceState {
     if (e.code === "ENOENT" || stderr.includes("command not found")) {
       throw new Error("gbrain CLI not on PATH");
     }
-    if (stderr.includes("Cannot connect to database") || stderr.includes("config.json")) {
+    if (
+      stderr.includes("Cannot connect to database") ||
+      stderr.includes("config.json")
+    ) {
       throw new Error("gbrain not configured (run /setup-gbrain)");
     }
     throw err;
@@ -106,7 +113,9 @@ export function probeSource(id: string, env?: NodeJS.ProcessEnv): SourceState {
   try {
     parsed = JSON.parse(stdout);
   } catch (err) {
-    throw new Error(`gbrain sources list returned non-JSON output: ${(err as Error).message}`);
+    throw new Error(
+      `gbrain sources list returned non-JSON output: ${(err as Error).message}`,
+    );
   }
 
   const sources = parseSourcesList(parsed);
@@ -133,60 +142,68 @@ export function probeSource(id: string, env?: NodeJS.ProcessEnv): SourceState {
 export async function ensureSourceRegistered(
   id: string,
   path: string,
-  options: EnsureOptions = {}
+  options: EnsureOptions = {},
 ): Promise<EnsureResult> {
   const federated = options.federated ?? false;
   const reregister_on_drift = options.reregister_on_drift ?? true;
   const env = options.env;
 
-  return withErrorContext(`ensureSourceRegistered:${id}`, () => {
-    const probed = probeSource(id, env);
+  return withErrorContext(
+    `ensureSourceRegistered:${id}`,
+    () => {
+      const probed = probeSource(id, env);
 
-    // Disambiguate match-but-different-path
-    let state: SourceState = probed;
-    if (probed.status === "match" && probed.registered_path !== path) {
-      state = { status: "drift", registered_path: probed.registered_path };
-    }
+      // Disambiguate match-but-different-path
+      let state: SourceState = probed;
+      if (probed.status === "match" && probed.registered_path !== path) {
+        state = { status: "drift", registered_path: probed.registered_path };
+      }
 
-    if (state.status === "match") {
-      return { changed: false, state };
-    }
+      if (state.status === "match") {
+        return { changed: false, state };
+      }
 
-    if (state.status === "drift" && !reregister_on_drift) {
-      return { changed: false, state };
-    }
+      if (state.status === "drift" && !reregister_on_drift) {
+        return { changed: false, state };
+      }
 
-    // For drift, remove first.
-    if (state.status === "drift") {
-      const rm = spawnSync("gbrain", ["sources", "remove", id, "--yes"], {
+      // For drift, remove first.
+      if (state.status === "drift") {
+        const rm = spawnSync("gbrain", ["sources", "remove", id, "--yes"], {
+          encoding: "utf-8",
+          timeout: 30_000,
+          env,
+          shell: NEEDS_SHELL_ON_WINDOWS, // #1731: gbrain is a .cmd shim on Windows
+        });
+        if (rm.status !== 0) {
+          throw new Error(
+            `gbrain sources remove ${id} failed: ${rm.stderr || rm.stdout || `exit ${rm.status}`}`,
+          );
+        }
+      }
+
+      // Add.
+      const addArgs = ["sources", "add", id, "--path", path];
+      if (federated) addArgs.push("--federated");
+      const add = spawnSync("gbrain", addArgs, {
         encoding: "utf-8",
         timeout: 30_000,
         env,
         shell: NEEDS_SHELL_ON_WINDOWS, // #1731: gbrain is a .cmd shim on Windows
       });
-      if (rm.status !== 0) {
-        throw new Error(`gbrain sources remove ${id} failed: ${rm.stderr || rm.stdout || `exit ${rm.status}`}`);
+      if (add.status !== 0) {
+        throw new Error(
+          `gbrain sources add ${id} failed: ${add.stderr || add.stdout || `exit ${add.status}`}`,
+        );
       }
-    }
 
-    // Add.
-    const addArgs = ["sources", "add", id, "--path", path];
-    if (federated) addArgs.push("--federated");
-    const add = spawnSync("gbrain", addArgs, {
-      encoding: "utf-8",
-      timeout: 30_000,
-      env,
-      shell: NEEDS_SHELL_ON_WINDOWS, // #1731: gbrain is a .cmd shim on Windows
-    });
-    if (add.status !== 0) {
-      throw new Error(`gbrain sources add ${id} failed: ${add.stderr || add.stdout || `exit ${add.status}`}`);
-    }
-
-    return {
-      changed: true,
-      state: { status: "match", registered_path: path },
-    };
-  }, "gbrain-sources");
+      return {
+        changed: true,
+        state: { status: "match", registered_path: path },
+      };
+    },
+    "gbrain-sources",
+  );
 }
 
 /**
@@ -194,7 +211,10 @@ export async function ensureSourceRegistered(
  * page_count is missing/invalid in the JSON. Used by the verdict block + preamble
  * variant selection.
  */
-export function sourcePageCount(id: string, env?: NodeJS.ProcessEnv): number | null {
+export function sourcePageCount(
+  id: string,
+  env?: NodeJS.ProcessEnv,
+): number | null {
   let stdout: string;
   try {
     stdout = execFileSync("gbrain", ["sources", "list", "--json"], {
@@ -260,8 +280,13 @@ interface DoctorReport {
  * gstack-side gbrain call). `env` is the caller's base env (tests inject a
  * shim on PATH).
  */
-export function cycleCompleted(sourceId: string, env?: NodeJS.ProcessEnv): CycleStatus {
-  const report = execGbrainJson<DoctorReport>(["doctor", "--json", "--fast"], { baseEnv: env });
+export function cycleCompleted(
+  sourceId: string,
+  env?: NodeJS.ProcessEnv,
+): CycleStatus {
+  const report = execGbrainJson<DoctorReport>(["doctor", "--json", "--fast"], {
+    baseEnv: env,
+  });
   if (!report || !Array.isArray(report.checks)) return "unknown";
 
   const check = report.checks.find((c) => c.name === "cycle_freshness");

@@ -31,12 +31,7 @@
 
 export type Tier = "HIGH" | "MEDIUM" | "LOW";
 
-export type Category =
-  | "secret"
-  | "pii"
-  | "legal"
-  | "internal"
-  | "hygiene";
+export type Category = "secret" | "pii" | "legal" | "internal" | "hygiene";
 
 export interface RedactPattern {
   /** Stable dotted id, e.g. "aws.access_key". Used in findings + tests. */
@@ -170,7 +165,8 @@ const PLACEHOLDER_SUBSTRING = [
 export function isPlaceholderSpan(span: string): boolean {
   if (PLACEHOLDER_STRUCTURAL.some((re) => re.test(span))) return true;
   const isCompound = span.includes("://") || span.includes("@");
-  if (!isCompound && PLACEHOLDER_SUBSTRING.some((re) => re.test(span))) return true;
+  if (!isCompound && PLACEHOLDER_SUBSTRING.some((re) => re.test(span)))
+    return true;
   return false;
 }
 
@@ -309,14 +305,16 @@ export const PATTERNS: RedactPattern[] = [
     tier: "HIGH",
     category: "secret",
     description: "Slack incoming webhook URL",
-    regex: /(https:\/\/hooks\.slack\.com\/services\/T[A-Z0-9]+\/B[A-Z0-9]+\/[A-Za-z0-9]{24})/,
+    regex:
+      /(https:\/\/hooks\.slack\.com\/services\/T[A-Z0-9]+\/B[A-Z0-9]+\/[A-Za-z0-9]{24})/,
   },
   {
     id: "discord.webhook",
     tier: "HIGH",
     category: "secret",
     description: "Discord webhook URL",
-    regex: /(https:\/\/(?:canary\.|ptb\.)?discord(?:app)?\.com\/api\/webhooks\/[0-9]{17,20}\/[A-Za-z0-9_\-]{60,})/,
+    regex:
+      /(https:\/\/(?:canary\.|ptb\.)?discord(?:app)?\.com\/api\/webhooks\/[0-9]{17,20}\/[A-Za-z0-9_\-]{60,})/,
   },
   {
     id: "twilio.auth_token",
@@ -332,19 +330,23 @@ export const PATTERNS: RedactPattern[] = [
     tier: "HIGH",
     category: "secret",
     description: "PEM private key block",
-    regex: /(-----BEGIN (?:RSA |EC |DSA |OPENSSH |PGP |ENCRYPTED )?PRIVATE KEY-----)/,
+    regex:
+      /(-----BEGIN (?:RSA |EC |DSA |OPENSSH |PGP |ENCRYPTED )?PRIVATE KEY-----)/,
   },
   {
     id: "db.url_with_password",
     tier: "HIGH",
     category: "secret",
     description: "Database URL with embedded password",
-    regex: /\b((?:postgres(?:ql)?|mysql|mongodb(?:\+srv)?|redis|amqp):\/\/[^:\s/@]+:[^@\s/]+@[^\s/]+)/,
+    regex:
+      /\b((?:postgres(?:ql)?|mysql|mongodb(?:\+srv)?|redis|amqp):\/\/[^:\s/@]+:[^@\s/]+@[^\s/]+)/,
     // Skip when the password segment is itself a placeholder.
     validate: (span) => {
       const m = span.match(/:\/\/[^:]+:([^@]+)@/);
       const pw = m?.[1] ?? "";
-      return !isPlaceholderSpan(pw) && pw !== "" && !/^\$\{?[A-Z_]+\}?$/.test(pw);
+      return (
+        !isPlaceholderSpan(pw) && pw !== "" && !/^\$\{?[A-Z_]+\}?$/.test(pw)
+      );
     },
   },
   {
@@ -356,7 +358,9 @@ export const PATTERNS: RedactPattern[] = [
     validate: (span) => {
       const m = span.match(/:\/\/[^:]+:([^@]+)@/);
       const pw = m?.[1] ?? "";
-      return !isPlaceholderSpan(pw) && pw !== "" && !/^\$\{?[A-Z_]+\}?$/.test(pw);
+      return (
+        !isPlaceholderSpan(pw) && pw !== "" && !/^\$\{?[A-Z_]+\}?$/.test(pw)
+      );
     },
   },
 
@@ -380,14 +384,16 @@ export const PATTERNS: RedactPattern[] = [
     tier: "MEDIUM",
     category: "secret",
     description: "JSON Web Token (3-segment base64url)",
-    regex: /\b(eyJ[A-Za-z0-9_\-]{8,}\.eyJ[A-Za-z0-9_\-]{8,}\.[A-Za-z0-9_\-]{8,})\b/,
+    regex:
+      /\b(eyJ[A-Za-z0-9_\-]{8,}\.eyJ[A-Za-z0-9_\-]{8,}\.[A-Za-z0-9_\-]{8,})\b/,
   },
   {
     id: "env.kv",
     tier: "MEDIUM",
     category: "secret",
     description: "Env-style SECRET assignment with high-entropy value",
-    regex: /^[ \t]*(?:export[ \t]+)?[A-Z][A-Z0-9_]*(?:KEY|TOKEN|SECRET|PASSWORD|PASSWD|CREDENTIALS?|DSN|AUTH|COOKIE|SESSION|PRIVATE)[ \t]*=[ \t]*['"]?([^\s'"]{8,})['"]?/,
+    regex:
+      /^[ \t]*(?:export[ \t]+)?[A-Z][A-Z0-9_]*(?:KEY|TOKEN|SECRET|PASSWORD|PASSWD|CREDENTIALS?|DSN|AUTH|COOKIE|SESSION|PRIVATE)[ \t]*=[ \t]*['"]?([^\s'"]{8,})['"]?/,
     // Only fire on high-entropy values — kills `FOO_KEY=changeme` FPs.
     validate: (span) =>
       !isPlaceholderSpan(span) &&
@@ -428,7 +434,8 @@ export const PATTERNS: RedactPattern[] = [
     tier: "MEDIUM",
     category: "pii",
     description: "Phone number (E.164 / common national formats; US/EU-biased)",
-    regex: /(?<![\w.])(\+?[1-9]\d{0,2}[ \-.]?\(?\d{2,4}\)?[ \-.]?\d{3,4}[ \-.]?\d{3,4})(?![\w.])/,
+    regex:
+      /(?<![\w.])(\+?[1-9]\d{0,2}[ \-.]?\(?\d{2,4}\)?[ \-.]?\d{3,4}[ \-.]?\d{3,4})(?![\w.])/,
     autoRedactable: true,
     redactToken: "<REDACTED-PHONE>",
     validate: (span) => span.replace(/\D/g, "").length >= 10,
@@ -444,7 +451,9 @@ export const PATTERNS: RedactPattern[] = [
     // Reject the all-zero-octet placeholders SSNs never use.
     validate: (span) => {
       const [a, b, c] = span.split("-");
-      return a !== "000" && b !== "00" && c !== "0000" && a !== "666" && a[0] !== "9";
+      return (
+        a !== "000" && b !== "00" && c !== "0000" && a !== "666" && a[0] !== "9"
+      );
     },
   },
   {
@@ -470,7 +479,8 @@ export const PATTERNS: RedactPattern[] = [
     tier: "MEDIUM",
     category: "pii",
     description: "Crypto wallet address (ETH/BTC)",
-    regex: /\b(0x[a-fA-F0-9]{40}|bc1[a-z0-9]{25,39}|[13][a-km-zA-HJ-NP-Z1-9]{25,34})\b/,
+    regex:
+      /\b(0x[a-fA-F0-9]{40}|bc1[a-z0-9]{25,39}|[13][a-km-zA-HJ-NP-Z1-9]{25,34})\b/,
     validate: (span) => looksLikeWallet(span),
   },
 
@@ -480,7 +490,8 @@ export const PATTERNS: RedactPattern[] = [
     tier: "MEDIUM",
     category: "internal",
     description: "Internal hostname (*.internal/.corp/.local/.prod/.staging)",
-    regex: /\b([a-z0-9][a-z0-9\-]*\.(?:internal|corp|local|lan|prod|staging))\b/i,
+    regex:
+      /\b([a-z0-9][a-z0-9\-]*\.(?:internal|corp|local|lan|prod|staging))\b/i,
   },
   {
     id: "internal.url_private",
@@ -496,14 +507,17 @@ export const PATTERNS: RedactPattern[] = [
     tier: "MEDIUM",
     category: "legal",
     description: "Confidentiality / NDA marker",
-    regex: /\b(CONFIDENTIAL|UNDER NDA|ATTORNEY[- ]CLIENT|PRIVILEGED|DO NOT DISTRIBUTE|EYES ONLY)\b/,
+    regex:
+      /\b(CONFIDENTIAL|UNDER NDA|ATTORNEY[- ]CLIENT|PRIVILEGED|DO NOT DISTRIBUTE|EYES ONLY)\b/,
   },
   {
     id: "legal.named_criticism",
     tier: "MEDIUM",
     category: "legal",
-    description: "Negative judgment near a capitalized full name (semantic pass is primary)",
-    regex: /\b(incompetent|negligent|fraudulent|fraud|fired|terminated|harassed|underperforming)\b/i,
+    description:
+      "Negative judgment near a capitalized full name (semantic pass is primary)",
+    regex:
+      /\b(incompetent|negligent|fraudulent|fraud|fired|terminated|harassed|underperforming)\b/i,
     // Require a Capitalized Two-Word name within the window.
     nearRegex: /\b[A-Z][a-z]+ [A-Z][a-z]+\b/,
     nearWindow: 80,

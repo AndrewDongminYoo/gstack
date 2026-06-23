@@ -26,9 +26,7 @@
  */
 
 import { execFileSync } from "child_process";
-import {
-  createHash,
-} from "crypto";
+import { createHash } from "crypto";
 import {
   existsSync,
   mkdirSync,
@@ -172,7 +170,10 @@ export function readGbrainVersion(env?: NodeJS.ProcessEnv): string {
   return result;
 }
 
-function configFingerprint(env?: NodeJS.ProcessEnv): { mtime: number; size: number } {
+function configFingerprint(env?: NodeJS.ProcessEnv): {
+  mtime: number;
+  size: number;
+} {
   try {
     const st = statSync(gbrainConfigPath(env));
     return { mtime: Math.floor(st.mtimeMs), size: st.size };
@@ -216,7 +217,9 @@ function keysEqual(a: CacheEntry["key"], b: CacheEntry["key"]): boolean {
 function readCache(key: CacheEntry["key"]): LocalEngineStatus | null {
   if (!existsSync(cacheFilePath())) return null;
   try {
-    const raw = JSON.parse(readFileSync(cacheFilePath(), "utf-8")) as CacheEntry;
+    const raw = JSON.parse(
+      readFileSync(cacheFilePath(), "utf-8"),
+    ) as CacheEntry;
     if (raw.schema_version !== 1) return null;
     if (Date.now() - raw.cached_at > CACHE_TTL_MS) return null;
     if (!keysEqual(raw.key, key)) return null;
@@ -310,7 +313,9 @@ function freshClassify(env?: NodeJS.ProcessEnv): LocalEngineStatus {
  *
  * Returns one of 5 states. Never throws — failure modes are surfaced as states.
  */
-export function localEngineStatus(opts: ClassifyOptions = {}): LocalEngineStatus {
+export function localEngineStatus(
+  opts: ClassifyOptions = {},
+): LocalEngineStatus {
   const env = opts.env ?? process.env;
   const gbrainBin = resolveGbrainBin(env);
   const gbrainVersion = gbrainBin ? readGbrainVersion(env) : "";

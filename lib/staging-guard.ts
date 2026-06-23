@@ -67,7 +67,10 @@ export interface StagingVerdict {
  * @param dir         Candidate path (e.g. gbrain checkpoint.dir, or the active staging dir).
  * @param gstackHome  Resolved $GSTACK_HOME (injected for testability).
  */
-export function checkOwnedStagingDir(dir: string, gstackHome: string): StagingVerdict {
+export function checkOwnedStagingDir(
+  dir: string,
+  gstackHome: string,
+): StagingVerdict {
   if (!dir || typeof dir !== "string") {
     return { ok: false, reason: "empty or non-string path" };
   }
@@ -78,7 +81,10 @@ export function checkOwnedStagingDir(dir: string, gstackHome: string): StagingVe
     home = realpathSync(gstackHome);
   } catch {
     // Missing path or broken symlink ⇒ cannot prove ownership ⇒ refuse.
-    return { ok: false, reason: "unresolvable path (missing dir or broken symlink)" };
+    return {
+      ok: false,
+      reason: "unresolvable path (missing dir or broken symlink)",
+    };
   }
   // The target itself must be a directory (not a file/socket/etc named like one).
   try {
@@ -92,20 +98,32 @@ export function checkOwnedStagingDir(dir: string, gstackHome: string): StagingVe
     return { ok: false, reason: `not a direct child of GSTACK_HOME (${home})` };
   }
   if (!basename(canon).startsWith(STAGING_PREFIX)) {
-    return { ok: false, reason: `basename does not start with "${STAGING_PREFIX}"` };
+    return {
+      ok: false,
+      reason: `basename does not start with "${STAGING_PREFIX}"`,
+    };
   }
   if (existsSync(join(canon, ".git"))) {
     // Tripwire: never recurse-delete anything that looks like a git work tree.
-    return { ok: false, reason: "path contains .git — refusing to touch a git working tree" };
+    return {
+      ok: false,
+      reason: "path contains .git — refusing to touch a git working tree",
+    };
   }
   // Marker must be a REGULAR FILE we minted — not a directory or symlink that
   // merely shares the name (lstat, not stat, so a symlink can't impersonate it).
   try {
     if (!lstatSync(join(canon, STAGING_MARKER)).isFile()) {
-      return { ok: false, reason: `"${STAGING_MARKER}" exists but is not a regular file` };
+      return {
+        ok: false,
+        reason: `"${STAGING_MARKER}" exists but is not a regular file`,
+      };
     }
   } catch {
-    return { ok: false, reason: `missing "${STAGING_MARKER}" marker — not minted by makeStagingDir` };
+    return {
+      ok: false,
+      reason: `missing "${STAGING_MARKER}" marker — not minted by makeStagingDir`,
+    };
   }
   return { ok: true, canonicalPath: canon };
 }
