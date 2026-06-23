@@ -31,9 +31,9 @@
  * harness.
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
-import * as os from 'os';
+import * as fs from "fs";
+import * as path from "path";
+import * as os from "os";
 
 export interface SecretSinkOptions {
   bin: string;
@@ -49,8 +49,8 @@ export interface SecretSinkOptions {
 }
 
 export interface Leak {
-  channel: 'stdout' | 'stderr' | 'file' | 'telemetry';
-  matchType: 'exact' | 'url-decoded' | 'prefix-12' | 'base64';
+  channel: "stdout" | "stderr" | "file" | "telemetry";
+  matchType: "exact" | "url-decoded" | "prefix-12" | "base64";
   /** For channel=file|telemetry: the path relative to tmpHome. */
   where?: string;
   /** Short excerpt around the match (for debugging). */
@@ -71,24 +71,27 @@ export interface SinkResult {
   tmpHome: string;
 }
 
-export async function runWithSecretSink(opts: SecretSinkOptions): Promise<SinkResult> {
-  const tmpHome = opts.tmpHome ?? fs.mkdtempSync(path.join(os.tmpdir(), 'sink-'));
+export async function runWithSecretSink(
+  opts: SecretSinkOptions,
+): Promise<SinkResult> {
+  const tmpHome =
+    opts.tmpHome ?? fs.mkdtempSync(path.join(os.tmpdir(), "sink-"));
   // Make sure .gstack exists so bins that append to analytics have somewhere to write.
-  fs.mkdirSync(path.join(tmpHome, '.gstack', 'analytics'), { recursive: true });
+  fs.mkdirSync(path.join(tmpHome, ".gstack", "analytics"), { recursive: true });
 
   const env = {
     // Minimal PATH that still finds jq/git/curl/sed so our bins work.
-    PATH: '/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/usr/local/bin',
+    PATH: "/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/usr/local/bin",
     HOME: tmpHome,
-    GSTACK_HOME: path.join(tmpHome, '.gstack'),
+    GSTACK_HOME: path.join(tmpHome, ".gstack"),
     ...(opts.env || {}),
   };
 
   const proc = Bun.spawn([opts.bin, ...opts.args], {
     env,
-    stdout: 'pipe',
-    stderr: 'pipe',
-    stdin: opts.stdin ? 'pipe' : 'ignore',
+    stdout: "pipe",
+    stderr: "pipe",
+    stdin: opts.stdin ? "pipe" : "ignore",
   });
   if (opts.stdin) {
     proc.stdin!.write(opts.stdin);
@@ -97,7 +100,11 @@ export async function runWithSecretSink(opts: SecretSinkOptions): Promise<SinkRe
 
   const timeoutMs = opts.timeoutMs ?? 10_000;
   const timeoutHandle = setTimeout(() => {
-    try { proc.kill(); } catch { /* already done */ }
+    try {
+      proc.kill();
+    } catch {
+      /* already done */
+    }
   }, timeoutMs);
 
   const [stdout, stderr, status] = await Promise.all([
@@ -112,7 +119,7 @@ export async function runWithSecretSink(opts: SecretSinkOptions): Promise<SinkRe
   const telemetry: Record<string, string> = {};
   walk(tmpHome, tmpHome, filesWritten);
   for (const [rel, content] of Object.entries(filesWritten)) {
-    if (rel.startsWith('.gstack/analytics/') && rel.endsWith('.jsonl')) {
+    if (rel.startsWith(".gstack/analytics/") && rel.endsWith(".jsonl")) {
       telemetry[rel] = content;
     }
   }
@@ -125,17 +132,32 @@ export async function runWithSecretSink(opts: SecretSinkOptions): Promise<SinkRe
     for (const { rule, matchType } of rules) {
       const stdoutHit = findHit(stdout, rule);
       if (stdoutHit !== null) {
-        leaks.push({ channel: 'stdout', matchType, excerpt: excerptAt(stdout, stdoutHit) });
+        leaks.push({
+          channel: "stdout",
+          matchType,
+          excerpt: excerptAt(stdout, stdoutHit),
+        });
       }
       const stderrHit = findHit(stderr, rule);
       if (stderrHit !== null) {
-        leaks.push({ channel: 'stderr', matchType, excerpt: excerptAt(stderr, stderrHit) });
+        leaks.push({
+          channel: "stderr",
+          matchType,
+          excerpt: excerptAt(stderr, stderrHit),
+        });
       }
       for (const [rel, content] of Object.entries(filesWritten)) {
         const hit = findHit(content, rule);
         if (hit !== null) {
-          const channel = rel.startsWith('.gstack/analytics/') ? 'telemetry' : 'file';
-          leaks.push({ channel, matchType, where: rel, excerpt: excerptAt(content, hit) });
+          const channel = rel.startsWith(".gstack/analytics/")
+            ? "telemetry"
+            : "file";
+          leaks.push({
+            channel,
+            matchType,
+            where: rel,
+            excerpt: excerptAt(content, hit),
+          });
         }
       }
     }
@@ -162,22 +184,25 @@ function walk(root: string, dir: string, out: Record<string, string>) {
     if (stat.size > 1024 * 1024) continue; // skip huge files, unlikely to be secrets
     const rel = path.relative(root, full);
     try {
-      out[rel] = fs.readFileSync(full, 'utf-8');
+      out[rel] = fs.readFileSync(full, "utf-8");
     } catch {
       // binary or unreadable — skip
     }
   }
 }
 
-function buildMatchRules(seed: string): Array<{ rule: string; matchType: Leak['matchType'] }> {
-  const rules: Array<{ rule: string; matchType: Leak['matchType'] }> = [];
-  rules.push({ rule: seed, matchType: 'exact' });
+function buildMatchRules(
+  seed: string,
+): Array<{ rule: string; matchType: Leak["matchType"] }> {
+  const rules: Array<{ rule: string; matchType: Leak["matchType"] }> = [];
+  rules.push({ rule: seed, matchType: "exact" });
 
   // URL-decoded form — catches cases where the seed got percent-encoded
   // (e.g., a password with a '@' embedded in a connection string).
   try {
     const decoded = decodeURIComponent(seed);
-    if (decoded !== seed) rules.push({ rule: decoded, matchType: 'url-decoded' });
+    if (decoded !== seed)
+      rules.push({ rule: decoded, matchType: "url-decoded" });
   } catch {
     // malformed %-encoding in the seed itself; ignore
   }
@@ -186,14 +211,17 @@ function buildMatchRules(seed: string): Array<{ rule: string; matchType: Leak['m
   // first 10 chars for debugging." Only applied to seeds >= 16 chars,
   // since shorter seeds would false-positive against normal words.
   if (seed.length >= 16) {
-    rules.push({ rule: seed.slice(0, 12), matchType: 'prefix-12' });
+    rules.push({ rule: seed.slice(0, 12), matchType: "prefix-12" });
   }
 
   // Base64 encoding — catches leaks through auth headers or config files
   // that encode the seed. Only for seeds >= 12 chars to reduce false
   // positives from short strings that happen to be valid base64.
   if (seed.length >= 12) {
-    rules.push({ rule: Buffer.from(seed).toString('base64'), matchType: 'base64' });
+    rules.push({
+      rule: Buffer.from(seed).toString("base64"),
+      matchType: "base64",
+    });
   }
 
   return rules;
@@ -208,5 +236,5 @@ function findHit(haystack: string, needle: string): number | null {
 function excerptAt(s: string, idx: number): string {
   const start = Math.max(0, idx - 20);
   const end = Math.min(s.length, idx + 40);
-  return s.slice(start, end).replace(/\n/g, '\\n');
+  return s.slice(start, end).replace(/\n/g, "\\n");
 }

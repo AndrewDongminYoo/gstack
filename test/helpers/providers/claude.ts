@@ -1,10 +1,15 @@
-import type { ProviderAdapter, RunOpts, RunResult, AvailabilityCheck } from './types';
-import { estimateCostUsd } from '../pricing';
-import { execFileSync } from 'child_process';
-import * as fs from 'fs';
-import * as path from 'path';
-import * as os from 'os';
-import { resolveClaudeCommand } from '../../../browse/src/claude-bin';
+import type {
+  ProviderAdapter,
+  RunOpts,
+  RunResult,
+  AvailabilityCheck,
+} from "./types";
+import { estimateCostUsd } from "../pricing";
+import { execFileSync } from "child_process";
+import * as fs from "fs";
+import * as path from "path";
+import * as os from "os";
+import { resolveClaudeCommand } from "../../../browse/src/claude-bin";
 
 /**
  * Claude adapter — wraps the `claude` CLI via claude -p.
@@ -15,22 +20,30 @@ import { resolveClaudeCommand } from '../../../browse/src/claude-bin';
  * swap to session-runner's full stream-json parser.
  */
 export class ClaudeAdapter implements ProviderAdapter {
-  readonly name = 'claude';
-  readonly family = 'claude' as const;
+  readonly name = "claude";
+  readonly family = "claude" as const;
 
   async available(): Promise<AvailabilityCheck> {
     // Binary on PATH (or GSTACK_CLAUDE_BIN override). Routes through the shared
     // resolver so Windows + override paths behave the same as production sites.
     const resolved = resolveClaudeCommand();
     if (!resolved) {
-      return { ok: false, reason: 'claude CLI not found on PATH. Install from https://claude.ai/download or npm i -g @anthropic-ai/claude-code (or set GSTACK_CLAUDE_BIN)' };
+      return {
+        ok: false,
+        reason:
+          "claude CLI not found on PATH. Install from https://claude.ai/download or npm i -g @anthropic-ai/claude-code (or set GSTACK_CLAUDE_BIN)",
+      };
     }
     // Auth sniff: ~/.claude/.credentials.json OR ANTHROPIC_API_KEY
-    const credsPath = path.join(os.homedir(), '.claude', '.credentials.json');
+    const credsPath = path.join(os.homedir(), ".claude", ".credentials.json");
     const hasCreds = fs.existsSync(credsPath);
     const hasKey = !!process.env.ANTHROPIC_API_KEY;
     if (!hasCreds && !hasKey) {
-      return { ok: false, reason: 'No Claude auth found. Log in via `claude` interactive session, or export ANTHROPIC_API_KEY.' };
+      return {
+        ok: false,
+        reason:
+          "No Claude auth found. Log in via `claude` interactive session, or export ANTHROPIC_API_KEY.",
+      };
     }
     return { ok: true };
   }
@@ -39,10 +52,12 @@ export class ClaudeAdapter implements ProviderAdapter {
     const start = Date.now();
     const resolved = resolveClaudeCommand();
     if (!resolved) {
-      throw new Error('claude CLI not resolvable (set GSTACK_CLAUDE_BIN or install)');
+      throw new Error(
+        "claude CLI not resolvable (set GSTACK_CLAUDE_BIN or install)",
+      );
     }
-    const args = [...resolved.argsPrefix, '-p', '--output-format', 'json'];
-    if (opts.model) args.push('--model', opts.model);
+    const args = [...resolved.argsPrefix, "-p", "--output-format", "json"];
+    if (opts.model) args.push("--model", opts.model);
     if (opts.extraArgs) args.push(...opts.extraArgs);
 
     try {
@@ -50,11 +65,11 @@ export class ClaudeAdapter implements ProviderAdapter {
         input: opts.prompt,
         cwd: opts.workdir,
         timeout: opts.timeoutMs,
-        encoding: 'utf-8',
+        encoding: "utf-8",
         maxBuffer: 32 * 1024 * 1024,
         // Default GSTACK_HEADLESS=1 so a benchmark run classifies as headless (an
         // AskUserQuestion failure BLOCKs rather than emitting unanswerable prose).
-        env: { ...process.env, GSTACK_HEADLESS: '1' },
+        env: { ...process.env, GSTACK_HEADLESS: "1" },
       });
       const parsed = this.parseOutput(out);
       return {
@@ -62,27 +77,54 @@ export class ClaudeAdapter implements ProviderAdapter {
         tokens: parsed.tokens,
         durationMs: Date.now() - start,
         toolCalls: parsed.toolCalls,
-        modelUsed: parsed.modelUsed || opts.model || 'claude-opus-4-7',
+        modelUsed: parsed.modelUsed || opts.model || "claude-opus-4-7",
       };
     } catch (err: unknown) {
       const durationMs = Date.now() - start;
-      const e = err as { code?: string; stderr?: Buffer; signal?: string; message?: string };
-      const stderr = e.stderr?.toString() ?? '';
-      if (e.signal === 'SIGTERM' || e.code === 'ETIMEDOUT') {
-        return this.emptyResult(durationMs, { code: 'timeout', reason: `exceeded ${opts.timeoutMs}ms` }, opts.model);
+      const e = err as {
+        code?: string;
+        stderr?: Buffer;
+        signal?: string;
+        message?: string;
+      };
+      const stderr = e.stderr?.toString() ?? "";
+      if (e.signal === "SIGTERM" || e.code === "ETIMEDOUT") {
+        return this.emptyResult(
+          durationMs,
+          { code: "timeout", reason: `exceeded ${opts.timeoutMs}ms` },
+          opts.model,
+        );
       }
       if (/unauthorized|auth|login/i.test(stderr)) {
-        return this.emptyResult(durationMs, { code: 'auth', reason: stderr.slice(0, 400) }, opts.model);
+        return this.emptyResult(
+          durationMs,
+          { code: "auth", reason: stderr.slice(0, 400) },
+          opts.model,
+        );
       }
       if (/rate[- ]?limit|429/i.test(stderr)) {
-        return this.emptyResult(durationMs, { code: 'rate_limit', reason: stderr.slice(0, 400) }, opts.model);
+        return this.emptyResult(
+          durationMs,
+          { code: "rate_limit", reason: stderr.slice(0, 400) },
+          opts.model,
+        );
       }
-      return this.emptyResult(durationMs, { code: 'unknown', reason: (e.message ?? stderr ?? 'unknown').slice(0, 400) }, opts.model);
+      return this.emptyResult(
+        durationMs,
+        {
+          code: "unknown",
+          reason: (e.message ?? stderr ?? "unknown").slice(0, 400),
+        },
+        opts.model,
+      );
     }
   }
 
-  estimateCost(tokens: { input: number; output: number; cached?: number }, model?: string): number {
-    return estimateCostUsd(tokens, model ?? 'claude-opus-4-7');
+  estimateCost(
+    tokens: { input: number; output: number; cached?: number },
+    model?: string,
+  ): number {
+    return estimateCostUsd(tokens, model ?? "claude-opus-4-7");
   }
 
   /**
@@ -91,10 +133,16 @@ export class ClaudeAdapter implements ProviderAdapter {
    *     num_turns, session_id, ... }
    * Older formats may differ — adapter is best-effort.
    */
-  private parseOutput(raw: string): { output: string; tokens: { input: number; output: number; cached?: number }; toolCalls: number; modelUsed?: string } {
+  private parseOutput(raw: string): {
+    output: string;
+    tokens: { input: number; output: number; cached?: number };
+    toolCalls: number;
+    modelUsed?: string;
+  } {
     try {
       const obj = JSON.parse(raw);
-      const result = typeof obj.result === 'string' ? obj.result : String(obj.result ?? '');
+      const result =
+        typeof obj.result === "string" ? obj.result : String(obj.result ?? "");
       const u = obj.usage ?? {};
       return {
         output: result,
@@ -112,13 +160,17 @@ export class ClaudeAdapter implements ProviderAdapter {
     }
   }
 
-  private emptyResult(durationMs: number, error: RunResult['error'], model?: string): RunResult {
+  private emptyResult(
+    durationMs: number,
+    error: RunResult["error"],
+    model?: string,
+  ): RunResult {
     return {
-      output: '',
+      output: "",
       tokens: { input: 0, output: 0 },
       durationMs,
       toolCalls: 0,
-      modelUsed: model ?? 'claude-opus-4-7',
+      modelUsed: model ?? "claude-opus-4-7",
       error,
     };
   }

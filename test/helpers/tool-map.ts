@@ -15,18 +15,21 @@
  */
 
 export type ToolName =
-  | 'Read'
-  | 'Write'
-  | 'Edit'
-  | 'Bash'
-  | 'Agent'
-  | 'Glob'
-  | 'Grep'
-  | 'AskUserQuestion'
-  | 'WebSearch'
-  | 'WebFetch';
+  | "Read"
+  | "Write"
+  | "Edit"
+  | "Bash"
+  | "Agent"
+  | "Glob"
+  | "Grep"
+  | "AskUserQuestion"
+  | "WebSearch"
+  | "WebFetch";
 
-export const TOOL_COMPATIBILITY: Record<'claude' | 'gpt' | 'gemini', Record<ToolName, boolean>> = {
+export const TOOL_COMPATIBILITY: Record<
+  "claude" | "gpt" | "gemini",
+  Record<ToolName, boolean>
+> = {
   claude: {
     Read: true,
     Write: true,
@@ -43,14 +46,14 @@ export const TOOL_COMPATIBILITY: Record<'claude' | 'gpt' | 'gemini', Record<Tool
     // Codex CLI has a narrower tool surface: it uses shell + apply_patch.
     // Read/Glob/Grep-style operations happen via shell pipelines.
     Read: true,
-    Write: false,       // apply_patch handles writes; no standalone Write tool
-    Edit: false,        // apply_patch handles edits; no standalone Edit tool
+    Write: false, // apply_patch handles writes; no standalone Write tool
+    Edit: false, // apply_patch handles edits; no standalone Edit tool
     Bash: true,
     Agent: false,
     Glob: false,
     Grep: false,
     AskUserQuestion: false,
-    WebSearch: true,    // --enable web_search_cached
+    WebSearch: true, // --enable web_search_cached
     WebFetch: false,
   },
   gemini: {
@@ -74,9 +77,9 @@ export const TOOL_COMPATIBILITY: Record<'claude' | 'gpt' | 'gemini', Record<Tool
  * Empty array means full compatibility.
  */
 export function missingTools(
-  provider: 'claude' | 'gpt' | 'gemini',
-  requiredTools: ToolName[]
+  provider: "claude" | "gpt" | "gemini",
+  requiredTools: ToolName[],
 ): ToolName[] {
   const map = TOOL_COMPATIBILITY[provider];
-  return requiredTools.filter(t => !map[t]);
+  return requiredTools.filter((t) => !map[t]);
 }

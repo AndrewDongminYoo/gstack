@@ -18,11 +18,14 @@
  * load-bearing prose even when size stays within ratio.
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
-import type { ParityBaseline, SkillBaselineEntry } from './capture-parity-baseline';
-import { captureBaseline } from './capture-parity-baseline';
-import { CARVE_GUARDS } from './carve-guards';
+import * as fs from "fs";
+import * as path from "path";
+import type {
+  ParityBaseline,
+  SkillBaselineEntry,
+} from "./capture-parity-baseline";
+import { captureBaseline } from "./capture-parity-baseline";
+import { CARVE_GUARDS } from "./carve-guards";
 
 export interface ParityInvariant {
   skill: string;
@@ -69,19 +72,23 @@ export function readSkillForParity(
   skill: string,
   sectioned: boolean,
 ): { text: string; unionBytes: number; skeletonBytes: number } {
-  const skeleton = fs.readFileSync(path.join(repoRoot, skill, 'SKILL.md'), 'utf-8');
-  const skeletonBytes = Buffer.byteLength(skeleton, 'utf-8');
-  if (!sectioned) return { text: skeleton, unionBytes: skeletonBytes, skeletonBytes };
+  const skeleton = fs.readFileSync(
+    path.join(repoRoot, skill, "SKILL.md"),
+    "utf-8",
+  );
+  const skeletonBytes = Buffer.byteLength(skeleton, "utf-8");
+  if (!sectioned)
+    return { text: skeleton, unionBytes: skeletonBytes, skeletonBytes };
 
   let text = skeleton;
   let unionBytes = skeletonBytes;
-  const sectionsDir = path.join(repoRoot, skill, 'sections');
+  const sectionsDir = path.join(repoRoot, skill, "sections");
   if (fs.existsSync(sectionsDir)) {
     for (const f of fs.readdirSync(sectionsDir).sort()) {
-      if (!f.endsWith('.md')) continue;
-      const sec = fs.readFileSync(path.join(sectionsDir, f), 'utf-8');
-      text += '\n' + sec;
-      unionBytes += Buffer.byteLength(sec, 'utf-8');
+      if (!f.endsWith(".md")) continue;
+      const sec = fs.readFileSync(path.join(sectionsDir, f), "utf-8");
+      text += "\n" + sec;
+      unionBytes += Buffer.byteLength(sec, "utf-8");
     }
   }
   return { text, unionBytes, skeletonBytes };
@@ -94,7 +101,9 @@ export function checkSkillParity(
   repoRoot: string,
 ): ParityCheckResult {
   const failures: string[] = [];
-  const needText = !!(invariant.mustContain?.length || invariant.mustHaveHeadings?.length);
+  const needText = !!(
+    invariant.mustContain?.length || invariant.mustHaveHeadings?.length
+  );
 
   // Resolve the text + size to check against. Carved skills union skeleton +
   // sections; monoliths use the skeleton alone. Read on demand so size-only
@@ -106,17 +115,29 @@ export function checkSkillParity(
       const r = readSkillForParity(repoRoot, invariant.skill, true);
       checkText = r.text;
       checkBytes = r.unionBytes;
-      if (invariant.maxSkeletonBytes !== undefined && r.skeletonBytes > invariant.maxSkeletonBytes) {
-        failures.push(`skeleton ${r.skeletonBytes} > maxSkeletonBytes ${invariant.maxSkeletonBytes}`);
+      if (
+        invariant.maxSkeletonBytes !== undefined &&
+        r.skeletonBytes > invariant.maxSkeletonBytes
+      ) {
+        failures.push(
+          `skeleton ${r.skeletonBytes} > maxSkeletonBytes ${invariant.maxSkeletonBytes}`,
+        );
       }
     } catch (err) {
-      failures.push(`cannot read carved skill ${invariant.skill}: ${(err as Error).message}`);
+      failures.push(
+        `cannot read carved skill ${invariant.skill}: ${(err as Error).message}`,
+      );
     }
   } else if (needText) {
     try {
-      checkText = fs.readFileSync(path.join(repoRoot, invariant.skill, 'SKILL.md'), 'utf-8');
+      checkText = fs.readFileSync(
+        path.join(repoRoot, invariant.skill, "SKILL.md"),
+        "utf-8",
+      );
     } catch (err) {
-      failures.push(`cannot read ${path.join(repoRoot, invariant.skill, 'SKILL.md')}: ${(err as Error).message}`);
+      failures.push(
+        `cannot read ${path.join(repoRoot, invariant.skill, "SKILL.md")}: ${(err as Error).message}`,
+      );
     }
   }
 
@@ -124,7 +145,9 @@ export function checkSkillParity(
   if (invariant.maxSizeRatio !== undefined && baseline) {
     const ratio = checkBytes / baseline.skillMdBytes;
     if (ratio > invariant.maxSizeRatio) {
-      failures.push(`size ratio ${ratio.toFixed(3)} > maxSizeRatio ${invariant.maxSizeRatio}`);
+      failures.push(
+        `size ratio ${ratio.toFixed(3)} > maxSizeRatio ${invariant.maxSizeRatio}`,
+      );
     }
   }
   if (invariant.minBytes !== undefined && checkBytes < invariant.minBytes) {
@@ -177,18 +200,22 @@ export function runParityChecks(opts: {
       details.push({
         skill: invariant.skill,
         passed: false,
-        failures: [`skill removed: ${invariant.skill} present in baseline but not current state`],
+        failures: [
+          `skill removed: ${invariant.skill} present in baseline but not current state`,
+        ],
       });
       continue;
     }
-    details.push(checkSkillParity(invariant, currentEntry, baselineEntry, repoRoot));
+    details.push(
+      checkSkillParity(invariant, currentEntry, baselineEntry, repoRoot),
+    );
   }
   return {
     baselineTag: baseline.tag,
     currentCapturedAt: current.capturedAt,
     totalChecks: details.length,
-    passed: details.filter(d => d.passed).length,
-    failed: details.filter(d => !d.passed).length,
+    passed: details.filter((d) => d.passed).length,
+    failed: details.filter((d) => !d.passed).length,
     details,
   };
 }
@@ -207,9 +234,9 @@ export function runParityChecks(opts: {
 const MONOLITH_INVARIANTS: ParityInvariant[] = [
   // cso is now carved — its invariant is generated from CARVE_GUARDS below.
   {
-    skill: 'review',
-    mustContain: ['confidence', 'P1', 'P2'],
-    mustHaveHeadings: ['## Preamble', '## When to invoke'],
+    skill: "review",
+    mustContain: ["confidence", "P1", "P2"],
+    mustHaveHeadings: ["## Preamble", "## When to invoke"],
     // The adversarial step swapped its bare `command -v codex` check for the shared
     // codexPreflight() block (install + auth tri-state + CODEX_MODE branch prose),
     // landing ~6.3% over the v1.53.0.0 baseline. Intentional: it adds proper
@@ -218,16 +245,16 @@ const MONOLITH_INVARIANTS: ParityInvariant[] = [
     minBytes: 70_000,
   },
   {
-    skill: 'qa',
-    mustContain: ['bug', 'browse', 'fix'],
-    mustHaveHeadings: ['## Preamble', '## When to invoke'],
+    skill: "qa",
+    mustContain: ["bug", "browse", "fix"],
+    mustHaveHeadings: ["## Preamble", "## When to invoke"],
     maxSizeRatio: 1.05,
     minBytes: 50_000,
   },
   {
-    skill: 'investigate',
-    mustContain: ['root cause', 'hypothes'],
-    mustHaveHeadings: ['## Preamble', '## When to invoke'],
+    skill: "investigate",
+    mustContain: ["root cause", "hypothes"],
+    mustHaveHeadings: ["## Preamble", "## When to invoke"],
     // Cross-cutting preamble growth (v1.57.2.0 AUQ-failure prose fallback ~2KB + the
     // cross-session decision-memory nudge) lands this skill just over the strict 1.05;
     // headroom for the shared preamble additions (matches the carved-skill overrides).
@@ -235,9 +262,9 @@ const MONOLITH_INVARIANTS: ParityInvariant[] = [
     minBytes: 30_000,
   },
   {
-    skill: 'autoplan',
-    mustContain: ['ceo', 'eng', 'design'],
-    mustHaveHeadings: ['## Preamble', '## When to invoke'],
+    skill: "autoplan",
+    mustContain: ["ceo", "eng", "design"],
+    mustHaveHeadings: ["## Preamble", "## When to invoke"],
     maxSizeRatio: 1.05,
     minBytes: 70_000,
   },
@@ -252,15 +279,17 @@ const MONOLITH_INVARIANTS: ParityInvariant[] = [
  * plan-devex-review (previously in SECTIONS_EXTRACTED but missing a sectioned
  * parity invariant) is now guarded.
  */
-const CARVED_INVARIANTS: ParityInvariant[] = Object.values(CARVE_GUARDS).map((g) => ({
-  skill: g.skill,
-  sectioned: true,
-  maxSkeletonBytes: g.maxSkeletonBytes,
-  minBytes: g.minUnionBytes,
-  mustContain: g.mustContain,
-  mustHaveHeadings: ['## Preamble', '## When to invoke'],
-  maxSizeRatio: g.maxSizeRatio ?? 1.05,
-}));
+const CARVED_INVARIANTS: ParityInvariant[] = Object.values(CARVE_GUARDS).map(
+  (g) => ({
+    skill: g.skill,
+    sectioned: true,
+    maxSkeletonBytes: g.maxSkeletonBytes,
+    minBytes: g.minUnionBytes,
+    mustContain: g.mustContain,
+    mustHaveHeadings: ["## Preamble", "## When to invoke"],
+    maxSizeRatio: g.maxSizeRatio ?? 1.05,
+  }),
+);
 
 export const PARITY_INVARIANTS: ParityInvariant[] = [
   ...MONOLITH_INVARIANTS,

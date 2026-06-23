@@ -13,19 +13,19 @@
  * - Message events are streamed with `delta: true` — must concatenate
  */
 
-import * as path from 'path';
-import { hermeticChildEnv } from './hermetic-env';
+import * as path from "path";
+import { hermeticChildEnv } from "./hermetic-env";
 
 // --- Interfaces ---
 
 export interface GeminiResult {
-  output: string;           // Full assistant message text (concatenated deltas)
-  toolCalls: string[];      // Tool names from tool_use events
-  tokens: number;           // Total tokens used
-  exitCode: number;         // Process exit code
-  durationMs: number;       // Wall clock time
+  output: string; // Full assistant message text (concatenated deltas)
+  toolCalls: string[]; // Tool names from tool_use events
+  tokens: number; // Total tokens used
+  exitCode: number; // Process exit code
+  durationMs: number; // Wall clock time
   sessionId: string | null; // Session ID from init event
-  rawLines: string[];       // Raw JSONL lines for debugging
+  rawLines: string[]; // Raw JSONL lines for debugging
 }
 
 // --- JSONL parser ---
@@ -58,27 +58,29 @@ export function parseGeminiJSONL(lines: string[]): ParsedGeminiJSONL {
     if (!line.trim()) continue;
     try {
       const obj = JSON.parse(line);
-      const t = obj.type || '';
+      const t = obj.type || "";
 
-      if (t === 'init') {
-        const sid = obj.session_id || '';
+      if (t === "init") {
+        const sid = obj.session_id || "";
         if (sid) sessionId = sid;
-      } else if (t === 'message') {
-        if (obj.role === 'assistant' && obj.content) {
+      } else if (t === "message") {
+        if (obj.role === "assistant" && obj.content) {
           outputParts.push(obj.content);
         }
-      } else if (t === 'tool_use') {
-        const name = obj.tool_name || '';
+      } else if (t === "tool_use") {
+        const name = obj.tool_name || "";
         if (name) toolCalls.push(name);
-      } else if (t === 'result') {
+      } else if (t === "result") {
         const stats = obj.stats || {};
-        tokens = (stats.total_tokens || 0);
+        tokens = stats.total_tokens || 0;
       }
-    } catch { /* skip malformed lines */ }
+    } catch {
+      /* skip malformed lines */
+    }
   }
 
   return {
-    output: outputParts.join(''),
+    output: outputParts.join(""),
     toolCalls,
     tokens,
     sessionId,
@@ -94,23 +96,19 @@ export function parseGeminiJSONL(lines: string[]): ParsedGeminiJSONL {
  * and returns a GeminiResult. Skips gracefully if gemini binary is not found.
  */
 export async function runGeminiSkill(opts: {
-  prompt: string;           // What to ask Gemini
-  timeoutMs?: number;       // Default 300000 (5 min)
-  cwd?: string;             // Working directory (where .agents/skills/ lives)
+  prompt: string; // What to ask Gemini
+  timeoutMs?: number; // Default 300000 (5 min)
+  cwd?: string; // Working directory (where .agents/skills/ lives)
 }): Promise<GeminiResult> {
-  const {
-    prompt,
-    timeoutMs = 300_000,
-    cwd,
-  } = opts;
+  const { prompt, timeoutMs = 300_000, cwd } = opts;
 
   const startTime = Date.now();
 
   // Check if gemini binary exists
-  const whichResult = Bun.spawnSync(['which', 'gemini']);
+  const whichResult = Bun.spawnSync(["which", "gemini"]);
   if (whichResult.exitCode !== 0) {
     return {
-      output: 'SKIP: gemini binary not found',
+      output: "SKIP: gemini binary not found",
       toolCalls: [],
       tokens: 0,
       exitCode: -1,
@@ -121,17 +119,23 @@ export async function runGeminiSkill(opts: {
   }
 
   // Build gemini command
-  const args = ['-p', prompt, '--output-format', 'stream-json', '--yolo'];
+  const args = ["-p", prompt, "--output-format", "stream-json", "--yolo"];
 
   // Spawn gemini — uses real HOME for auth (~/.gemini; HOME is allowlisted),
   // cwd for skill discovery. Hermetic scrub with gemini's auth surface
   // re-admitted (previously this spawn inherited the full operator env).
-  const proc = Bun.spawn(['gemini', ...args], {
+  const proc = Bun.spawn(["gemini", ...args], {
     cwd: cwd || process.cwd(),
-    stdout: 'pipe',
-    stderr: 'pipe',
+    stdout: "pipe",
+    stderr: "pipe",
     env: hermeticChildEnv(undefined, {
-      extraAllow: ['GEMINI_API_KEY', 'GOOGLE_API_KEY', 'GOOGLE_APPLICATION_CREDENTIALS', 'GOOGLE_CLOUD_*', 'GEMINI_*'],
+      extraAllow: [
+        "GEMINI_API_KEY",
+        "GOOGLE_API_KEY",
+        "GOOGLE_APPLICATION_CREDENTIALS",
+        "GOOGLE_CLOUD_*",
+        "GEMINI_*",
+      ],
     }),
   });
 
@@ -148,15 +152,15 @@ export async function runGeminiSkill(opts: {
 
   const reader = proc.stdout.getReader();
   const decoder = new TextDecoder();
-  let buf = '';
+  let buf = "";
 
   try {
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
       buf += decoder.decode(value, { stream: true });
-      const lines = buf.split('\n');
-      buf = lines.pop() || '';
+      const lines = buf.split("\n");
+      buf = lines.pop() || "";
       for (const line of lines) {
         if (!line.trim()) continue;
         collectedLines.push(line);
@@ -164,17 +168,29 @@ export async function runGeminiSkill(opts: {
         // Real-time progress to stderr
         try {
           const event = JSON.parse(line);
-          if (event.type === 'tool_use' && event.tool_name) {
+          if (event.type === "tool_use" && event.tool_name) {
             const elapsed = Math.round((Date.now() - startTime) / 1000);
-            process.stderr.write(`  [gemini ${elapsed}s] tool: ${event.tool_name}\n`);
-          } else if (event.type === 'message' && event.role === 'assistant' && event.content) {
+            process.stderr.write(
+              `  [gemini ${elapsed}s] tool: ${event.tool_name}\n`,
+            );
+          } else if (
+            event.type === "message" &&
+            event.role === "assistant" &&
+            event.content
+          ) {
             const elapsed = Math.round((Date.now() - startTime) / 1000);
-            process.stderr.write(`  [gemini ${elapsed}s] message: ${event.content.slice(0, 100)}\n`);
+            process.stderr.write(
+              `  [gemini ${elapsed}s] message: ${event.content.slice(0, 100)}\n`,
+            );
           }
-        } catch { /* skip — parseGeminiJSONL will handle it later */ }
+        } catch {
+          /* skip — parseGeminiJSONL will handle it later */
+        }
       }
     }
-  } catch { /* stream read error — fall through to exit code handling */ }
+  } catch {
+    /* stream read error — fall through to exit code handling */
+  }
 
   // Flush remaining buffer
   if (buf.trim()) {

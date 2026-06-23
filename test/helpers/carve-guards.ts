@@ -78,7 +78,7 @@ export interface CarveGuard {
    *                 ship's git/VERSION/CHANGELOG state). The data-driven loop
    *                 skips it; E1 asserts `externalTest` exists instead.
    */
-  behavioral: 'plan' | 'prompt' | 'external';
+  behavioral: "plan" | "prompt" | "external";
   /** Required when behavioral === 'external': path (repo-relative) to the dedicated test. */
   externalTest?: string;
   /** Parity: max bytes for the always-loaded skeleton (asserts the carve shrank it). */
@@ -97,73 +97,81 @@ export interface CarveGuard {
 
 export const CARVE_GUARDS: Record<string, CarveGuard> = {
   ship: {
-    skill: 'ship',
+    skill: "ship",
     expectedSections: [
-      'tests.md',
-      'test-coverage.md',
-      'plan-completion.md',
-      'review-army.md',
-      'greptile.md',
-      'adversarial.md',
-      'changelog.md',
-      'pr-body.md',
+      "tests.md",
+      "test-coverage.md",
+      "plan-completion.md",
+      "review-army.md",
+      "greptile.md",
+      "adversarial.md",
+      "changelog.md",
+      "pr-body.md",
     ],
-    requiredReads: ['review-army.md', 'changelog.md'],
+    requiredReads: ["review-army.md", "changelog.md"],
     scenario:
-      'This is a FRESH version-changing ship: the branch has a real code change, VERSION still equals the base version (needs a bump), and CHANGELOG.md needs a new entry. Follow the skill flow for a version-changing ship: run the pre-landing review and prepare the CHANGELOG entry. Produce the ship plan / review report. Do NOT actually commit, push, or open a PR.',
+      "This is a FRESH version-changing ship: the branch has a real code change, VERSION still equals the base version (needs a bump), and CHANGELOG.md needs a new entry. Follow the skill flow for a version-changing ship: run the pre-landing review and prepare the CHANGELOG entry. Produce the ship plan / review report. Do NOT actually commit, push, or open a PR.",
     staticInvariants: {
       // The PR-title-version invariant MUST stay always-loaded: the v1.54.0.0
       // carve stranded it in pr-body.md and PRs started landing with bare titles
       // (CI backstop: test/pr-title-sync-workflow-safety.test.ts).
-      mustStayInSkeleton: ['v$NEW_VERSION', 'gstack-pr-title-rewrite'],
+      mustStayInSkeleton: ["v$NEW_VERSION", "gstack-pr-title-rewrite"],
       // ...while the full create/update procedure stays carved into pr-body.md
       // (out of the skeleton, present in the union). Asserts BOTH PR paths
       // survive: the create path and the idempotent update path.
-      mustMoveToSection: ['gh pr create --base', 'gh pr edit --title'],
+      mustMoveToSection: ["gh pr create --base", "gh pr edit --title"],
       // ship is operational (multi-STOP, not a plan review); no single post-STOP gate.
       gateAfterStop: undefined,
     },
-    behavioral: 'external',
-    externalTest: 'test/skill-e2e-ship-section-loading.test.ts',
+    behavioral: "external",
+    externalTest: "test/skill-e2e-ship-section-loading.test.ts",
     maxSkeletonBytes: 90_000,
     minUnionBytes: 120_000,
-    mustContain: ['VERSION', 'CHANGELOG', 'review', 'merge', 'PR'],
+    mustContain: ["VERSION", "CHANGELOG", "review", "merge", "PR"],
   },
-  'plan-ceo-review': {
-    skill: 'plan-ceo-review',
-    expectedSections: ['review-sections.md'],
-    requiredReads: ['review-sections.md'],
+  "plan-ceo-review": {
+    skill: "plan-ceo-review",
+    expectedSections: ["review-sections.md"],
+    requiredReads: ["review-sections.md"],
     scenario:
-      'Review the plan in PLAN.md. Hold the current scope (HOLD SCOPE mode) — do not challenge or expand scope. Run the full CEO review and produce the review report.',
+      "Review the plan in PLAN.md. Hold the current scope (HOLD SCOPE mode) — do not challenge or expand scope. Run the full CEO review and produce the review report.",
     staticInvariants: {
-      mustStayInSkeleton: ['## Step 0: Nuclear Scope Challenge'],
-      mustMoveToSection: ['### Section 1: Architecture Review', '## Mode Quick Reference'],
-      gateAfterStop: 'EXIT PLAN MODE GATE',
+      mustStayInSkeleton: ["## Step 0: Nuclear Scope Challenge"],
+      mustMoveToSection: [
+        "### Section 1: Architecture Review",
+        "## Mode Quick Reference",
+      ],
+      gateAfterStop: "EXIT PLAN MODE GATE",
     },
-    behavioral: 'external',
-    externalTest: 'test/skill-e2e-plan-ceo-review-section-loading.test.ts',
+    behavioral: "external",
+    externalTest: "test/skill-e2e-plan-ceo-review-section-loading.test.ts",
     maxSkeletonBytes: 90_000,
     minUnionBytes: 80_000,
-    mustContain: ['SCOPE EXPANSION', 'SELECTIVE EXPANSION', 'HOLD SCOPE', 'SCOPE REDUCTION'],
+    mustContain: [
+      "SCOPE EXPANSION",
+      "SELECTIVE EXPANSION",
+      "HOLD SCOPE",
+      "SCOPE REDUCTION",
+    ],
     // Default-on Codex outside-voice (codexPreflight block + CODEX_MODE branch
     // prose replacing the smaller opt-in question) lands this ~5.2% over baseline.
     maxSizeRatio: 1.08,
   },
-  'plan-eng-review': {
-    skill: 'plan-eng-review',
-    expectedSections: ['review-sections.md'],
-    requiredReads: ['review-sections.md'],
+  "plan-eng-review": {
+    skill: "plan-eng-review",
+    expectedSections: ["review-sections.md"],
+    requiredReads: ["review-sections.md"],
     scenario:
-      'Review the plan in PLAN.md. Accept the current scope. Run the full engineering review (architecture, code quality, tests, performance) and produce the review report.',
+      "Review the plan in PLAN.md. Accept the current scope. Run the full engineering review (architecture, code quality, tests, performance) and produce the review report.",
     staticInvariants: {
-      mustStayInSkeleton: ['### Step 0: Scope Challenge'],
-      mustMoveToSection: ['### 1. Architecture review'],
-      gateAfterStop: 'EXIT PLAN MODE GATE',
+      mustStayInSkeleton: ["### Step 0: Scope Challenge"],
+      mustMoveToSection: ["### 1. Architecture review"],
+      gateAfterStop: "EXIT PLAN MODE GATE",
     },
-    behavioral: 'plan',
+    behavioral: "plan",
     maxSkeletonBytes: 62_000,
     minUnionBytes: 70_000,
-    mustContain: ['Architecture', 'Code Quality', 'Test', 'Performance'],
+    mustContain: ["Architecture", "Code Quality", "Test", "Performance"],
     // Cross-cutting preamble growth (v1.57.2.0 AUQ-failure prose fallback + the
     // decision-memory nudge + the v1.57.4.0 Boil-the-Ocean rename) plus the
     // default-on Codex outside-voice (codexPreflight block + CODEX_MODE branch
@@ -171,51 +179,51 @@ export const CARVE_GUARDS: Record<string, CarveGuard> = {
     // v1.53.0.0 baseline. Headroom for those intentional additions.
     maxSizeRatio: 1.08,
   },
-  'plan-design-review': {
-    skill: 'plan-design-review',
-    expectedSections: ['review-sections.md'],
-    requiredReads: ['review-sections.md'],
+  "plan-design-review": {
+    skill: "plan-design-review",
+    expectedSections: ["review-sections.md"],
+    requiredReads: ["review-sections.md"],
     scenario:
-      'Review the plan in PLAN.md for design and UX. Accept the current scope. Run the full design review passes and produce the review report.',
+      "Review the plan in PLAN.md for design and UX. Accept the current scope. Run the full design review passes and produce the review report.",
     staticInvariants: {
       mustStayInSkeleton: [],
-      mustMoveToSection: ['### Pass 1: Information Architecture'],
-      gateAfterStop: 'EXIT PLAN MODE GATE',
+      mustMoveToSection: ["### Pass 1: Information Architecture"],
+      gateAfterStop: "EXIT PLAN MODE GATE",
     },
-    behavioral: 'plan',
+    behavioral: "plan",
     // +Conductor AUQ-default-prose rule + one-way/continuation safety in the
     // always-loaded AskUserQuestion Format section.
     maxSkeletonBytes: 84_000,
     minUnionBytes: 70_000,
-    mustContain: ['design', 'visual'],
+    mustContain: ["design", "visual"],
   },
-  'plan-devex-review': {
-    skill: 'plan-devex-review',
-    expectedSections: ['review-sections.md'],
-    requiredReads: ['review-sections.md'],
+  "plan-devex-review": {
+    skill: "plan-devex-review",
+    expectedSections: ["review-sections.md"],
+    requiredReads: ["review-sections.md"],
     scenario:
-      'Review the plan in PLAN.md for developer experience. Accept the current scope. Run the full DX review passes and produce the review report.',
+      "Review the plan in PLAN.md for developer experience. Accept the current scope. Run the full DX review passes and produce the review report.",
     staticInvariants: {
       mustStayInSkeleton: [],
-      mustMoveToSection: ['### Pass 1: Getting Started Experience'],
-      gateAfterStop: 'EXIT PLAN MODE GATE',
+      mustMoveToSection: ["### Pass 1: Getting Started Experience"],
+      gateAfterStop: "EXIT PLAN MODE GATE",
     },
-    behavioral: 'plan',
+    behavioral: "plan",
     // +Conductor AUQ-default-prose rule + one-way/destructive prose safety +
     // continuation protocol in the always-loaded AskUserQuestion Format section.
     maxSkeletonBytes: 78_000,
     minUnionBytes: 70_000,
-    mustContain: ['developer experience', 'Getting Started'],
+    mustContain: ["developer experience", "Getting Started"],
     // Default-on Codex outside-voice (codexPreflight block + CODEX_MODE branch
     // prose replacing the smaller opt-in question) lands this ~5.7% over baseline.
     maxSizeRatio: 1.08,
   },
-  'office-hours': {
-    skill: 'office-hours',
-    expectedSections: ['design-and-handoff.md'],
-    requiredReads: ['design-and-handoff.md'],
+  "office-hours": {
+    skill: "office-hours",
+    expectedSections: ["design-and-handoff.md"],
+    requiredReads: ["design-and-handoff.md"],
     scenario:
-      'Run office hours for this product idea through to the end: have the diagnostic conversation, explore alternatives, then write the design doc and run the relationship handoff (Phases 5-6).',
+      "Run office hours for this product idea through to the end: have the diagnostic conversation, explore alternatives, then write the design doc and run the relationship handoff (Phases 5-6).",
     staticInvariants: {
       mustStayInSkeleton: [],
       mustMoveToSection: [],
@@ -223,29 +231,35 @@ export const CARVE_GUARDS: Record<string, CarveGuard> = {
       // post-STOP review gate in the skeleton.
       gateAfterStop: undefined,
     },
-    behavioral: 'prompt',
+    behavioral: "prompt",
     maxSkeletonBytes: 96_000,
     minUnionBytes: 70_000,
-    mustContain: ['design doc', 'problem statement'],
+    mustContain: ["design doc", "problem statement"],
   },
-  'document-release': {
-    skill: 'document-release',
-    expectedSections: ['release-body.md'],
-    requiredReads: ['release-body.md'],
+  "document-release": {
+    skill: "document-release",
+    expectedSections: ["release-body.md"],
+    requiredReads: ["release-body.md"],
     scenario:
-      'A PR has shipped a new CLI flag and touched README.md and CHANGELOG.md. Skip the git pre-flight shell commands (assume the diff adds --new-flag and updates those two docs). Run the documentation workflow: build the coverage map, then audit the docs, apply updates, and polish the CHANGELOG voice. Produce the documentation health summary.',
+      "A PR has shipped a new CLI flag and touched README.md and CHANGELOG.md. Skip the git pre-flight shell commands (assume the diff adds --new-flag and updates those two docs). Run the documentation workflow: build the coverage map, then audit the docs, apply updates, and polish the CHANGELOG voice. Produce the documentation health summary.",
     staticInvariants: {
-      mustStayInSkeleton: ['## Step 1: Pre-flight', '## Step 1.5: Coverage Map'],
-      mustMoveToSection: ['## Step 2: Per-File Documentation Audit', '## Step 5: CHANGELOG Voice Polish'],
+      mustStayInSkeleton: [
+        "## Step 1: Pre-flight",
+        "## Step 1.5: Coverage Map",
+      ],
+      mustMoveToSection: [
+        "## Step 2: Per-File Documentation Audit",
+        "## Step 5: CHANGELOG Voice Polish",
+      ],
       // Operational skill (no plan-mode review gate).
       gateAfterStop: undefined,
     },
-    behavioral: 'prompt',
+    behavioral: "prompt",
     // +Conductor AUQ-default-prose rule + one-way/continuation safety in the
     // always-loaded AskUserQuestion Format section.
     maxSkeletonBytes: 53_000,
     minUnionBytes: 55_000,
-    mustContain: ['CHANGELOG', 'Diataxis', 'coverage'],
+    mustContain: ["CHANGELOG", "Diataxis", "coverage"],
     // Two intentional additions stack on this small skill: the AUQ-failure prose
     // fallback (v1.57.2.0, ~2KB to every preamble) AND the new default-on Codex
     // documentation-review section (codexPreflight + prompt + apply-gate, carved
@@ -254,63 +268,70 @@ export const CARVE_GUARDS: Record<string, CarveGuard> = {
     // is a deliberate new feature, not preamble creep; the union ceiling is raised
     // to match while the skeleton budget (50_000) still holds the always-loaded
     // cost flat.
-    maxSizeRatio: 1.20,
+    maxSizeRatio: 1.2,
   },
-  'design-consultation': {
-    skill: 'design-consultation',
-    expectedSections: ['proposal-and-preview.md'],
-    requiredReads: ['proposal-and-preview.md'],
+  "design-consultation": {
+    skill: "design-consultation",
+    expectedSections: ["proposal-and-preview.md"],
+    requiredReads: ["proposal-and-preview.md"],
     scenario:
-      'The user gave product context (a B2B analytics dashboard for ops teams) and declined the research phase. Skip browser/design tool setup. Proceed to build the complete design-system proposal, then write DESIGN.md. Produce the proposal and the DESIGN.md content.',
+      "The user gave product context (a B2B analytics dashboard for ops teams) and declined the research phase. Skip browser/design tool setup. Proceed to build the complete design-system proposal, then write DESIGN.md. Produce the proposal and the DESIGN.md content.",
     staticInvariants: {
-      mustStayInSkeleton: ['## Phase 0: Pre-checks', '## Phase 1: Product Context', '## Phase 2: Research'],
-      mustMoveToSection: ['## Phase 3: The Complete Proposal', '## Phase 6: Write DESIGN.md'],
+      mustStayInSkeleton: [
+        "## Phase 0: Pre-checks",
+        "## Phase 1: Product Context",
+        "## Phase 2: Research",
+      ],
+      mustMoveToSection: [
+        "## Phase 3: The Complete Proposal",
+        "## Phase 6: Write DESIGN.md",
+      ],
       gateAfterStop: undefined,
     },
-    behavioral: 'prompt',
+    behavioral: "prompt",
     // +Conductor AUQ-default-prose rule + one-way/continuation safety in the
     // always-loaded AskUserQuestion Format section.
     maxSkeletonBytes: 67_000,
     minUnionBytes: 72_000,
-    mustContain: ['Typography', 'Color', 'Aesthetic Direction'],
+    mustContain: ["Typography", "Color", "Aesthetic Direction"],
     // Cross-cutting preamble growth (v1.57.2.0 AUQ-failure prose fallback ~2KB +
     // the cross-session decision-memory nudge) lands this carved skeleton just over
     // the strict 1.05; headroom for the shared preamble additions.
     maxSizeRatio: 1.07,
   },
   cso: {
-    skill: 'cso',
-    expectedSections: ['audit-phases.md'],
-    requiredReads: ['audit-phases.md'],
+    skill: "cso",
+    expectedSections: ["audit-phases.md"],
+    requiredReads: ["audit-phases.md"],
     scenario:
-      'Run a security audit on this repository in --owasp mode (OWASP Top 10 only). Resolve the mode, do the Phase 0 stack detection and Phase 1 attack-surface census, then run the scoped audit phases and produce the findings report. Skip any step that needs network access.',
+      "Run a security audit on this repository in --owasp mode (OWASP Top 10 only). Resolve the mode, do the Phase 0 stack detection and Phase 1 attack-surface census, then run the scoped audit phases and produce the findings report. Skip any step that needs network access.",
     staticInvariants: {
       // Dispatch + always-run + FP-filtering phases are ALWAYS loaded (security).
       mustStayInSkeleton: [
-        '## Arguments',
-        '## Mode Resolution',
-        '### Phase 0',
-        '### Phase 1',
-        '### Phase 12',
-        '### Phase 13',
-        '### Phase 14',
+        "## Arguments",
+        "## Mode Resolution",
+        "### Phase 0",
+        "### Phase 1",
+        "### Phase 12",
+        "### Phase 13",
+        "### Phase 14",
       ],
       // Earliest-use: mode must be resolvable before any section is read (codex #6).
-      mustPrecedeStop: ['## Arguments', '## Mode Resolution'],
+      mustPrecedeStop: ["## Arguments", "## Mode Resolution"],
       // Scope-dependent audit detail moved to the section.
       mustMoveToSection: [
-        '### Phase 2: Secrets Archaeology',
-        '### Phase 9: OWASP Top 10 Assessment',
-        '### Phase 10: STRIDE Threat Model',
+        "### Phase 2: Secrets Archaeology",
+        "### Phase 9: OWASP Top 10 Assessment",
+        "### Phase 10: STRIDE Threat Model",
       ],
       gateAfterStop: undefined,
     },
-    behavioral: 'prompt',
+    behavioral: "prompt",
     // +Conductor AUQ-default-prose rule + one-way/continuation safety in the
     // always-loaded AskUserQuestion Format section.
     maxSkeletonBytes: 73_000,
     minUnionBytes: 72_000,
-    mustContain: ['OWASP', 'STRIDE', 'daily', 'comprehensive', 'verif'],
+    mustContain: ["OWASP", "STRIDE", "daily", "comprehensive", "verif"],
     // cso keeps its mode-dispatch + FP-filtering phases always-loaded, so the
     // cross-cutting preamble growth (v1.57.2.0 AUQ-failure prose fallback ~2KB + the
     // decision-memory nudge) lands it just over 1.05; headroom for the shared additions.

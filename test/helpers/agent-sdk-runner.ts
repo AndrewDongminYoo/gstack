@@ -32,12 +32,12 @@ import {
   type SettingSource,
   type Options,
   type CanUseTool,
-} from '@anthropic-ai/claude-agent-sdk';
-import * as fs from 'fs';
-import * as path from 'path';
-import { resolveClaudeBinary as resolveClaudeBinaryShared } from '../../browse/src/claude-bin';
-import { hermeticChildEnv } from './hermetic-env';
-import type { SkillTestResult } from './session-runner';
+} from "@anthropic-ai/claude-agent-sdk";
+import * as fs from "fs";
+import * as path from "path";
+import { resolveClaudeBinary as resolveClaudeBinaryShared } from "../../browse/src/claude-bin";
+import { hermeticChildEnv } from "./hermetic-env";
+import type { SkillTestResult } from "./session-runner";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -75,7 +75,12 @@ export type QueryProvider = typeof query;
 /** Subset of SDK Options['systemPrompt'] we support. */
 export type SystemPromptOption =
   | string
-  | { type: 'preset'; preset: 'claude_code'; append?: string; excludeDynamicSections?: boolean };
+  | {
+      type: "preset";
+      preset: "claude_code";
+      append?: string;
+      excludeDynamicSections?: boolean;
+    };
 
 export interface RunAgentSdkOptions {
   /**
@@ -145,18 +150,18 @@ export interface RunAgentSdkOptions {
 export function passThroughNonAskUserQuestion(
   toolName: string,
   input: Record<string, unknown>,
-): { behavior: 'allow'; updatedInput: Record<string, unknown> } {
+): { behavior: "allow"; updatedInput: Record<string, unknown> } {
   // SDK requires an allow response to include updatedInput — pass the original
   // input through unchanged so the tool runs as the model intended.
   void toolName;
-  return { behavior: 'allow', updatedInput: input };
+  return { behavior: "allow", updatedInput: input };
 }
 
 export class RateLimitExhaustedError extends Error {
   readonly attempts: number;
   constructor(attempts: number, cause?: unknown) {
     super(`rate limit exhausted after ${attempts} attempts`);
-    this.name = 'RateLimitExhaustedError';
+    this.name = "RateLimitExhaustedError";
     this.attempts = attempts;
     if (cause !== undefined) (this as { cause?: unknown }).cause = cause;
   }
@@ -201,7 +206,9 @@ class Semaphore {
   }
 }
 
-const DEFAULT_SDK_CONCURRENCY = Number(process.env.GSTACK_SDK_MAX_CONCURRENCY ?? 3);
+const DEFAULT_SDK_CONCURRENCY = Number(
+  process.env.GSTACK_SDK_MAX_CONCURRENCY ?? 3,
+);
 let _apiSemaphore: Semaphore | null = null;
 function getApiSemaphore(): Semaphore {
   if (!_apiSemaphore) _apiSemaphore = new Semaphore(DEFAULT_SDK_CONCURRENCY);
@@ -219,9 +226,9 @@ export function __resetSemaphoreForTests(capacity: number): void {
 
 /** True if `err` looks like a rate-limit thrown from the SDK. */
 export function isRateLimitThrown(err: unknown): boolean {
-  if (!err || typeof err !== 'object') return false;
-  const msg = (err as { message?: string }).message ?? '';
-  const name = (err as { name?: string }).name ?? '';
+  if (!err || typeof err !== "object") return false;
+  const msg = (err as { message?: string }).message ?? "";
+  const name = (err as { name?: string }).name ?? "";
   const status = (err as { status?: number }).status;
   return (
     status === 429 ||
@@ -232,20 +239,21 @@ export function isRateLimitThrown(err: unknown): boolean {
 
 /** True if a SDKResultMessage is a rate-limit-shaped error. */
 export function isRateLimitResult(msg: SDKMessage): boolean {
-  if (msg.type !== 'result') return false;
+  if (msg.type !== "result") return false;
   const r = msg as SDKResultMessage;
-  if (r.subtype === 'success') return false;
+  if (r.subtype === "success") return false;
   // subtype === 'error_during_execution' | 'error_max_turns' | 'error_max_budget_usd' | ...
-  if (r.subtype !== 'error_during_execution') return false;
+  if (r.subtype !== "error_during_execution") return false;
   const errs = (r as { errors?: string[] }).errors ?? [];
   return errs.some((e) => /rate.?limit|429|too many requests/i.test(e));
 }
 
 /** True if mid-stream SDKRateLimitEvent indicates a blocking rate-limit. */
 export function isRateLimitEvent(msg: SDKMessage): boolean {
-  if (msg.type !== 'rate_limit_event') return false;
-  const info = (msg as { rate_limit_info?: { status?: string } }).rate_limit_info;
-  return info?.status === 'rejected';
+  if (msg.type !== "rate_limit_event") return false;
+  const info = (msg as { rate_limit_info?: { status?: string } })
+    .rate_limit_info;
+  return info?.status === "rejected";
 }
 
 /**
@@ -256,8 +264,8 @@ export function isRateLimitEvent(msg: SDKMessage): boolean {
  * failing the whole run.
  */
 export function isMaxTurnsError(err: unknown): boolean {
-  if (!err || typeof err !== 'object') return false;
-  const msg = (err as { message?: string }).message ?? '';
+  if (!err || typeof err !== "object") return false;
+  const msg = (err as { message?: string }).message ?? "";
   return /reached maximum number of turns|max.?turns/i.test(msg);
 }
 
@@ -269,11 +277,14 @@ let _sdkVersionCache: string | null = null;
 function resolveSdkVersion(): string {
   if (_sdkVersionCache) return _sdkVersionCache;
   try {
-    const pkgPath = require.resolve('@anthropic-ai/claude-agent-sdk/package.json');
-    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8')) as { version?: string };
-    _sdkVersionCache = pkg.version ?? 'unknown';
+    const pkgPath =
+      require.resolve("@anthropic-ai/claude-agent-sdk/package.json");
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8")) as {
+      version?: string;
+    };
+    _sdkVersionCache = pkg.version ?? "unknown";
   } catch {
-    _sdkVersionCache = 'unknown';
+    _sdkVersionCache = "unknown";
   }
   return _sdkVersionCache;
 }
@@ -299,7 +310,7 @@ export async function runAgentSdkTest(
   const sem = getApiSemaphore();
   const maxRetries = opts.maxRetries ?? 3;
   const queryImpl: QueryProvider = opts.queryProvider ?? query;
-  const model = opts.model ?? 'claude-opus-4-7';
+  const model = opts.model ?? "claude-opus-4-7";
 
   // NOTE on env: the SDK child gets the COMPLETE hermetic env (allowlist
   // scrub + ANTHROPIC_API_KEY + hermetic CLAUDE_CONFIG_DIR/GSTACK_HOME), with
@@ -324,12 +335,13 @@ export async function runAgentSdkTest(
     // whatever we captured before the SDK threw.
     const events: SDKMessage[] = [];
     const assistantTurns: SDKAssistantMessage[] = [];
-    const toolCalls: Array<{ tool: string; input: unknown; output: string }> = [];
+    const toolCalls: Array<{ tool: string; input: unknown; output: string }> =
+      [];
     const assistantTextParts: string[] = [];
     let firstResponseMs = 0;
     let lastEventMs = startMs;
     let maxInterTurnMs = 0;
-    let systemInitVersion = 'unknown';
+    let systemInitVersion = "unknown";
     let rateLimited: unknown = null;
     let terminalResult: SDKResultMessage | null = null;
 
@@ -339,17 +351,18 @@ export async function runAgentSdkTest(
       // that. Flip to 'default' mode so canUseTool actually fires. Tests
       // that want AskUserQuestion interception without this flip would
       // silently auto-pass — the exact testability gap D14/D4-eng fix.
-      const hasCanUseTool = typeof opts.canUseTool === 'function';
+      const hasCanUseTool = typeof opts.canUseTool === "function";
       const resolvedPermissionMode: PermissionMode =
-        opts.permissionMode ?? (hasCanUseTool ? 'default' : 'bypassPermissions');
+        opts.permissionMode ??
+        (hasCanUseTool ? "default" : "bypassPermissions");
 
       // When canUseTool is supplied, ensure AskUserQuestion is in the allowed
       // tools list. Without it, Claude can't invoke AskUserQuestion at all
       // and the callback never has a chance to fire on it.
-      const baseTools = opts.allowedTools ?? ['Read', 'Glob', 'Grep', 'Bash'];
+      const baseTools = opts.allowedTools ?? ["Read", "Glob", "Grep", "Bash"];
       const resolvedTools =
-        hasCanUseTool && !baseTools.includes('AskUserQuestion')
-          ? [...baseTools, 'AskUserQuestion']
+        hasCanUseTool && !baseTools.includes("AskUserQuestion")
+          ? [...baseTools, "AskUserQuestion"]
           : baseTools;
 
       const sdkOpts: Options = {
@@ -360,7 +373,8 @@ export async function runAgentSdkTest(
         disallowedTools: opts.disallowedTools,
         allowedTools: resolvedTools,
         permissionMode: resolvedPermissionMode,
-        allowDangerouslySkipPermissions: resolvedPermissionMode === 'bypassPermissions',
+        allowDangerouslySkipPermissions:
+          resolvedPermissionMode === "bypassPermissions",
         settingSources: opts.settingSources ?? [],
         env: hermeticChildEnv(opts.env),
         pathToClaudeCodeExecutable: opts.pathToClaudeCodeExecutable,
@@ -368,7 +382,7 @@ export async function runAgentSdkTest(
       };
       // Empty bare string means "omit entirely" (SDK runs with no override).
       // Any object or non-empty string is passed through.
-      if (typeof opts.systemPrompt === 'object' || opts.systemPrompt !== '') {
+      if (typeof opts.systemPrompt === "object" || opts.systemPrompt !== "") {
         sdkOpts.systemPrompt = opts.systemPrompt;
       }
 
@@ -386,28 +400,31 @@ export async function runAgentSdkTest(
 
         events.push(ev);
 
-        if (ev.type === 'system' && (ev as SDKSystemMessage).subtype === 'init') {
+        if (
+          ev.type === "system" &&
+          (ev as SDKSystemMessage).subtype === "init"
+        ) {
           systemInitVersion =
-            (ev as SDKSystemMessage).claude_code_version ?? 'unknown';
-        } else if (ev.type === 'assistant') {
+            (ev as SDKSystemMessage).claude_code_version ?? "unknown";
+        } else if (ev.type === "assistant") {
           const am = ev as SDKAssistantMessage;
           assistantTurns.push(am);
           const content = am.message?.content;
           if (Array.isArray(content)) {
             for (const block of content as Array<
-              | { type: 'text'; text?: string }
-              | { type: 'tool_use'; name?: string; input?: unknown }
+              | { type: "text"; text?: string }
+              | { type: "tool_use"; name?: string; input?: unknown }
               | { type: string }
             >) {
-              if (block.type === 'text') {
+              if (block.type === "text") {
                 const t = (block as { text?: string }).text;
                 if (t) assistantTextParts.push(t);
-              } else if (block.type === 'tool_use') {
+              } else if (block.type === "tool_use") {
                 const tb = block as { name?: string; input?: unknown };
                 toolCalls.push({
-                  tool: tb.name ?? 'unknown',
+                  tool: tb.name ?? "unknown",
                   input: tb.input ?? {},
-                  output: '',
+                  output: "",
                 });
               }
             }
@@ -418,11 +435,11 @@ export async function runAgentSdkTest(
               (ev as { rate_limit_info?: unknown }).rate_limit_info,
             )}`,
           );
-        } else if (ev.type === 'result') {
+        } else if (ev.type === "result") {
           terminalResult = ev as SDKResultMessage;
           if (isRateLimitResult(ev)) {
             rateLimited = new Error(
-              `result-message rate limit: ${((ev as { errors?: string[] }).errors ?? []).join('; ')}`,
+              `result-message rate limit: ${((ev as { errors?: string[] }).errors ?? []).join("; ")}`,
             );
           }
         }
@@ -432,7 +449,7 @@ export async function runAgentSdkTest(
         throw rateLimited;
       }
       if (!terminalResult) {
-        throw new Error('query stream ended without a result event');
+        throw new Error("query stream ended without a result event");
       }
 
       const durationMs = Date.now() - startMs;
@@ -442,13 +459,13 @@ export async function runAgentSdkTest(
         (terminalResult as { num_turns?: number }).num_turns ??
         assistantTurns.length;
       const exitReason =
-        (terminalResult as { subtype?: string }).subtype ?? 'unknown';
+        (terminalResult as { subtype?: string }).subtype ?? "unknown";
 
       return {
         events,
         assistantTurns,
         toolCalls,
-        output: assistantTextParts.join('\n'),
+        output: assistantTextParts.join("\n"),
         exitReason,
         turnsUsed,
         durationMs,
@@ -458,7 +475,7 @@ export async function runAgentSdkTest(
         model,
         sdkVersion: resolveSdkVersion(),
         sdkClaudeCodeVersion: systemInitVersion,
-        resolvedBinaryPath: opts.pathToClaudeCodeExecutable ?? 'sdk-default',
+        resolvedBinaryPath: opts.pathToClaudeCodeExecutable ?? "sdk-default",
         browseErrors: [],
       };
     } catch (err) {
@@ -476,8 +493,8 @@ export async function runAgentSdkTest(
           events,
           assistantTurns,
           toolCalls,
-          output: assistantTextParts.join('\n'),
-          exitReason: 'error_max_turns',
+          output: assistantTextParts.join("\n"),
+          exitReason: "error_max_turns",
           turnsUsed: assistantTurns.length,
           durationMs,
           firstResponseMs,
@@ -486,7 +503,7 @@ export async function runAgentSdkTest(
           model,
           sdkVersion: resolveSdkVersion(),
           sdkClaudeCodeVersion: systemInitVersion,
-          resolvedBinaryPath: opts.pathToClaudeCodeExecutable ?? 'sdk-default',
+          resolvedBinaryPath: opts.pathToClaudeCodeExecutable ?? "sdk-default",
           browseErrors: [],
         };
       }
@@ -566,9 +583,13 @@ export function toSkillTestResult(r: AgentSdkResult): SkillTestResult {
  * This is the core "fanout" metric. A turn with N tool_use blocks = N
  * parallel tool invocations.
  */
-export function firstTurnParallelism(firstTurn: SDKAssistantMessage | undefined): number {
+export function firstTurnParallelism(
+  firstTurn: SDKAssistantMessage | undefined,
+): number {
   if (!firstTurn) return 0;
   const content = firstTurn.message?.content;
   if (!Array.isArray(content)) return 0;
-  return (content as Array<{ type: string }>).filter((b) => b.type === 'tool_use').length;
+  return (content as Array<{ type: string }>).filter(
+    (b) => b.type === "tool_use",
+  ).length;
 }

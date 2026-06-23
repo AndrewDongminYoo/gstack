@@ -11,9 +11,9 @@
  * Imports only the leaf data module (carve-guards.ts) + node stdlib — no cycle.
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
-import { CARVE_GUARDS, type CarveGuard } from './carve-guards';
+import * as fs from "fs";
+import * as path from "path";
+import { CARVE_GUARDS, type CarveGuard } from "./carve-guards";
 
 /** Every dir under `root` that owns a sections/manifest.json. Injectable for tests. */
 export function discoverCarvedSkills(root: string): string[] {
@@ -21,29 +21,31 @@ export function discoverCarvedSkills(root: string): string[] {
     .readdirSync(root, { withFileTypes: true })
     .filter((d) => d.isDirectory())
     .map((d) => d.name)
-    .filter((name) => fs.existsSync(path.join(root, name, 'sections', 'manifest.json')))
+    .filter((name) =>
+      fs.existsSync(path.join(root, name, "sections", "manifest.json")),
+    )
     .sort();
 }
 
 function readSkeleton(root: string, skill: string): string {
-  return fs.readFileSync(path.join(root, skill, 'SKILL.md'), 'utf-8');
+  return fs.readFileSync(path.join(root, skill, "SKILL.md"), "utf-8");
 }
 
 /** Skeleton + every sections/*.md unioned (relocated content still counts). */
 function readUnion(root: string, skill: string): string {
   let text = readSkeleton(root, skill);
-  const dir = path.join(root, skill, 'sections');
+  const dir = path.join(root, skill, "sections");
   if (fs.existsSync(dir)) {
     for (const f of fs.readdirSync(dir).sort()) {
-      if (f.endsWith('.md') && !f.endsWith('.md.tmpl')) {
-        text += '\n' + fs.readFileSync(path.join(dir, f), 'utf-8');
+      if (f.endsWith(".md") && !f.endsWith(".md.tmpl")) {
+        text += "\n" + fs.readFileSync(path.join(dir, f), "utf-8");
       }
     }
   }
   return text;
 }
 
-const STOP = '> **STOP.**';
+const STOP = "> **STOP.**";
 
 /**
  * Static ordering invariants for one carved skill. Returns a list of failure
@@ -61,11 +63,11 @@ export function checkOrdering(root: string, guard: CarveGuard): string[] {
   const union = readUnion(root, guard.skill);
 
   // 1. The skeleton routes to sections via a Section index + STOP-Read directives.
-  if (!skeleton.includes('## Section index')) {
+  if (!skeleton.includes("## Section index")) {
     failures.push('skeleton is missing the "## Section index" table');
   }
   if (!skeleton.includes(STOP)) {
-    failures.push('skeleton has no STOP-Read directive');
+    failures.push("skeleton has no STOP-Read directive");
   }
 
   // 2. Every expected section is referenced by path AND generated (AUTO-GENERATED).
@@ -73,18 +75,27 @@ export function checkOrdering(root: string, guard: CarveGuard): string[] {
     if (!skeleton.includes(`sections/${file}`)) {
       failures.push(`skeleton does not reference sections/${file}`);
     }
-    const secPath = path.join(root, guard.skill, 'sections', file);
+    const secPath = path.join(root, guard.skill, "sections", file);
     if (!fs.existsSync(secPath)) {
       failures.push(`section file missing: sections/${file}`);
-    } else if (!fs.readFileSync(secPath, 'utf-8').slice(0, 200).includes('AUTO-GENERATED')) {
-      failures.push(`sections/${file} is hand-edited (no AUTO-GENERATED header)`);
+    } else if (
+      !fs
+        .readFileSync(secPath, "utf-8")
+        .slice(0, 200)
+        .includes("AUTO-GENERATED")
+    ) {
+      failures.push(
+        `sections/${file} is hand-edited (no AUTO-GENERATED header)`,
+      );
     }
   }
 
   // 3. Pre-STOP anchors stay in the skeleton.
   for (const anchor of guard.staticInvariants.mustStayInSkeleton) {
     if (!skeleton.includes(anchor)) {
-      failures.push(`mustStayInSkeleton anchor missing from skeleton: "${anchor}"`);
+      failures.push(
+        `mustStayInSkeleton anchor missing from skeleton: "${anchor}"`,
+      );
     }
   }
 
@@ -95,19 +106,27 @@ export function checkOrdering(root: string, guard: CarveGuard): string[] {
   for (const anchor of guard.staticInvariants.mustPrecedeStop ?? []) {
     const at = skeleton.indexOf(anchor);
     if (at < 0) {
-      failures.push(`mustPrecedeStop anchor missing from skeleton: "${anchor}"`);
+      failures.push(
+        `mustPrecedeStop anchor missing from skeleton: "${anchor}"`,
+      );
     } else if (firstStopIdx >= 0 && at > firstStopIdx) {
-      failures.push(`mustPrecedeStop anchor "${anchor}" appears AFTER the STOP (stranded)`);
+      failures.push(
+        `mustPrecedeStop anchor "${anchor}" appears AFTER the STOP (stranded)`,
+      );
     }
   }
 
   // 4. Heavy body moved out of the skeleton but is preserved in the union.
   for (const moved of guard.staticInvariants.mustMoveToSection) {
     if (skeleton.includes(moved)) {
-      failures.push(`mustMoveToSection marker is still in the skeleton: "${moved}"`);
+      failures.push(
+        `mustMoveToSection marker is still in the skeleton: "${moved}"`,
+      );
     }
     if (!union.includes(moved)) {
-      failures.push(`mustMoveToSection marker absent from the union (lost): "${moved}"`);
+      failures.push(
+        `mustMoveToSection marker absent from the union (lost): "${moved}"`,
+      );
     }
   }
 
@@ -121,7 +140,9 @@ export function checkOrdering(root: string, guard: CarveGuard): string[] {
     if (lastGate < 0) {
       failures.push(`gateAfterStop marker missing from skeleton: "${gate}"`);
     } else if (lastStop >= 0 && lastGate < lastStop) {
-      failures.push(`gateAfterStop "${gate}" appears before the last STOP (stranded above it)`);
+      failures.push(
+        `gateAfterStop "${gate}" appears before the last STOP (stranded above it)`,
+      );
     }
   }
 
@@ -140,12 +161,16 @@ export function checkCompleteness(root: string): string[] {
 
   for (const skill of discovered) {
     if (!registered.has(skill)) {
-      failures.push(`carved on disk but NOT in CARVE_GUARDS (unguarded carve): ${skill}`);
+      failures.push(
+        `carved on disk but NOT in CARVE_GUARDS (unguarded carve): ${skill}`,
+      );
     }
   }
   for (const skill of registered) {
     if (!discovered.has(skill)) {
-      failures.push(`in CARVE_GUARDS but not carved on disk (stale registry entry): ${skill}`);
+      failures.push(
+        `in CARVE_GUARDS but not carved on disk (stale registry entry): ${skill}`,
+      );
     }
   }
 
@@ -154,21 +179,29 @@ export function checkCompleteness(root: string): string[] {
       failures.push(`${skill}: expectedSections is empty`);
     }
     if (g.requiredReads.length === 0) {
-      failures.push(`${skill}: requiredReads is empty (behavioral guard would be decorative)`);
+      failures.push(
+        `${skill}: requiredReads is empty (behavioral guard would be decorative)`,
+      );
     }
     for (const r of g.requiredReads) {
       if (!g.expectedSections.includes(r)) {
-        failures.push(`${skill}: requiredRead "${r}" is not in expectedSections`);
+        failures.push(
+          `${skill}: requiredRead "${r}" is not in expectedSections`,
+        );
       }
     }
     // Behavioral guard exists: 'plan'/'prompt' are covered structurally by the
     // data-driven loop (registry membership IS coverage); 'external' must name a
     // dedicated test file that actually exists on disk.
-    if (g.behavioral === 'external') {
+    if (g.behavioral === "external") {
       if (!g.externalTest) {
-        failures.push(`${skill}: behavioral 'external' but no externalTest path`);
+        failures.push(
+          `${skill}: behavioral 'external' but no externalTest path`,
+        );
       } else if (!fs.existsSync(path.join(root, g.externalTest))) {
-        failures.push(`${skill}: externalTest missing on disk: ${g.externalTest}`);
+        failures.push(
+          `${skill}: externalTest missing on disk: ${g.externalTest}`,
+        );
       }
     }
   }

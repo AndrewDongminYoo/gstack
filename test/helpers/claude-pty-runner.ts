@@ -21,18 +21,18 @@
  * tests don't need it).
  */
 
-import * as fs from 'fs';
-import * as os from 'os';
-import * as path from 'path';
-import { hermeticChildEnv, isHermeticEnabled } from './hermetic-env';
+import * as fs from "fs";
+import * as os from "os";
+import * as path from "path";
+import { hermeticChildEnv, isHermeticEnabled } from "./hermetic-env";
 
 /** Strip ANSI escapes for pattern-matching against visible text. */
 export function stripAnsi(s: string): string {
   return s
-    .replace(/\x1b\[[\d;]*[a-zA-Z]/g, '')
-    .replace(/\x1b\][^\x07\x1b]*(\x07|\x1b\\)/g, '')
-    .replace(/\x1b[()][AB012]/g, '')
-    .replace(/\x1b[78=>]/g, '');
+    .replace(/\x1b\[[\d;]*[a-zA-Z]/g, "")
+    .replace(/\x1b\][^\x07\x1b]*(\x07|\x1b\\)/g, "")
+    .replace(/\x1b[()][AB012]/g, "")
+    .replace(/\x1b[78=>]/g, "");
 }
 
 /** Find claude on PATH, with fallback locations. Mirrors terminal-agent.ts. */
@@ -40,11 +40,11 @@ export function resolveClaudeBinary(): string | null {
   const override = process.env.BROWSE_TERMINAL_BINARY;
   if (override && fs.existsSync(override)) return override;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const which = (Bun as any).which?.('claude');
+  const which = (Bun as any).which?.("claude");
   if (which) return which;
   const candidates = [
-    '/opt/homebrew/bin/claude',
-    '/usr/local/bin/claude',
+    "/opt/homebrew/bin/claude",
+    "/usr/local/bin/claude",
     `${process.env.HOME}/.local/bin/claude`,
     `${process.env.HOME}/.bun/bin/claude`,
     `${process.env.HOME}/.npm-global/bin/claude`,
@@ -68,7 +68,14 @@ export interface ClaudePtyOptions {
    *  Other valid SDK modes ('default', 'acceptEdits', 'bypassPermissions',
    *  'auto', 'dontAsk') are passed through verbatim.
    */
-  permissionMode?: 'plan' | 'default' | 'acceptEdits' | 'bypassPermissions' | 'auto' | 'dontAsk' | null;
+  permissionMode?:
+    | "plan"
+    | "default"
+    | "acceptEdits"
+    | "bypassPermissions"
+    | "auto"
+    | "dontAsk"
+    | null;
   /** Extra args after the permission-mode flag. */
   extraArgs?: string[];
   /**
@@ -96,7 +103,9 @@ export interface ClaudePtySession {
   /** Send raw bytes to PTY stdin. Newlines = "\r" in TTY world. */
   send(data: string): void;
   /** Send a key by name. Limited set used by these tests. */
-  sendKey(key: 'Enter' | 'Up' | 'Down' | 'Esc' | 'Tab' | 'ShiftTab' | 'CtrlC'): void;
+  sendKey(
+    key: "Enter" | "Up" | "Down" | "Esc" | "Tab" | "ShiftTab" | "CtrlC",
+  ): void;
   /** Raw accumulated stdout (with ANSI). For forensics. */
   rawOutput(): string;
   /** Visible (ANSI-stripped) output for the entire session. For pattern matching. */
@@ -147,7 +156,7 @@ export interface ClaudePtySession {
 /** Detect the workspace-trust dialog rendering. */
 export function isTrustDialogVisible(visible: string): boolean {
   // Phrase Claude Code prints. Stable across versions in this branch's range.
-  return visible.includes('trust this folder');
+  return visible.includes("trust this folder");
 }
 
 /**
@@ -159,7 +168,7 @@ export function isTrustDialogVisible(visible: string): boolean {
  */
 export function isPlanReadyVisible(visible: string): boolean {
   if (/ready to execute|Would you like to proceed/i.test(visible)) return true;
-  const collapsed = visible.replace(/\s+/g, '');
+  const collapsed = visible.replace(/\s+/g, "");
   return /readytoexecute|Wouldyouliketoproceed/i.test(collapsed);
 }
 
@@ -174,10 +183,11 @@ export function isPlanReadyVisible(visible: string): boolean {
  */
 export function isAutoDecidedVisible(visible: string): boolean {
   const stemMatch =
-    /Auto-decided\b/i.test(visible) || /Auto-decided/i.test(visible.replace(/\s+/g, ''));
+    /Auto-decided\b/i.test(visible) ||
+    /Auto-decided/i.test(visible.replace(/\s+/g, ""));
   if (!stemMatch) return false;
   if (/\(your preference\)/i.test(visible)) return true;
-  return /\(yourpreference\)/i.test(visible.replace(/\s+/g, ''));
+  return /\(yourpreference\)/i.test(visible.replace(/\s+/g, ""));
 }
 
 /**
@@ -205,23 +215,24 @@ export function extractPlanFilePath(visible: string): string | null {
   // character: `~/`, `/Users/`, `/home/`, `/var/`, or `/tmp/`. Anchoring on
   // these prefixes prevents earlier non-whitespace characters from being
   // glommed into the path (real bug seen in the wild: `yetat/Users/...`).
-  const PATH_ANCHOR = '(~\\/|\\/Users\\/|\\/home\\/|\\/var\\/|\\/tmp\\/|\\.\\/)';
+  const PATH_ANCHOR =
+    "(~\\/|\\/Users\\/|\\/home\\/|\\/var\\/|\\/tmp\\/|\\.\\/)";
   const patterns: RegExp[] = [
-    new RegExp(`Plan\\s*saved\\s*to\\s*:?\\s*(${PATH_ANCHOR}\\S+\\.md)`, 'i'),
-    new RegExp(`Plan\\s*file\\s*:?\\s*(${PATH_ANCHOR}\\S+\\.md)`, 'i'),
-    new RegExp(`·\\s*(${PATH_ANCHOR}\\S*\\.claude\\/plans\\/\\S+\\.md)`, 'i'),
+    new RegExp(`Plan\\s*saved\\s*to\\s*:?\\s*(${PATH_ANCHOR}\\S+\\.md)`, "i"),
+    new RegExp(`Plan\\s*file\\s*:?\\s*(${PATH_ANCHOR}\\S+\\.md)`, "i"),
+    new RegExp(`·\\s*(${PATH_ANCHOR}\\S*\\.claude\\/plans\\/\\S+\\.md)`, "i"),
     // Fallback: any path-anchored reference to a .claude/plans .md file.
-    new RegExp(`(${PATH_ANCHOR}\\S*\\.claude\\/plans\\/[\\w-]+\\.md)`, 'i'),
+    new RegExp(`(${PATH_ANCHOR}\\S*\\.claude\\/plans\\/[\\w-]+\\.md)`, "i"),
   ];
   for (const p of patterns) {
     const m = visible.match(p);
     if (m && m[1]) {
       let raw = m[1];
       // Strip trailing punctuation that some patterns may capture.
-      raw = raw.replace(/\.+$/, '.md').replace(/\.md\.+$/, '.md');
+      raw = raw.replace(/\.+$/, ".md").replace(/\.md\.+$/, ".md");
       // Tilde expansion to absolute path.
-      if (raw.startsWith('~')) {
-        const home = process.env.HOME ?? '';
+      if (raw.startsWith("~")) {
+        const home = process.env.HOME ?? "";
         raw = home + raw.slice(1);
       }
       return raw;
@@ -243,7 +254,7 @@ export function extractPlanFilePath(visible: string): string | null {
  */
 export function planFileHasDecisionsSection(planFile: string): boolean {
   try {
-    const content = fs.readFileSync(planFile, 'utf-8');
+    const content = fs.readFileSync(planFile, "utf-8");
     return /^##\s+Decisions\b/im.test(content);
   } catch {
     return false;
@@ -337,11 +348,11 @@ export function isNumberedOptionListVisible(visible: string): boolean {
 // ~/.gstack/analytics/pty-judge.jsonl for offline analysis.
 // ────────────────────────────────────────────────────────────────────────────
 
-import { spawnSync as nodeSpawnSync } from 'node:child_process';
-import { createHash } from 'node:crypto';
+import { spawnSync as nodeSpawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 
 export interface PtyStateVerdict {
-  state: 'waiting' | 'working' | 'hung' | 'unknown';
+  state: "waiting" | "working" | "hung" | "unknown";
   reasoning: string;
   /** SHA-1 of the normalized snapshot input (for caching/dedup). */
   hash: string;
@@ -360,7 +371,7 @@ function logPtyJudge(record: Record<string, unknown>): void {
   try {
     const dir = `${process.env.HOME}/.gstack/analytics`;
     fs.mkdirSync(dir, { recursive: true });
-    fs.appendFileSync(`${dir}/pty-judge.jsonl`, JSON.stringify(record) + '\n');
+    fs.appendFileSync(`${dir}/pty-judge.jsonl`, JSON.stringify(record) + "\n");
   } catch {
     /* best-effort */
   }
@@ -371,16 +382,19 @@ function logPtyJudge(record: Record<string, unknown>): void {
  * Writes the last 4KB of visible TTY plus context to
  * ~/.gstack/analytics/pty-snapshots/<testName>-<elapsed>ms.txt.
  */
-export function logPtySnapshot(visible: string, ctx: { testName: string; elapsedMs: number; tag?: string }): void {
-  if (process.env.GSTACK_PTY_LOG !== '1') return;
+export function logPtySnapshot(
+  visible: string,
+  ctx: { testName: string; elapsedMs: number; tag?: string },
+): void {
+  if (process.env.GSTACK_PTY_LOG !== "1") return;
   try {
     const dir = `${process.env.HOME}/.gstack/analytics/pty-snapshots`;
     fs.mkdirSync(dir, { recursive: true });
-    const tag = ctx.tag ? `-${ctx.tag}` : '';
+    const tag = ctx.tag ? `-${ctx.tag}` : "";
     const file = `${dir}/${ctx.testName}-${ctx.elapsedMs}ms${tag}.txt`;
     fs.writeFileSync(
       file,
-      `# testName: ${ctx.testName}\n# elapsedMs: ${ctx.elapsedMs}\n# tag: ${ctx.tag ?? ''}\n# visible.length: ${visible.length}\n\n${visible.slice(-4096)}`,
+      `# testName: ${ctx.testName}\n# elapsedMs: ${ctx.elapsedMs}\n# tag: ${ctx.tag ?? ""}\n# visible.length: ${visible.length}\n\n${visible.slice(-4096)}`,
     );
   } catch {
     /* best-effort */
@@ -405,8 +419,8 @@ export function judgePtyState(
   // Normalize: strip trailing whitespace lines + take last 4KB. Hash the
   // normalized form so spinner-frame-only diffs (which all look "working")
   // don't bust the cache and rack up cost.
-  const tail = visible.slice(-4096).replace(/[ \t]+$/gm, '');
-  const hash = createHash('sha1').update(tail).digest('hex').slice(0, 16);
+  const tail = visible.slice(-4096).replace(/[ \t]+$/gm, "");
+  const hash = createHash("sha1").update(tail).digest("hex").slice(0, 16);
 
   const cached = PTY_VERDICT_CACHE.get(hash);
   if (cached) return cached;
@@ -430,21 +444,21 @@ ${tail}
 \`\`\``;
 
   let verdict: PtyStateVerdict = {
-    state: 'unknown',
-    reasoning: 'judge call did not complete',
+    state: "unknown",
+    reasoning: "judge call did not complete",
     hash,
     elapsedMs: 0,
   };
 
   try {
     const result = nodeSpawnSync(
-      'claude',
-      ['-p', '--model', 'claude-haiku-4-5', '--max-turns', '1'],
+      "claude",
+      ["-p", "--model", "claude-haiku-4-5", "--max-turns", "1"],
       {
         input: prompt,
-        stdio: ['pipe', 'pipe', 'pipe'],
+        stdio: ["pipe", "pipe", "pipe"],
         timeout: 30_000,
-        encoding: 'utf-8',
+        encoding: "utf-8",
       },
     );
     const elapsedMs = Date.now() - judgeStart;
@@ -455,32 +469,45 @@ ${tail}
       if (match) {
         try {
           const parsed = JSON.parse(match[0]);
-          const state = ['waiting', 'working', 'hung'].includes(parsed.state)
-            ? (parsed.state as 'waiting' | 'working' | 'hung')
-            : 'unknown';
+          const state = ["waiting", "working", "hung"].includes(parsed.state)
+            ? (parsed.state as "waiting" | "working" | "hung")
+            : "unknown";
           verdict = {
             state,
-            reasoning: typeof parsed.reasoning === 'string' ? parsed.reasoning.slice(0, 200) : '',
+            reasoning:
+              typeof parsed.reasoning === "string"
+                ? parsed.reasoning.slice(0, 200)
+                : "",
             hash,
             elapsedMs,
           };
         } catch {
-          verdict = { state: 'unknown', reasoning: 'malformed JSON', hash, elapsedMs };
+          verdict = {
+            state: "unknown",
+            reasoning: "malformed JSON",
+            hash,
+            elapsedMs,
+          };
         }
       } else {
-        verdict = { state: 'unknown', reasoning: 'no JSON in response', hash, elapsedMs };
+        verdict = {
+          state: "unknown",
+          reasoning: "no JSON in response",
+          hash,
+          elapsedMs,
+        };
       }
     } else {
       verdict = {
-        state: 'unknown',
-        reasoning: `claude exited ${result.status} (${(result.stderr ?? '').slice(0, 80)})`,
+        state: "unknown",
+        reasoning: `claude exited ${result.status} (${(result.stderr ?? "").slice(0, 80)})`,
         hash,
         elapsedMs,
       };
     }
   } catch (err) {
     verdict = {
-      state: 'unknown',
+      state: "unknown",
       reasoning: `judge spawn failed: ${(err as Error).message}`.slice(0, 200),
       hash,
       elapsedMs: Date.now() - judgeStart,
@@ -490,7 +517,7 @@ ${tail}
   PTY_VERDICT_CACHE.set(hash, verdict);
   logPtyJudge({
     ts: new Date().toISOString(),
-    testName: ctx?.testName ?? 'unknown',
+    testName: ctx?.testName ?? "unknown",
     state: verdict.state,
     reasoning: verdict.reasoning,
     hash: verdict.hash,
@@ -602,7 +629,7 @@ export function isProseAUQVisible(visible: string): boolean {
   // false — the two-signal contract is pinned by unit tests.
   const replyOrRec =
     /reply\s*(?:with)?\s*[A-D]/i.test(tail) ||
-    /reply(?:with)?[A-D]/i.test(tail.replace(/\s+/g, '')) ||
+    /reply(?:with)?[A-D]/i.test(tail.replace(/\s+/g, "")) ||
     /\bRecommendation\s*:/i.test(tail) ||
     /\(recommended\)/i.test(tail);
   if (replyOrRec) {
@@ -649,7 +676,7 @@ export function parseNumberedOptions(
   // dialog still in scrollback) sit above it and must be ignored. Without
   // this, parseNumberedOptions returns stale options after the dialog is
   // dismissed.
-  const lines = tail.split('\n');
+  const lines = tail.split("\n");
   // Anchor on the LAST line containing `❯<spaces>1.` ANYWHERE on the line.
   // The /plan-*-review skill's box-layout AUQ uses TTY cursor-positioning
   // escapes that stripAnsi removes — leaving the cursor `❯1.` mid-line,
@@ -657,7 +684,7 @@ export function parseNumberedOptions(
   // earlier `^\s*❯` anchor missed those entirely.
   let cursorLineIdx = -1;
   for (let i = lines.length - 1; i >= 0; i--) {
-    if (/❯\s*1\./.test(lines[i] ?? '')) {
+    if (/❯\s*1\./.test(lines[i] ?? "")) {
       cursorLineIdx = i;
       break;
     }
@@ -668,7 +695,7 @@ export function parseNumberedOptions(
   // sigil and prevent the literal-cursor anchor above from finding it.
   if (cursorLineIdx < 0) {
     for (let i = lines.length - 1; i >= 0; i--) {
-      if (/^(?:\s*|\s*❯\s+)1\./.test(lines[i] ?? '')) {
+      if (/^(?:\s*|\s*❯\s+)1\./.test(lines[i] ?? "")) {
         cursorLineIdx = i;
         break;
       }
@@ -683,12 +710,12 @@ export function parseNumberedOptions(
   // captures `❯N. label` from anywhere on the line through end-of-line.
   // Only used for the cursor line — subsequent options are parsed with the
   // start-of-line `optionRe`.
-  const cursorLine = lines[cursorLineIdx] ?? '';
+  const cursorLine = lines[cursorLineIdx] ?? "";
   const cursorInlineRe = /❯\s*([1-9])\.\s*(\S.*?)\s*$/;
   const inlineMatch = cursorInlineRe.exec(cursorLine);
   if (inlineMatch) {
     const idx = Number(inlineMatch[1]);
-    const label = (inlineMatch[2] ?? '').trim();
+    const label = (inlineMatch[2] ?? "").trim();
     if (label.length > 0 && !seenIndices.has(idx)) {
       seenIndices.add(idx);
       found.push({ index: idx, label });
@@ -698,7 +725,7 @@ export function parseNumberedOptions(
     const startMatch = optionRe.exec(cursorLine);
     if (startMatch) {
       const idx = Number(startMatch[1]);
-      const label = (startMatch[2] ?? '').trim();
+      const label = (startMatch[2] ?? "").trim();
       if (label.length > 0 && !seenIndices.has(idx)) {
         seenIndices.add(idx);
         found.push({ index: idx, label });
@@ -708,10 +735,10 @@ export function parseNumberedOptions(
 
   // Subsequent lines: standard start-of-line option parsing.
   for (let i = cursorLineIdx + 1; i < lines.length; i++) {
-    const m = optionRe.exec(lines[i] ?? '');
+    const m = optionRe.exec(lines[i] ?? "");
     if (!m) continue;
     const idx = Number(m[1]);
-    const label = (m[2] ?? '').trim();
+    const label = (m[2] ?? "").trim();
     if (seenIndices.has(idx)) continue;
     if (label.length === 0) continue;
     seenIndices.add(idx);
@@ -742,7 +769,8 @@ export function parseNumberedOptions(
  * source of truth — when /plan-ceo-review adds a fifth mode, one regex updates
  * everywhere instead of drifting per-test.
  */
-export const MODE_RE = /HOLD SCOPE|SCOPE EXPANSION|SELECTIVE EXPANSION|SCOPE REDUCTION/i;
+export const MODE_RE =
+  /HOLD SCOPE|SCOPE EXPANSION|SELECTIVE EXPANSION|SCOPE REDUCTION/i;
 
 /**
  * Stable signature for a parsed numbered-option list — used by tests to detect
@@ -758,7 +786,7 @@ export function optionsSignature(
   return [...opts]
     .sort((a, b) => a.index - b.index)
     .map((o) => `${o.index}:${o.label}`)
-    .join('|');
+    .join("|");
 }
 
 /**
@@ -774,19 +802,19 @@ export function optionsSignature(
  * since they need the session handle.
  */
 export type ClassifyResult =
-  | { outcome: 'silent_write'; summary: string }
-  | { outcome: 'wrote_findings_before_asking'; summary: string }
-  | { outcome: 'auto_decided'; summary: string }
-  | { outcome: 'plan_ready'; summary: string }
-  | { outcome: 'asked'; summary: string }
+  | { outcome: "silent_write"; summary: string }
+  | { outcome: "wrote_findings_before_asking"; summary: string }
+  | { outcome: "auto_decided"; summary: string }
+  | { outcome: "plan_ready"; summary: string }
+  | { outcome: "asked"; summary: string }
   | null;
 
 const SANCTIONED_WRITE_SUBSTRINGS = [
-  '.claude/plans',
-  '.gstack/',
-  '/.context/',
-  'CHANGELOG.md',
-  'TODOS.md',
+  ".claude/plans",
+  ".gstack/",
+  "/.context/",
+  "CHANGELOG.md",
+  "TODOS.md",
 ];
 
 /**
@@ -834,12 +862,16 @@ export function classifyVisible(
   // not an actual silent write).
   const writeRe = /⏺\s*(?:Write|Edit)\(([^)]+)\)/g;
   let m: RegExpExecArray | null;
-  const auqRenderIdx = opts?.strictPlanWrites ? findFirstAuqRenderIndex(visible) : -1;
+  const auqRenderIdx = opts?.strictPlanWrites
+    ? findFirstAuqRenderIndex(visible)
+    : -1;
   while ((m = writeRe.exec(visible)) !== null) {
-    const target = m[1] ?? '';
+    const target = m[1] ?? "";
     const writePos = m.index;
-    const isPlanWrite = target.includes('.claude/plans');
-    const sanctioned = SANCTIONED_WRITE_SUBSTRINGS.some((s) => target.includes(s));
+    const isPlanWrite = target.includes(".claude/plans");
+    const sanctioned = SANCTIONED_WRITE_SUBSTRINGS.some((s) =>
+      target.includes(s),
+    );
 
     // D4-B: when strictPlanWrites is on, plan writes that precede the first
     // AUQ render are flagged. Legitimate end-of-workflow plan writes happen
@@ -848,7 +880,7 @@ export function classifyVisible(
     if (opts?.strictPlanWrites && isPlanWrite) {
       if (auqRenderIdx < 0 || writePos < auqRenderIdx) {
         return {
-          outcome: 'wrote_findings_before_asking',
+          outcome: "wrote_findings_before_asking",
           summary: `Write/Edit to ${target} fired before any AskUserQuestion render`,
         };
       }
@@ -858,7 +890,7 @@ export function classifyVisible(
 
     if (!sanctioned && !isNumberedOptionListVisible(visible)) {
       return {
-        outcome: 'silent_write',
+        outcome: "silent_write",
         summary: `Write/Edit to ${target} fired before any AskUserQuestion`,
       };
     }
@@ -869,15 +901,16 @@ export function classifyVisible(
   // we got to plan_ready without surfacing the question.
   if (isAutoDecidedVisible(visible)) {
     return {
-      outcome: 'auto_decided',
+      outcome: "auto_decided",
       summary:
-        'skill auto-decided an AskUserQuestion via the AUTO_DECIDE preamble (the user never saw the prompt)',
+        "skill auto-decided an AskUserQuestion via the AUTO_DECIDE preamble (the user never saw the prompt)",
     };
   }
   if (isPlanReadyVisible(visible)) {
     return {
-      outcome: 'plan_ready',
-      summary: 'skill ran end-to-end and emitted plan-mode "Ready to execute" confirmation',
+      outcome: "plan_ready",
+      summary:
+        'skill ran end-to-end and emitted plan-mode "Ready to execute" confirmation',
     };
   }
   if (isNumberedOptionListVisible(visible)) {
@@ -887,8 +920,9 @@ export function classifyVisible(
       return null;
     }
     return {
-      outcome: 'asked',
-      summary: 'skill fired a numbered-option prompt (AskUserQuestion or routing-injection)',
+      outcome: "asked",
+      summary:
+        "skill fired a numbered-option prompt (AskUserQuestion or routing-injection)",
     };
   }
   // Prose-rendered AUQ: model surfaced the question as lettered or numbered
@@ -902,8 +936,9 @@ export function classifyVisible(
       return null;
     }
     return {
-      outcome: 'asked',
-      summary: 'skill rendered a prose-style AskUserQuestion (model waiting for user input)',
+      outcome: "asked",
+      summary:
+        "skill rendered a prose-style AskUserQuestion (model waiting for user input)",
     };
   }
   return null;
@@ -973,32 +1008,32 @@ export type Step0BoundaryPredicate = (
 export function parseQuestionPrompt(visible: string): string {
   // Tail-only — older prompts higher in the buffer are stale.
   const tail = visible.length > 4096 ? visible.slice(-4096) : visible;
-  const lines = tail.split('\n');
+  const lines = tail.split("\n");
 
   // Find the latest line containing `❯<spaces>1.` (matching parseNumberedOptions —
   // unanchored to handle the box-layout case where cursor is mid-line after
   // divider + header + prompt text on the same logical line).
   let cursorLineIdx = -1;
   for (let i = lines.length - 1; i >= 0; i--) {
-    if (/❯\s*1\./.test(lines[i] ?? '')) {
+    if (/❯\s*1\./.test(lines[i] ?? "")) {
       cursorLineIdx = i;
       break;
     }
   }
-  if (cursorLineIdx < 0) return '';
+  if (cursorLineIdx < 0) return "";
 
   // Box-layout case: prompt text may be ON the cursor line, BEFORE `❯1.`.
   // Extract that prefix (after stripping leading box-drawing characters and
   // dividers) as the last piece of the prompt — appended after any prior
   // multi-line prompt text we walk up to find.
-  const cursorLine = lines[cursorLineIdx] ?? '';
-  let inlinePrompt = '';
+  const cursorLine = lines[cursorLineIdx] ?? "";
+  let inlinePrompt = "";
   const cursorPos = cursorLine.search(/❯\s*1\./);
   if (cursorPos > 0) {
     inlinePrompt = cursorLine
       .slice(0, cursorPos)
       // Strip box-drawing chars + dividers + leading checkbox sigil.
-      .replace(/^[─━┄┅┈┉─┌┐└┘├┤┬┴┼│┃☐□■\s]+/, '')
+      .replace(/^[─━┄┅┈┉─┌┐└┘├┤┬┴┼│┃☐□■\s]+/, "")
       .trim();
   }
 
@@ -1009,9 +1044,9 @@ export function parseQuestionPrompt(visible: string): string {
   const promptLines: string[] = [];
   let blankRun = 0;
   for (let i = cursorLineIdx - 1; i >= 0 && promptLines.length < 6; i--) {
-    const raw = lines[i] ?? '';
+    const raw = lines[i] ?? "";
     const trimmed = raw.trim();
-    if (trimmed === '') {
+    if (trimmed === "") {
       blankRun += 1;
       if (blankRun >= 2 && promptLines.length > 0) break;
       continue;
@@ -1022,8 +1057,9 @@ export function parseQuestionPrompt(visible: string): string {
     promptLines.unshift(trimmed);
   }
 
-  const all = inlinePrompt.length > 0 ? [...promptLines, inlinePrompt] : promptLines;
-  const joined = all.join(' ').replace(/\s+/g, ' ').trim();
+  const all =
+    inlinePrompt.length > 0 ? [...promptLines, inlinePrompt] : promptLines;
+  const joined = all.join(" ").replace(/\s+/g, " ").trim();
   return joined.slice(0, 240);
 }
 
@@ -1041,10 +1077,10 @@ export function auqFingerprint(
   promptSnippet: string,
   opts: Array<{ index: number; label: string }>,
 ): string {
-  const normalized = promptSnippet.replace(/\s+/g, ' ').trim();
+  const normalized = promptSnippet.replace(/\s+/g, " ").trim();
   const sig = optionsSignature(opts);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (Bun as any).hash(normalized + '||' + sig).toString(16);
+  return (Bun as any).hash(normalized + "||" + sig).toString(16);
 }
 
 /**
@@ -1088,18 +1124,18 @@ export function assertReviewReportAtBottom(
   const re = /^## GSTACK REVIEW REPORT\s*$/m;
   const match = re.exec(content);
   if (!match) {
-    return { ok: false, reason: 'no GSTACK REVIEW REPORT section' };
+    return { ok: false, reason: "no GSTACK REVIEW REPORT section" };
   }
   const after = content.slice(match.index + match[0].length);
   // Match any `## ` heading after the report. Reject `## ` followed by
   // newline-only (trailing-whitespace ## headers) to avoid false positives.
-  const trailingHeadings = Array.from(
-    after.matchAll(/^## \S.*$/gm),
-  ).map((m) => m[0]);
+  const trailingHeadings = Array.from(after.matchAll(/^## \S.*$/gm)).map(
+    (m) => m[0],
+  );
   if (trailingHeadings.length > 0) {
     return {
       ok: false,
-      reason: 'trailing ## heading(s) after GSTACK REVIEW REPORT',
+      reason: "trailing ## heading(s) after GSTACK REVIEW REPORT",
       trailingHeadings,
     };
   }
@@ -1119,9 +1155,11 @@ export function assertReviewReportAtBottom(
  * so it also catches the report-missing case under `'asked'` /
  * `'wrote_findings_before_asking'` when a plan was already written.
  */
-export function assertReportAtBottomIfPlanWritten(
-  obs: { planFile?: string; evidence: string; outcome?: string },
-): void {
+export function assertReportAtBottomIfPlanWritten(obs: {
+  planFile?: string;
+  evidence: string;
+  outcome?: string;
+}): void {
   if (!obs.planFile) return;
   // Skip when the plan file path was detected from TTY output but no file
   // exists on disk. This happens when the model mentions a path mid-stream
@@ -1135,13 +1173,13 @@ export function assertReportAtBottomIfPlanWritten(
   // is the expected mid-flight state, not a contract violation. The
   // report-at-bottom check applies to outcomes that imply the workflow
   // ran end-to-end (plan_ready, completion_summary, etc.).
-  if (obs.outcome === 'asked') return;
-  const content = fs.readFileSync(obs.planFile, 'utf-8');
+  if (obs.outcome === "asked") return;
+  const content = fs.readFileSync(obs.planFile, "utf-8");
   const verdict = assertReviewReportAtBottom(content);
   if (!verdict.ok) {
     const trailing = verdict.trailingHeadings?.length
-      ? `\ntrailing headings: ${verdict.trailingHeadings.join(', ')}`
-      : '';
+      ? `\ntrailing headings: ${verdict.trailingHeadings.join(", ")}`
+      : "";
     throw new Error(
       `GSTACK REVIEW REPORT contract violation in ${obs.planFile}: ${verdict.reason}${trailing}\n` +
         `--- evidence (last 2KB) ---\n${obs.evidence}`,
@@ -1201,7 +1239,7 @@ export async function launchClaudePty(
   const claudePath = resolveClaudeBinary();
   if (!claudePath) {
     throw new Error(
-      'claude binary not found on PATH. Install: https://docs.anthropic.com/en/docs/claude-code',
+      "claude binary not found on PATH. Install: https://docs.anthropic.com/en/docs/claude-code",
     );
   }
 
@@ -1210,7 +1248,7 @@ export async function launchClaudePty(
   const rows = opts.rows ?? 40;
   const timeoutMs = opts.timeoutMs ?? 240_000;
 
-  let buffer = '';
+  let buffer = "";
   let exited = false;
   let exitCodeCaptured: number | null = null;
 
@@ -1219,18 +1257,19 @@ export async function launchClaudePty(
   // (see ClaudePtyOptions.model). Chain mirrors session-runner.ts:144 so PTY and
   // `claude -p` evals always agree. Pushed before extraArgs => a test-supplied
   // --model wins (last flag wins).
-  const model = opts.model ?? process.env.EVALS_MODEL ?? 'claude-sonnet-4-6';
-  args.push('--model', model);
+  const model = opts.model ?? process.env.EVALS_MODEL ?? "claude-sonnet-4-6";
+  args.push("--model", model);
   // Permission mode: 'plan' default, null => omit flag entirely.
-  const permissionMode = opts.permissionMode === undefined ? 'plan' : opts.permissionMode;
+  const permissionMode =
+    opts.permissionMode === undefined ? "plan" : opts.permissionMode;
   if (permissionMode !== null) {
-    args.push('--permission-mode', permissionMode);
+    args.push("--permission-mode", permissionMode);
   }
   // Hermetic children get zero MCP servers; gated on the same call-time
   // check as the env scrub so EVALS_HERMETIC=0 restores operator MCP too.
   // Before opts.extraArgs so a test could theoretically supply --mcp-config.
   const hermetic = isHermeticEnabled();
-  if (hermetic) args.push('--strict-mcp-config');
+  if (hermetic) args.push("--strict-mcp-config");
   if (opts.extraArgs) args.push(...opts.extraArgs);
 
   // Hermetic by default (test/helpers/hermetic-env.ts): operator session
@@ -1243,7 +1282,7 @@ export async function launchClaudePty(
       cols,
       rows,
       data(_t: unknown, chunk: Buffer) {
-        buffer += chunk.toString('utf-8');
+        buffer += chunk.toString("utf-8");
       },
     },
     cwd,
@@ -1252,7 +1291,7 @@ export async function launchClaudePty(
 
   // Track exit so waitForAny can fail fast if claude crashes.
   let exitedPromise: Promise<void> = Promise.resolve();
-  if (proc.exited && typeof proc.exited.then === 'function') {
+  if (proc.exited && typeof proc.exited.then === "function") {
     exitedPromise = proc.exited
       .then((code: number | null) => {
         exitCodeCaptured = code;
@@ -1266,7 +1305,7 @@ export async function launchClaudePty(
   // Top-level timeout. If a test forgets to close, this kills it eventually.
   const wallTimer = setTimeout(() => {
     try {
-      proc.kill?.('SIGKILL');
+      proc.kill?.("SIGKILL");
     } catch {
       /* ignore */
     }
@@ -1281,7 +1320,7 @@ export async function launchClaudePty(
     if (isTrustDialogVisible(visible)) {
       trustHandled = true;
       try {
-        proc.terminal?.write?.('1\r');
+        proc.terminal?.write?.("1\r");
       } catch {
         /* ignore */
       }
@@ -1289,7 +1328,10 @@ export async function launchClaudePty(
   }, 200);
   // Stop the watcher after 15s — by then the dialog has either fired or
   // doesn't exist on this run.
-  const trustWatcherStop = setTimeout(() => clearInterval(trustWatcher), 15_000);
+  const trustWatcherStop = setTimeout(
+    () => clearInterval(trustWatcher),
+    15_000,
+  );
 
   function send(data: string): void {
     if (exited) return;
@@ -1300,18 +1342,18 @@ export async function launchClaudePty(
     }
   }
 
-  type Key = Parameters<ClaudePtySession['sendKey']>[0];
+  type Key = Parameters<ClaudePtySession["sendKey"]>[0];
   function sendKey(key: Key): void {
     const map: Record<string, string> = {
-      Enter: '\r',
-      Up: '\x1b[A',
-      Down: '\x1b[B',
-      Esc: '\x1b',
-      Tab: '\t',
-      ShiftTab: '\x1b[Z',
-      CtrlC: '\x03',
+      Enter: "\r",
+      Up: "\x1b[A",
+      Down: "\x1b[B",
+      Esc: "\x1b",
+      Tab: "\t",
+      ShiftTab: "\x1b[Z",
+      CtrlC: "\x03",
     };
-    send(map[key] ?? '');
+    send(map[key] ?? "");
   }
 
   let lastMark = 0;
@@ -1339,10 +1381,14 @@ export async function launchClaudePty(
             `Last visible:\n${stripAnsi(buffer).slice(-2000)}`,
         );
       }
-      const visible = since !== undefined ? stripAnsi(buffer.slice(since)) : stripAnsi(buffer);
+      const visible =
+        since !== undefined
+          ? stripAnsi(buffer.slice(since))
+          : stripAnsi(buffer);
       for (let i = 0; i < patterns.length; i++) {
         const p = patterns[i]!;
-        const matchIdx = typeof p === 'string' ? visible.indexOf(p) : visible.search(p);
+        const matchIdx =
+          typeof p === "string" ? visible.indexOf(p) : visible.search(p);
         if (matchIdx >= 0) {
           return { matched: p, index: matchIdx };
         }
@@ -1351,9 +1397,11 @@ export async function launchClaudePty(
     }
     throw new Error(
       `Timed out after ${wTimeout}ms waiting for any of: ${patterns
-        .map((p) => (typeof p === 'string' ? JSON.stringify(p) : p.source))
-        .join(', ')}\nLast visible (since=${since ?? 'all'}):\n${
-        since !== undefined ? stripAnsi(buffer.slice(since)).slice(-2000) : stripAnsi(buffer).slice(-2000)
+        .map((p) => (typeof p === "string" ? JSON.stringify(p) : p.source))
+        .join(", ")}\nLast visible (since=${since ?? "all"}):\n${
+        since !== undefined
+          ? stripAnsi(buffer.slice(since)).slice(-2000)
+          : stripAnsi(buffer).slice(-2000)
       }`,
     );
   }
@@ -1371,7 +1419,7 @@ export async function launchClaudePty(
     clearInterval(trustWatcher);
     if (exited) return;
     try {
-      proc.kill?.('SIGINT');
+      proc.kill?.("SIGINT");
     } catch {
       /* ignore */
     }
@@ -1379,7 +1427,7 @@ export async function launchClaudePty(
     await Promise.race([exitedPromise, Bun.sleep(2000)]);
     if (!exited) {
       try {
-        proc.kill?.('SIGKILL');
+        proc.kill?.("SIGKILL");
       } catch {
         /* ignore */
       }
@@ -1399,7 +1447,7 @@ export async function launchClaudePty(
     pid: () => proc.pid as number | undefined,
     exited: () => exited,
     exitCode: () => exitCodeCaptured,
-    hermeticConfigDir: hermetic ? childEnv.CLAUDE_CONFIG_DIR ?? null : null,
+    hermeticConfigDir: hermetic ? (childEnv.CLAUDE_CONFIG_DIR ?? null) : null,
     close,
   };
 }
@@ -1427,7 +1475,11 @@ export async function invokeAndObserve(
   slashCommand: string,
   expectations: Record<string, RegExp | string>,
   opts?: { boot_grace_ms?: number; timeoutMs?: number },
-): Promise<{ matched: string; rawPattern: RegExp | string; visibleAtMatch: string }> {
+): Promise<{
+  matched: string;
+  rawPattern: RegExp | string;
+  visibleAtMatch: string;
+}> {
   // Brief grace period so the trust-dialog auto-press has time to clear and
   // claude is back at the input prompt before we type the command.
   const boot = opts?.boot_grace_ms ?? 6000;
@@ -1439,7 +1491,7 @@ export async function invokeAndObserve(
   const sinceMark = session.mark();
 
   // Type and submit.
-  session.send(slashCommand + '\r');
+  session.send(slashCommand + "\r");
 
   const patterns = Object.entries(expectations);
   const result = await session.waitForAny(
@@ -1479,7 +1531,13 @@ export interface PlanSkillObservation {
    *  - 'exited'       — claude process died before any of the above
    *  - 'timeout'      — none of the above within budget
    */
-  outcome: 'asked' | 'auto_decided' | 'plan_ready' | 'silent_write' | 'exited' | 'timeout';
+  outcome:
+    | "asked"
+    | "auto_decided"
+    | "plan_ready"
+    | "silent_write"
+    | "exited"
+    | "timeout";
   /** Human-readable summary. */
   summary: string;
   /** Visible terminal text since the slash command was sent (last 2KB). */
@@ -1579,7 +1637,7 @@ export async function runPlanSkillObservation(opts: {
 }): Promise<PlanSkillObservation> {
   const startedAt = Date.now();
   const session = await launchClaudePty({
-    permissionMode: opts.inPlanMode === false ? null : 'plan',
+    permissionMode: opts.inPlanMode === false ? null : "plan",
     cwd: opts.cwd,
     timeoutMs: (opts.timeoutMs ?? 180_000) + 30_000,
     extraArgs: opts.extraArgs,
@@ -1627,15 +1685,15 @@ export async function runPlanSkillObservation(opts: {
 
       if (session.exited()) {
         return {
-          outcome: 'exited',
+          outcome: "exited",
           summary: `claude exited (code=${session.exitCode()}) before reaching a terminal outcome`,
           evidence: visible.slice(-2000),
           elapsedMs: Date.now() - startedAt,
         };
       }
-      if (visible.includes('Unknown command:')) {
+      if (visible.includes("Unknown command:")) {
         return {
-          outcome: 'exited',
+          outcome: "exited",
           summary: `claude rejected /${opts.skillName} as unknown command (skill not registered in this cwd)`,
           evidence: visible.slice(-2000),
           elapsedMs: Date.now() - startedAt,
@@ -1649,7 +1707,7 @@ export async function runPlanSkillObservation(opts: {
         logPtySnapshot(visible, {
           testName: opts.skillName,
           elapsedMs: Date.now() - start,
-          tag: 'prose-auq-surfaced',
+          tag: "prose-auq-surfaced",
         });
       }
 
@@ -1682,14 +1740,21 @@ export async function runPlanSkillObservation(opts: {
       // question via prose the regex couldn't reassemble). Snapshot the
       // visible buffer at each judge call when GSTACK_PTY_LOG=1.
       const elapsed = Date.now() - start;
-      if (elapsed > JUDGE_AFTER_MS && Date.now() - lastJudgeAt > JUDGE_INTERVAL_MS) {
+      if (
+        elapsed > JUDGE_AFTER_MS &&
+        Date.now() - lastJudgeAt > JUDGE_INTERVAL_MS
+      ) {
         lastJudgeAt = Date.now();
-        logPtySnapshot(visible, { testName: opts.skillName, elapsedMs: elapsed, tag: 'judge-tick' });
+        logPtySnapshot(visible, {
+          testName: opts.skillName,
+          elapsedMs: elapsed,
+          tag: "judge-tick",
+        });
         lastJudgeVerdict = judgePtyState(visible, { testName: opts.skillName });
-        if (lastJudgeVerdict.state === 'waiting') {
+        if (lastJudgeVerdict.state === "waiting") {
           waitingEverObserved = true;
           return {
-            outcome: 'asked',
+            outcome: "asked",
             summary: `LLM judge: ${lastJudgeVerdict.reasoning} (state=waiting after ${Math.round(elapsed / 1000)}s)`,
             evidence: visible.slice(-2000),
             elapsedMs: Date.now() - startedAt,
@@ -1706,12 +1771,12 @@ export async function runPlanSkillObservation(opts: {
     const finalVisible = session.visibleSince(since);
     if (proseAUQEverObserved || waitingEverObserved) {
       return {
-        outcome: 'asked',
+        outcome: "asked",
         summary:
           `prose-AUQ surface observed during run (proseAUQEverObserved=${proseAUQEverObserved}, waitingEverObserved=${waitingEverObserved}); model surfaced the question and the test budget elapsed without a follow-up classification` +
           (lastJudgeVerdict
             ? ` (last LLM judge: ${lastJudgeVerdict.state} — ${lastJudgeVerdict.reasoning})`
-            : ''),
+            : ""),
         evidence: finalVisible.slice(-2000),
         elapsedMs: Date.now() - startedAt,
         proseAUQEverObserved,
@@ -1719,12 +1784,12 @@ export async function runPlanSkillObservation(opts: {
       };
     }
     return {
-      outcome: 'timeout',
+      outcome: "timeout",
       summary:
         `no terminal outcome within ${budgetMs}ms` +
         (lastJudgeVerdict
           ? ` (last LLM judge: state=${lastJudgeVerdict.state} — ${lastJudgeVerdict.reasoning})`
-          : ''),
+          : ""),
       evidence: finalVisible.slice(-2000),
       elapsedMs: Date.now() - startedAt,
       proseAUQEverObserved,
@@ -1748,12 +1813,12 @@ export async function runPlanSkillObservation(opts: {
  */
 export interface PlanSkillCountObservation {
   outcome:
-    | 'plan_ready'
-    | 'completion_summary'
-    | 'ceiling_reached'
-    | 'silent_write'
-    | 'exited'
-    | 'timeout';
+    | "plan_ready"
+    | "completion_summary"
+    | "ceiling_reached"
+    | "silent_write"
+    | "exited"
+    | "timeout";
   summary: string;
   /** Visible terminal text at terminal time (last 3KB). */
   evidence: string;
@@ -1849,7 +1914,7 @@ export async function runPlanSkillCounting(opts: {
   const timeoutMs = opts.timeoutMs ?? 1_500_000;
 
   const session = await launchClaudePty({
-    permissionMode: 'plan',
+    permissionMode: "plan",
     cwd: opts.cwd,
     timeoutMs: timeoutMs + 60_000,
     env: opts.env,
@@ -1862,10 +1927,10 @@ export async function runPlanSkillCounting(opts: {
   let step0Count = 0;
   let reviewCount = 0;
   let isFirstAUQ = true;
-  let lastSig = '';
+  let lastSig = "";
 
   function snapshot(
-    outcome: PlanSkillCountObservation['outcome'],
+    outcome: PlanSkillCountObservation["outcome"],
     summary: string,
     visible: string,
   ): PlanSkillCountObservation {
@@ -1895,14 +1960,14 @@ export async function runPlanSkillCounting(opts: {
       // Process exited?
       if (session.exited()) {
         return snapshot(
-          'exited',
+          "exited",
           `claude exited (code=${session.exitCode()}) during counting (step0=${step0Count}, review=${reviewCount})`,
           visible,
         );
       }
-      if (visible.includes('Unknown command:')) {
+      if (visible.includes("Unknown command:")) {
         return snapshot(
-          'exited',
+          "exited",
           `claude rejected ${opts.slashCommand} as unknown command (skill not registered in this cwd)`,
           visible,
         );
@@ -1913,13 +1978,13 @@ export async function runPlanSkillCounting(opts: {
       const writeRe = /⏺\s*(?:Write|Edit)\(([^)]+)\)/g;
       let m: RegExpExecArray | null;
       while ((m = writeRe.exec(visible)) !== null) {
-        const target = m[1] ?? '';
+        const target = m[1] ?? "";
         const sanctioned = SANCTIONED_WRITE_SUBSTRINGS.some((s) =>
           target.includes(s),
         );
         if (!sanctioned && !isNumberedOptionListVisible(visible)) {
           return snapshot(
-            'silent_write',
+            "silent_write",
             `Write/Edit to ${target} fired before any AskUserQuestion`,
             visible,
           );
@@ -1930,14 +1995,14 @@ export async function runPlanSkillCounting(opts: {
       // completion-summary doesn't get misclassified as a bonus AUQ.
       if (COMPLETION_SUMMARY_RE.test(visible)) {
         return snapshot(
-          'completion_summary',
+          "completion_summary",
           `skill emitted completion summary / verdict / status line (step0=${step0Count}, review=${reviewCount})`,
           visible,
         );
       }
       if (isPlanReadyVisible(visible)) {
         return snapshot(
-          'plan_ready',
+          "plan_ready",
           `skill emitted plan-mode "Ready to execute" confirmation (step0=${step0Count}, review=${reviewCount})`,
           visible,
         );
@@ -1960,7 +2025,7 @@ export async function runPlanSkillCounting(opts: {
       const sig = optionsSignature(options);
       if (sig === lastSig) continue;
       const promptSnippet = parseQuestionPrompt(visible);
-      if (promptSnippet === '') continue; // not yet rendered, poll again
+      if (promptSnippet === "") continue; // not yet rendered, poll again
       lastSig = sig;
 
       const fingerprintHash = auqFingerprint(promptSnippet, options);
@@ -1996,7 +2061,7 @@ export async function runPlanSkillCounting(opts: {
       // Hard ceiling — runaway protection.
       if (reviewCount >= opts.reviewCountCeiling) {
         return snapshot(
-          'ceiling_reached',
+          "ceiling_reached",
           `review-phase AUQ count reached ceiling (${opts.reviewCountCeiling})`,
           session.visibleSince(since),
         );
@@ -2007,7 +2072,7 @@ export async function runPlanSkillCounting(opts: {
     }
 
     return snapshot(
-      'timeout',
+      "timeout",
       `no terminal outcome within ${timeoutMs}ms (step0=${step0Count}, review=${reviewCount})`,
       session.visibleSince(since),
     );
@@ -2046,11 +2111,11 @@ export interface PlanSkillFloorObservation {
   /** True iff a review-phase AUQ render was observed. */
   auqObserved: boolean;
   outcome:
-    | 'auq_observed'
-    | 'plan_ready'
-    | 'silent_write'
-    | 'exited'
-    | 'timeout';
+    | "auq_observed"
+    | "plan_ready"
+    | "silent_write"
+    | "exited"
+    | "timeout";
   summary: string;
   /** Visible TTY tail (last 3KB) at terminal time. */
   evidence: string;
@@ -2082,7 +2147,7 @@ export async function runPlanSkillFloorCheck(opts: {
   const timeoutMs = opts.timeoutMs ?? 600_000;
 
   const session = await launchClaudePty({
-    permissionMode: 'plan',
+    permissionMode: "plan",
     cwd: opts.cwd,
     timeoutMs: timeoutMs + 60_000,
     env: opts.env,
@@ -2108,16 +2173,16 @@ export async function runPlanSkillFloorCheck(opts: {
       if (session.exited()) {
         return {
           auqObserved: false,
-          outcome: 'exited',
+          outcome: "exited",
           summary: `claude exited (code=${session.exitCode()}) before any AUQ render`,
           evidence: visible.slice(-3000),
           elapsedMs: Date.now() - startedAt,
         };
       }
-      if (visible.includes('Unknown command:')) {
+      if (visible.includes("Unknown command:")) {
         return {
           auqObserved: false,
-          outcome: 'exited',
+          outcome: "exited",
           summary: `claude rejected ${opts.slashCommand} as unknown command`,
           evidence: visible.slice(-3000),
           elapsedMs: Date.now() - startedAt,
@@ -2136,8 +2201,8 @@ export async function runPlanSkillFloorCheck(opts: {
       ) {
         return {
           auqObserved: true,
-          outcome: 'auq_observed',
-          summary: 'agent rendered an AskUserQuestion (floor met)',
+          outcome: "auq_observed",
+          summary: "agent rendered an AskUserQuestion (floor met)",
           evidence: visible.slice(-3000),
           elapsedMs: Date.now() - startedAt,
         };
@@ -2150,14 +2215,21 @@ export async function runPlanSkillFloorCheck(opts: {
       // change the outcome — they enrich the eventual timeout summary so the
       // failure diagnostic is more actionable than "no AUQ render."
       const elapsed = Date.now() - start;
-      if (elapsed > JUDGE_AFTER_MS && Date.now() - lastJudgeAt > JUDGE_INTERVAL_MS) {
+      if (
+        elapsed > JUDGE_AFTER_MS &&
+        Date.now() - lastJudgeAt > JUDGE_INTERVAL_MS
+      ) {
         lastJudgeAt = Date.now();
-        logPtySnapshot(visible, { testName: opts.skillName, elapsedMs: elapsed, tag: 'floor-judge-tick' });
+        logPtySnapshot(visible, {
+          testName: opts.skillName,
+          elapsedMs: elapsed,
+          tag: "floor-judge-tick",
+        });
         lastJudgeVerdict = judgePtyState(visible, { testName: opts.skillName });
-        if (lastJudgeVerdict.state === 'waiting') {
+        if (lastJudgeVerdict.state === "waiting") {
           return {
             auqObserved: true,
-            outcome: 'auq_observed',
+            outcome: "auq_observed",
             summary: `LLM judge: ${lastJudgeVerdict.reasoning} (state=waiting after ${Math.round(elapsed / 1000)}s; floor met)`,
             evidence: visible.slice(-3000),
             elapsedMs: Date.now() - startedAt,
@@ -2169,12 +2241,14 @@ export async function runPlanSkillFloorCheck(opts: {
       const writeRe = /⏺\s*(?:Write|Edit)\(([^)]+)\)/g;
       let m: RegExpExecArray | null;
       while ((m = writeRe.exec(visible)) !== null) {
-        const target = m[1] ?? '';
-        const sanctioned = SANCTIONED_WRITE_SUBSTRINGS.some((s) => target.includes(s));
+        const target = m[1] ?? "";
+        const sanctioned = SANCTIONED_WRITE_SUBSTRINGS.some((s) =>
+          target.includes(s),
+        );
         if (!sanctioned && !isNumberedOptionListVisible(visible)) {
           return {
             auqObserved: false,
-            outcome: 'silent_write',
+            outcome: "silent_write",
             summary: `Write/Edit to ${target} fired before any AskUserQuestion`,
             evidence: visible.slice(-3000),
             elapsedMs: Date.now() - startedAt,
@@ -2192,8 +2266,9 @@ export async function runPlanSkillFloorCheck(opts: {
       if (isPlanReadyVisible(visible)) {
         return {
           auqObserved: false,
-          outcome: 'plan_ready',
-          summary: 'agent reached plan_ready without firing any AskUserQuestion',
+          outcome: "plan_ready",
+          summary:
+            "agent reached plan_ready without firing any AskUserQuestion",
           evidence: visible.slice(-3000),
           elapsedMs: Date.now() - startedAt,
         };
@@ -2202,7 +2277,7 @@ export async function runPlanSkillFloorCheck(opts: {
 
     return {
       auqObserved: false,
-      outcome: 'timeout',
+      outcome: "timeout",
       summary: `no AUQ render and no terminal outcome within ${timeoutMs}ms`,
       evidence: session.visibleSince(since).slice(-3000),
       elapsedMs: Date.now() - startedAt,

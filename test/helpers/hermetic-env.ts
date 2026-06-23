@@ -32,30 +32,47 @@
  * assignment, so a module-load-time read would silently ignore test pins.
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
-import * as os from 'os';
-import { promotedEnv } from '../../lib/conductor-env-shim';
-import { isProcessAlive } from '../../browse/src/error-handling';
+import * as fs from "fs";
+import * as path from "path";
+import * as os from "os";
+import { promotedEnv } from "../../lib/conductor-env-shim";
+import { isProcessAlive } from "../../browse/src/error-handling";
 
 /** Exact env names a hermetic child keeps. Everything not listed (or matched
  * by a prefix rule below) is dropped. */
 const ALLOW_EXACT = new Set([
   // Process basics
-  'PATH', 'HOME', 'TMPDIR', 'TERM', 'COLORTERM', 'LANG', 'LC_ALL', 'SHELL',
-  'USER', 'LOGNAME', 'TZ', 'NODE_ENV', 'CI',
+  "PATH",
+  "HOME",
+  "TMPDIR",
+  "TERM",
+  "COLORTERM",
+  "LANG",
+  "LC_ALL",
+  "SHELL",
+  "USER",
+  "LOGNAME",
+  "TZ",
+  "NODE_ENV",
+  "CI",
   // Browser/runtime caches the child legitimately shares with the operator
-  'PLAYWRIGHT_BROWSERS_PATH',
+  "PLAYWRIGHT_BROWSERS_PATH",
   // Network reachability — without these, children on proxied networks can't
   // reach the Anthropic API at all
-  'HTTP_PROXY', 'HTTPS_PROXY', 'NO_PROXY',
-  'http_proxy', 'https_proxy', 'no_proxy',
-  'SSL_CERT_FILE', 'SSL_CERT_DIR', 'NODE_EXTRA_CA_CERTS',
+  "HTTP_PROXY",
+  "HTTPS_PROXY",
+  "NO_PROXY",
+  "http_proxy",
+  "https_proxy",
+  "no_proxy",
+  "SSL_CERT_FILE",
+  "SSL_CERT_DIR",
+  "NODE_EXTRA_CA_CERTS",
   // Auth — named, NOT the broad ANTHROPIC_* prefix: a prefix rule would
   // smuggle model/beta/debug knobs that change eval behavior
-  'ANTHROPIC_API_KEY',   // the auth credential evals require
-  'ANTHROPIC_BASE_URL',  // API endpoint override (corp proxies)
-  'ANTHROPIC_AUTH_TOKEN', // bearer-token auth variant
+  "ANTHROPIC_API_KEY", // the auth credential evals require
+  "ANTHROPIC_BASE_URL", // API endpoint override (corp proxies)
+  "ANTHROPIC_AUTH_TOKEN", // bearer-token auth variant
 ]);
 
 /** Prefix rules: eval-harness knobs + CI metadata. Deliberately NOT here:
@@ -66,7 +83,7 @@ const ALLOW_EXACT = new Set([
  * using them. A test that legitimately needs one opts in via its own env
  * override; a provider runner (codex/gemini) re-admits its auth vars via
  * opts.extraAllow. */
-const ALLOW_PREFIXES = ['EVALS_', 'GITHUB_'];
+const ALLOW_PREFIXES = ["EVALS_", "GITHUB_"];
 
 export interface HermeticEnvOpts {
   /** Per-runner additional allowed names (exact match) or prefixes (entries
@@ -75,8 +92,10 @@ export interface HermeticEnvOpts {
 }
 
 /** EVALS_HERMETIC !== '0'. Read at call time (see module doc — ESM hoist). */
-export function isHermeticEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
-  return env.EVALS_HERMETIC !== '0';
+export function isHermeticEnabled(
+  env: NodeJS.ProcessEnv = process.env,
+): boolean {
+  return env.EVALS_HERMETIC !== "0";
 }
 
 /**
@@ -94,8 +113,10 @@ export function buildHermeticEnv(
   if (!isHermeticEnabled(base)) {
     // Escape hatch: byte-identical to the legacy spread.
     const legacy: Record<string, string> = {};
-    for (const [k, v] of Object.entries(base)) if (v !== undefined) legacy[k] = v;
-    for (const [k, v] of Object.entries(overrides ?? {})) if (v !== undefined) legacy[k] = v;
+    for (const [k, v] of Object.entries(base))
+      if (v !== undefined) legacy[k] = v;
+    for (const [k, v] of Object.entries(overrides ?? {}))
+      if (v !== undefined) legacy[k] = v;
     return legacy;
   }
 
@@ -103,7 +124,7 @@ export function buildHermeticEnv(
   const extraExact = new Set<string>();
   const extraPrefixes: string[] = [];
   for (const entry of opts?.extraAllow ?? []) {
-    if (entry.endsWith('*')) extraPrefixes.push(entry.slice(0, -1));
+    if (entry.endsWith("*")) extraPrefixes.push(entry.slice(0, -1));
     else extraExact.add(entry);
   }
 
@@ -117,9 +138,10 @@ export function buildHermeticEnv(
       extraPrefixes.some((p) => k.startsWith(p));
     if (allowed) out[k] = v;
   }
-  if (!out.TERM) out.TERM = 'xterm-256color';
+  if (!out.TERM) out.TERM = "xterm-256color";
   Object.assign(out, hermeticVars);
-  for (const [k, v] of Object.entries(overrides ?? {})) if (v !== undefined) out[k] = v;
+  for (const [k, v] of Object.entries(overrides ?? {}))
+    if (v !== undefined) out[k] = v;
   return out;
 }
 
@@ -171,13 +193,13 @@ export interface HermeticDirs {
   runRoot: string;
 }
 
-const DIR_PREFIX = 'gstack-hermetic-';
+const DIR_PREFIX = "gstack-hermetic-";
 
 let cachedDirs: HermeticDirs | null = null;
 
 /** Repo root for the trusted-dir seed: test files live in <root>/test/helpers. */
 function repoRoot(): string {
-  return path.resolve(__dirname, '..', '..');
+  return path.resolve(__dirname, "..", "..");
 }
 
 /**
@@ -193,9 +215,11 @@ export function getHermeticDirs(): HermeticDirs {
   gcStaleHermeticDirs();
 
   // Embed our pid so the GC of future processes can check liveness.
-  const runRoot = fs.mkdtempSync(path.join(os.tmpdir(), `${DIR_PREFIX}${process.pid}-`));
-  const configDir = path.join(runRoot, '.claude');
-  const gstackHome = path.join(runRoot, 'gstack-home');
+  const runRoot = fs.mkdtempSync(
+    path.join(os.tmpdir(), `${DIR_PREFIX}${process.pid}-`),
+  );
+  const configDir = path.join(runRoot, ".claude");
+  const gstackHome = path.join(runRoot, "gstack-home");
 
   // A half-seeded config dir means children hang on first-run prompts until
   // the test timeout — far worse than failing loudly here. So we throw on
@@ -206,19 +230,31 @@ export function getHermeticDirs(): HermeticDirs {
     fs.mkdirSync(configDir, { recursive: true });
     fs.mkdirSync(gstackHome, { recursive: true });
     const seed = buildSeedConfig({
-      apiKey: process.env.ANTHROPIC_API_KEY ?? process.env.GSTACK_ANTHROPIC_API_KEY,
+      apiKey:
+        process.env.ANTHROPIC_API_KEY ?? process.env.GSTACK_ANTHROPIC_API_KEY,
       trustedDirs: [repoRoot()],
     });
-    fs.writeFileSync(path.join(configDir, '.claude.json'), JSON.stringify(seed, null, 2));
+    fs.writeFileSync(
+      path.join(configDir, ".claude.json"),
+      JSON.stringify(seed, null, 2),
+    );
   } catch (err) {
-    try { fs.rmSync(runRoot, { recursive: true, force: true }); } catch { /* best-effort */ }
+    try {
+      fs.rmSync(runRoot, { recursive: true, force: true });
+    } catch {
+      /* best-effort */
+    }
     throw err;
   }
 
-  process.on('exit', () => {
+  process.on("exit", () => {
     // Exit handlers cannot await: sync best-effort removal only. Anything
     // left behind is reclaimed by the next process's pid-aware GC.
-    try { fs.rmSync(runRoot, { recursive: true, force: true }); } catch { /* GC reclaims */ }
+    try {
+      fs.rmSync(runRoot, { recursive: true, force: true });
+    } catch {
+      /* GC reclaims */
+    }
   });
 
   cachedDirs = { configDir, gstackHome, runRoot };
@@ -238,19 +274,29 @@ const GC_MIN_AGE_MS = 60 * 60 * 1000; // 1h
  */
 export function gcStaleHermeticDirs(tmpDir: string = os.tmpdir()): void {
   let entries: string[];
-  try { entries = fs.readdirSync(tmpDir); } catch { return; }
+  try {
+    entries = fs.readdirSync(tmpDir);
+  } catch {
+    return;
+  }
   const now = Date.now();
   for (const name of entries) {
     if (!name.startsWith(DIR_PREFIX)) continue;
-    const pidStr = name.slice(DIR_PREFIX.length).split('-')[0];
+    const pidStr = name.slice(DIR_PREFIX.length).split("-")[0];
     const pid = Number(pidStr);
     if (!Number.isInteger(pid) || pid <= 0) continue;
     if (pid === process.pid || isProcessAlive(pid)) continue;
     const full = path.join(tmpDir, name);
     try {
       if (now - fs.statSync(full).mtimeMs < GC_MIN_AGE_MS) continue; // too fresh
-    } catch { continue; } // vanished or unreadable — leave it
-    try { fs.rmSync(full, { recursive: true, force: true }); } catch { /* best-effort */ }
+    } catch {
+      continue;
+    } // vanished or unreadable — leave it
+    try {
+      fs.rmSync(full, { recursive: true, force: true });
+    } catch {
+      /* best-effort */
+    }
   }
 }
 

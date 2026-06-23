@@ -13,7 +13,10 @@
  * place.
  */
 
-import { extractSectionReads, type TranscriptResultLike } from './transcript-section-logger';
+import {
+  extractSectionReads,
+  type TranscriptResultLike,
+} from "./transcript-section-logger";
 
 export interface RequiredReadsResult {
   required: string[];
@@ -34,7 +37,7 @@ export function assertRequiredReads(
 ): RequiredReadsResult {
   const read = extractSectionReads(result);
   const readSet = new Set(read);
-  const required = requiredFiles.map(f => f.replace(/^.*\//, '')); // tolerate sections/<f>
-  const missing = required.filter(f => !readSet.has(f));
+  const required = requiredFiles.map((f) => f.replace(/^.*\//, "")); // tolerate sections/<f>
+  const missing = required.filter((f) => !readSet.has(f));
   return { required, read, missing, ok: missing.length === 0 };
 }

@@ -11,28 +11,38 @@
  * zero rendering loss. The TTY rendering layer is identical for fat and slim
  * skills, so it is not where token-reduction degradation can hide.
  */
-import * as fs from 'node:fs';
-import * as os from 'node:os';
-import * as path from 'node:path';
-import { spawnSync } from 'node:child_process';
-import { runSkillTest, type SkillTestResult } from './session-runner';
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
+import { spawnSync } from "node:child_process";
+import { runSkillTest, type SkillTestResult } from "./session-runner";
 
-const ROOT = path.resolve(__dirname, '..', '..');
+const ROOT = path.resolve(__dirname, "..", "..");
 
 /** The 7 decision-brief format elements graded on the captured AUQ text. */
 export const AUQ_FORMAT_ELEMENTS: Array<{ field: string; re: RegExp }> = [
-  { field: 'ELI10:', re: /ELI10\s*:/i },
-  { field: 'Recommendation:', re: /Recommendation\s*:/i },
-  { field: 'Pros / cons:', re: /Pros\s*\/\s*cons/i },
-  { field: '✅', re: /✅/ },
-  { field: '❌', re: /❌/ },
-  { field: 'Net:', re: /Net\s*:/i },
-  { field: '(recommended)', re: /\(recommended\)/i },
+  { field: "ELI10:", re: /ELI10\s*:/i },
+  { field: "Recommendation:", re: /Recommendation\s*:/i },
+  { field: "Pros / cons:", re: /Pros\s*\/\s*cons/i },
+  { field: "✅", re: /✅/ },
+  { field: "❌", re: /❌/ },
+  { field: "Net:", re: /Net\s*:/i },
+  { field: "(recommended)", re: /\(recommended\)/i },
 ];
 
-export function scoreAuqFormat(text: string): { present: number; total: number; missing: string[] } {
-  const missing = AUQ_FORMAT_ELEMENTS.filter(e => !e.re.test(text)).map(e => e.field);
-  return { present: AUQ_FORMAT_ELEMENTS.length - missing.length, total: AUQ_FORMAT_ELEMENTS.length, missing };
+export function scoreAuqFormat(text: string): {
+  present: number;
+  total: number;
+  missing: string[];
+} {
+  const missing = AUQ_FORMAT_ELEMENTS.filter((e) => !e.re.test(text)).map(
+    (e) => e.field,
+  );
+  return {
+    present: AUQ_FORMAT_ELEMENTS.length - missing.length,
+    total: AUQ_FORMAT_ELEMENTS.length,
+    missing,
+  };
 }
 
 /**
@@ -48,10 +58,13 @@ export function scoreAuqFormat(text: string): { present: number; total: number; 
  *
  * This does NOT touch judgeRecommendation or its pinned fixtures.
  */
-export async function gradeAuqRecommendation(
-  text: string,
-): Promise<{ substance: number; present: boolean; hadLiteralBecause: boolean; reason: string }> {
-  const { judgeRecommendation } = await import('./llm-judge');
+export async function gradeAuqRecommendation(text: string): Promise<{
+  substance: number;
+  present: boolean;
+  hadLiteralBecause: boolean;
+  reason: string;
+}> {
+  const { judgeRecommendation } = await import("./llm-judge");
   const recLine = text.match(/^[*_]*\s*recommendation\s*[*_]*\s*:\s*(.+)$/im);
   const hadLiteralBecause = !!recLine && /\bbecause\s+\S/i.test(recLine[1]);
 
@@ -61,7 +74,7 @@ export async function gradeAuqRecommendation(
     // sep ∈ {". ", " — ", " - ", ": "} right after a short choice token.
     const normalizedLine = recLine[1].replace(
       /^([^.:—-]{1,40}?)\s*(?:\.\s+|\s*[—-]\s+|:\s+)(\S.+)$/,
-      '$1 because $2',
+      "$1 because $2",
     );
     if (normalizedLine !== recLine[1]) {
       graded = text.replace(recLine[0], `Recommendation: ${normalizedLine}`);
@@ -70,9 +83,14 @@ export async function gradeAuqRecommendation(
 
   try {
     const r = await judgeRecommendation(graded);
-    return { substance: r.reason_substance, present: r.present, hadLiteralBecause, reason: r.reason_text };
+    return {
+      substance: r.reason_substance,
+      present: r.present,
+      hadLiteralBecause,
+      reason: r.reason_text,
+    };
   } catch {
-    return { substance: 0, present: !!recLine, hadLiteralBecause, reason: '' };
+    return { substance: 0, present: !!recLine, hadLiteralBecause, reason: "" };
   }
 }
 
@@ -86,34 +104,41 @@ export function setupPlanCeoDir(opts: {
   sectionsFrom?: string | null;
   tmpPrefix?: string;
 }): string {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), opts.tmpPrefix ?? 'auq-sdk-'));
-  const run = (cmd: string, args: string[]) => spawnSync(cmd, args, { cwd: dir, stdio: 'pipe', timeout: 5000 });
-  run('git', ['init', '-b', 'main']);
-  run('git', ['config', 'user.email', 'test@test.com']);
-  run('git', ['config', 'user.name', 'Test']);
+  const dir = fs.mkdtempSync(
+    path.join(os.tmpdir(), opts.tmpPrefix ?? "auq-sdk-"),
+  );
+  const run = (cmd: string, args: string[]) =>
+    spawnSync(cmd, args, { cwd: dir, stdio: "pipe", timeout: 5000 });
+  run("git", ["init", "-b", "main"]);
+  run("git", ["config", "user.email", "test@test.com"]);
+  run("git", ["config", "user.name", "Test"]);
   fs.writeFileSync(
-    path.join(dir, 'plan.md'),
+    path.join(dir, "plan.md"),
     [
       '# Plan: Launch a "developer-friendly" pricing tier',
-      '',
-      '## Goal',
-      'Increase developer adoption.',
-      '',
-      '## Success metric',
-      'More signups.',
-      '',
-      '## Premise',
+      "",
+      "## Goal",
+      "Increase developer adoption.",
+      "",
+      "## Success metric",
+      "More signups.",
+      "",
+      "## Premise",
       "We haven't talked to any developers about whether the current pricing is a",
       'barrier. The team agreed it "feels like" it should be cheaper.',
-    ].join('\n'),
+    ].join("\n"),
   );
-  fs.mkdirSync(path.join(dir, 'plan-ceo-review'), { recursive: true });
-  fs.writeFileSync(path.join(dir, 'plan-ceo-review', 'SKILL.md'), opts.skillMd);
+  fs.mkdirSync(path.join(dir, "plan-ceo-review"), { recursive: true });
+  fs.writeFileSync(path.join(dir, "plan-ceo-review", "SKILL.md"), opts.skillMd);
   if (opts.sectionsFrom && fs.existsSync(opts.sectionsFrom)) {
-    fs.cpSync(opts.sectionsFrom, path.join(dir, 'plan-ceo-review', 'sections'), { recursive: true });
+    fs.cpSync(
+      opts.sectionsFrom,
+      path.join(dir, "plan-ceo-review", "sections"),
+      { recursive: true },
+    );
   }
-  run('git', ['add', '.']);
-  run('git', ['commit', '-m', 'plan']);
+  run("git", ["add", "."]);
+  run("git", ["commit", "-m", "plan"]);
   return dir;
 }
 
@@ -129,31 +154,39 @@ export function setupSkillDir(opts: {
   fixtures?: Record<string, string>;
   tmpPrefix?: string;
 }): string {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), opts.tmpPrefix ?? `auq-${opts.skillName}-`));
-  const run = (cmd: string, args: string[]) => spawnSync(cmd, args, { cwd: dir, stdio: 'pipe', timeout: 5000 });
-  run('git', ['init', '-b', 'main']);
-  run('git', ['config', 'user.email', 'test@test.com']);
-  run('git', ['config', 'user.name', 'Test']);
+  const dir = fs.mkdtempSync(
+    path.join(os.tmpdir(), opts.tmpPrefix ?? `auq-${opts.skillName}-`),
+  );
+  const run = (cmd: string, args: string[]) =>
+    spawnSync(cmd, args, { cwd: dir, stdio: "pipe", timeout: 5000 });
+  run("git", ["init", "-b", "main"]);
+  run("git", ["config", "user.email", "test@test.com"]);
+  run("git", ["config", "user.name", "Test"]);
   for (const [name, content] of Object.entries(opts.fixtures ?? {})) {
     const p = path.join(dir, name);
     fs.mkdirSync(path.dirname(p), { recursive: true });
     fs.writeFileSync(p, content);
   }
   fs.mkdirSync(path.join(dir, opts.skillName), { recursive: true });
-  fs.writeFileSync(path.join(dir, opts.skillName, 'SKILL.md'), opts.skillMd);
+  fs.writeFileSync(path.join(dir, opts.skillName, "SKILL.md"), opts.skillMd);
   if (opts.sectionsFrom && fs.existsSync(opts.sectionsFrom)) {
-    fs.cpSync(opts.sectionsFrom, path.join(dir, opts.skillName, 'sections'), { recursive: true });
+    fs.cpSync(opts.sectionsFrom, path.join(dir, opts.skillName, "sections"), {
+      recursive: true,
+    });
   }
-  run('git', ['add', '.']);
-  run('git', ['commit', '-m', 'fixture']);
+  run("git", ["add", "."]);
+  run("git", ["commit", "-m", "fixture"]);
   return dir;
 }
 
 /** Read any skill's current (worktree) SKILL.md + its sections dir if present. */
-export function skillFromWorktree(skillName: string): { skillMd: string; sectionsFrom: string | null } {
-  const sec = path.join(ROOT, skillName, 'sections');
+export function skillFromWorktree(skillName: string): {
+  skillMd: string;
+  sectionsFrom: string | null;
+} {
+  const sec = path.join(ROOT, skillName, "sections");
   return {
-    skillMd: fs.readFileSync(path.join(ROOT, skillName, 'SKILL.md'), 'utf-8'),
+    skillMd: fs.readFileSync(path.join(ROOT, skillName, "SKILL.md"), "utf-8"),
     sectionsFrom: fs.existsSync(sec) ? sec : null,
   };
 }
@@ -173,8 +206,8 @@ export async function captureFirstAuq(opts: {
   runId?: string;
   model?: string;
 }): Promise<string> {
-  const outFile = path.join(opts.planDir, 'ask-capture.md');
-  const skillPath = path.join(opts.planDir, opts.skillName, 'SKILL.md');
+  const outFile = path.join(opts.planDir, "ask-capture.md");
+  const skillPath = path.join(opts.planDir, opts.skillName, "SKILL.md");
   const prompt = `You are running a format-capture test. The ONLY skill file you may read is this absolute path: ${skillPath}. Do NOT search for, Glob, find, or read any other SKILL.md anywhere — especially nothing under ~/.claude or /Users.
 
 Read ${skillPath} and follow its workflow for this scenario:
@@ -186,18 +219,18 @@ This is a capture test, not an interactive session. Skip any system-audit / envi
   await runSkillTest({
     prompt,
     workingDirectory: opts.planDir,
-    allowedTools: ['Read', 'Write'],
+    allowedTools: ["Read", "Write"],
     maxTurns: 14,
     timeout: 240_000,
     testName: opts.testName,
     runId: opts.runId,
-    model: opts.model ?? 'claude-opus-4-7',
+    model: opts.model ?? "claude-opus-4-7",
   });
 
   try {
-    return fs.readFileSync(outFile, 'utf-8');
+    return fs.readFileSync(outFile, "utf-8");
   } catch {
-    return '';
+    return "";
   }
 }
 
@@ -229,9 +262,14 @@ export async function captureSectionReads(opts: {
   model?: string;
   maxTurns?: number;
   timeout?: number;
-}): Promise<{ readSections: Set<string>; reportProduced: boolean; toolCalls: SkillTestResult['toolCalls']; output: string }> {
-  const outFile = path.join(opts.planDir, opts.reportFile ?? 'REPORT.md');
-  const skillPath = path.join(opts.planDir, opts.skillName, 'SKILL.md');
+}): Promise<{
+  readSections: Set<string>;
+  reportProduced: boolean;
+  toolCalls: SkillTestResult["toolCalls"];
+  output: string;
+}> {
+  const outFile = path.join(opts.planDir, opts.reportFile ?? "REPORT.md");
+  const skillPath = path.join(opts.planDir, opts.skillName, "SKILL.md");
   const prompt = `You are running an automated skill-execution test. No human is present, so AskUserQuestion is unavailable. The ONLY skill file you may read is this absolute path: ${skillPath}. Do NOT Glob/find/search for any other SKILL.md anywhere — especially nothing under ~/.claude or /Users.
 
 Read ${skillPath} and EXECUTE its workflow for this scenario:
@@ -248,46 +286,63 @@ Rules for this run:
   const result = await runSkillTest({
     prompt,
     workingDirectory: opts.planDir,
-    allowedTools: ['Read', 'Grep', 'Glob', 'Write'],
+    allowedTools: ["Read", "Grep", "Glob", "Write"],
     maxTurns: opts.maxTurns ?? 25,
     timeout: opts.timeout ?? 300_000,
     testName: opts.testName,
     runId: opts.runId,
-    model: opts.model ?? 'claude-opus-4-7',
+    model: opts.model ?? "claude-opus-4-7",
   });
 
   const readSections = new Set<string>();
   for (const c of result.toolCalls) {
-    if (c.tool !== 'Read') continue;
-    const fp = String(c.input?.file_path ?? '');
+    if (c.tool !== "Read") continue;
+    const fp = String(c.input?.file_path ?? "");
     const m = fp.match(/sections\/([A-Za-z0-9._-]+\.md)/);
     if (m) readSections.add(m[1]);
   }
 
-  let output = '';
-  try { output = fs.readFileSync(outFile, 'utf-8'); } catch { output = result.output ?? ''; }
-  const reportProduced = opts.reportMarker ? opts.reportMarker.test(output) : output.trim().length > 0;
+  let output = "";
+  try {
+    output = fs.readFileSync(outFile, "utf-8");
+  } catch {
+    output = result.output ?? "";
+  }
+  const reportProduced = opts.reportMarker
+    ? opts.reportMarker.test(output)
+    : output.trim().length > 0;
 
   return { readSections, reportProduced, toolCalls: result.toolCalls, output };
 }
 
 /** Read the carved (current worktree) plan-ceo SKILL.md + its sections dir. */
-export function carvedSkill(): { skillMd: string; sectionsFrom: string | null } {
-  const sec = path.join(ROOT, 'plan-ceo-review', 'sections');
+export function carvedSkill(): {
+  skillMd: string;
+  sectionsFrom: string | null;
+} {
+  const sec = path.join(ROOT, "plan-ceo-review", "sections");
   return {
-    skillMd: fs.readFileSync(path.join(ROOT, 'plan-ceo-review', 'SKILL.md'), 'utf-8'),
+    skillMd: fs.readFileSync(
+      path.join(ROOT, "plan-ceo-review", "SKILL.md"),
+      "utf-8",
+    ),
     sectionsFrom: fs.existsSync(sec) ? sec : null,
   };
 }
 
 /** Read the pre-carve verbose monolith plan-ceo SKILL.md from git. */
-export function verboseSkill(gitRef = 'ab66193e^'): string {
-  return execGit(['show', `${gitRef}:plan-ceo-review/SKILL.md`]);
+export function verboseSkill(gitRef = "ab66193e^"): string {
+  return execGit(["show", `${gitRef}:plan-ceo-review/SKILL.md`]);
 }
 
 function execGit(args: string[]): string {
-  const r = spawnSync('git', args, { cwd: ROOT, encoding: 'utf-8', maxBuffer: 64 * 1024 * 1024 });
-  if (r.status !== 0) throw new Error(`git ${args.join(' ')} failed: ${r.stderr}`);
+  const r = spawnSync("git", args, {
+    cwd: ROOT,
+    encoding: "utf-8",
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  if (r.status !== 0)
+    throw new Error(`git ${args.join(" ")} failed: ${r.stderr}`);
   return r.stdout;
 }
 
@@ -302,9 +357,9 @@ export async function captureModeSelectionAuq(opts: {
   runId?: string;
   model?: string;
 }): Promise<string> {
-  const outFile = path.join(opts.planDir, 'ask-capture.md');
-  const skillPath = path.join(opts.planDir, 'plan-ceo-review', 'SKILL.md');
-  const planPath = path.join(opts.planDir, 'plan.md');
+  const outFile = path.join(opts.planDir, "ask-capture.md");
+  const skillPath = path.join(opts.planDir, "plan-ceo-review", "SKILL.md");
+  const planPath = path.join(opts.planDir, "plan.md");
   // CRITICAL: pin the EXACT skill file. Without this the agent runs
   // `find / -name SKILL.md` / Glob and reads the GLOBAL install
   // (~/.claude/skills/...) instead of the version-under-test in the temp dir —
@@ -329,22 +384,22 @@ Write the verbatim text of that AskUserQuestion (the full decision brief: title,
     // Read + Write only: no Bash means the agent cannot `find /` its way to the
     // global install, and the skill's preamble bash blocks (irrelevant to format
     // capture) can't run and wander.
-    allowedTools: ['Read', 'Write'],
+    allowedTools: ["Read", "Write"],
     maxTurns: 12,
     timeout: 240_000,
     testName: opts.testName,
     runId: opts.runId,
-    model: opts.model ?? 'claude-opus-4-7',
+    model: opts.model ?? "claude-opus-4-7",
   });
 
   try {
-    const text = fs.readFileSync(outFile, 'utf-8');
+    const text = fs.readFileSync(outFile, "utf-8");
     // Defense in depth: verify the agent actually read the planted skill, not a
     // global one. If the captured run somehow read elsewhere we can't detect it
     // from the output file alone, so callers should also confirm via the run
     // log; this guard at least catches an empty/placeholder capture.
     return text;
   } catch {
-    return '';
+    return "";
   }
 }

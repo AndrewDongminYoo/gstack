@@ -26,9 +26,9 @@
  * validate the logic.
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
-import * as os from 'os';
+import * as fs from "fs";
+import * as path from "path";
+import * as os from "os";
 
 /** Minimal shape we need from SkillTestResult — kept structural so callers can
  *  pass a full SkillTestResult or a hand-built fixture in unit tests. */
@@ -44,18 +44,18 @@ export interface TranscriptResultLike {
 
 /** Pull the file_path off a tool-call input, tolerating unknown shapes. */
 function readFilePath(input: unknown): string | null {
-  if (input && typeof input === 'object') {
+  if (input && typeof input === "object") {
     const fp = (input as Record<string, unknown>).file_path;
-    if (typeof fp === 'string') return fp;
+    if (typeof fp === "string") return fp;
   }
   return null;
 }
 
 /** Pull the command string off a Bash tool-call input. */
 function bashCommand(input: unknown): string | null {
-  if (input && typeof input === 'object') {
+  if (input && typeof input === "object") {
     const cmd = (input as Record<string, unknown>).command;
-    if (typeof cmd === 'string') return cmd;
+    if (typeof cmd === "string") return cmd;
   }
   return null;
 }
@@ -70,7 +70,7 @@ export function extractSectionReads(result: TranscriptResultLike): string[] {
   const seen = new Set<string>();
   const ordered: string[] = [];
   for (const call of result.toolCalls) {
-    if (call.tool !== 'Read') continue;
+    if (call.tool !== "Read") continue;
     const fp = readFilePath(call.input);
     if (!fp) continue;
     const m = fp.match(/(?:^|\/)sections\/([A-Za-z0-9._-]+\.md)$/);
@@ -94,24 +94,30 @@ export function extractSectionReads(result: TranscriptResultLike): string[] {
  * actions a monolith run did for the same fixture situation.
  */
 export const SHIP_ACTIONS = [
-  'merged_base',       // git merge <base>
-  'ran_tests',         // bun test / npm test / the project test cmd
-  'bumped_version',    // wrote VERSION / package.json version / ran gstack-version-bump
-  'wrote_changelog',   // edited CHANGELOG.md
-  'committed',         // git commit
-  'pushed',            // git push
-  'opened_pr',         // gh pr create / glab mr create
+  "merged_base", // git merge <base>
+  "ran_tests", // bun test / npm test / the project test cmd
+  "bumped_version", // wrote VERSION / package.json version / ran gstack-version-bump
+  "wrote_changelog", // edited CHANGELOG.md
+  "committed", // git commit
+  "pushed", // git push
+  "opened_pr", // gh pr create / glab mr create
 ] as const;
 export type ShipAction = (typeof SHIP_ACTIONS)[number];
 
 const BASH_ACTION_PATTERNS: Array<{ action: ShipAction; re: RegExp }> = [
-  { action: 'merged_base', re: /\bgit\s+merge\b/ },
-  { action: 'ran_tests', re: /\b(bun\s+test|npm\s+(run\s+)?test|yarn\s+test|pytest|go\s+test|cargo\s+test|rspec)\b/ },
-  { action: 'bumped_version', re: /gstack-version-bump\b|gstack-next-version\b|>\s*VERSION\b|npm\s+version\b/ },
-  { action: 'wrote_changelog', re: /CHANGELOG\.md/ },
-  { action: 'committed', re: /\bgit\s+commit\b/ },
-  { action: 'pushed', re: /\bgit\s+push\b/ },
-  { action: 'opened_pr', re: /\bgh\s+pr\s+create\b|\bglab\s+mr\s+create\b/ },
+  { action: "merged_base", re: /\bgit\s+merge\b/ },
+  {
+    action: "ran_tests",
+    re: /\b(bun\s+test|npm\s+(run\s+)?test|yarn\s+test|pytest|go\s+test|cargo\s+test|rspec)\b/,
+  },
+  {
+    action: "bumped_version",
+    re: /gstack-version-bump\b|gstack-next-version\b|>\s*VERSION\b|npm\s+version\b/,
+  },
+  { action: "wrote_changelog", re: /CHANGELOG\.md/ },
+  { action: "committed", re: /\bgit\s+commit\b/ },
+  { action: "pushed", re: /\bgit\s+push\b/ },
+  { action: "opened_pr", re: /\bgh\s+pr\s+create\b|\bglab\s+mr\s+create\b/ },
 ];
 
 /**
@@ -122,20 +128,20 @@ const BASH_ACTION_PATTERNS: Array<{ action: ShipAction; re: RegExp }> = [
 export function extractShipActions(result: TranscriptResultLike): ShipAction[] {
   const found = new Set<ShipAction>();
   for (const call of result.toolCalls) {
-    if (call.tool === 'Bash') {
+    if (call.tool === "Bash") {
       const cmd = bashCommand(call.input);
       if (!cmd) continue;
       for (const { action, re } of BASH_ACTION_PATTERNS) {
         if (re.test(cmd)) found.add(action);
       }
-    } else if (call.tool === 'Write' || call.tool === 'Edit') {
+    } else if (call.tool === "Write" || call.tool === "Edit") {
       const fp = readFilePath(call.input);
-      if (fp && /CHANGELOG\.md$/.test(fp)) found.add('wrote_changelog');
-      if (fp && /(?:^|\/)VERSION$/.test(fp)) found.add('bumped_version');
+      if (fp && /CHANGELOG\.md$/.test(fp)) found.add("wrote_changelog");
+      if (fp && /(?:^|\/)VERSION$/.test(fp)) found.add("bumped_version");
     }
   }
   // Preserve canonical order.
-  return SHIP_ACTIONS.filter(a => found.has(a));
+  return SHIP_ACTIONS.filter((a) => found.has(a));
 }
 
 export interface ShipBaseline {
@@ -149,25 +155,40 @@ export interface ShipBaseline {
   capturedAt: string;
 }
 
-const DEFAULT_BASELINE_DIR = path.join(os.homedir(), '.gstack-dev', 'ship-baselines');
+const DEFAULT_BASELINE_DIR = path.join(
+  os.homedir(),
+  ".gstack-dev",
+  "ship-baselines",
+);
 
 /** Where a baseline for a given situation lives. */
-export function baselinePath(situation: string, dir = DEFAULT_BASELINE_DIR): string {
+export function baselinePath(
+  situation: string,
+  dir = DEFAULT_BASELINE_DIR,
+): string {
   return path.join(dir, `${situation}.json`);
 }
 
 /** Persist a ship baseline (used once on the monolith, before the carve). */
-export function writeShipBaseline(baseline: ShipBaseline, dir = DEFAULT_BASELINE_DIR): string {
+export function writeShipBaseline(
+  baseline: ShipBaseline,
+  dir = DEFAULT_BASELINE_DIR,
+): string {
   fs.mkdirSync(dir, { recursive: true });
   const p = baselinePath(baseline.situation, dir);
-  fs.writeFileSync(p, JSON.stringify(baseline, null, 2) + '\n');
+  fs.writeFileSync(p, JSON.stringify(baseline, null, 2) + "\n");
   return p;
 }
 
 /** Read a previously-captured baseline, or null if none exists yet. */
-export function readShipBaseline(situation: string, dir = DEFAULT_BASELINE_DIR): ShipBaseline | null {
+export function readShipBaseline(
+  situation: string,
+  dir = DEFAULT_BASELINE_DIR,
+): ShipBaseline | null {
   try {
-    return JSON.parse(fs.readFileSync(baselinePath(situation, dir), 'utf-8')) as ShipBaseline;
+    return JSON.parse(
+      fs.readFileSync(baselinePath(situation, dir), "utf-8"),
+    ) as ShipBaseline;
   } catch {
     return null;
   }
@@ -187,10 +208,13 @@ export interface ShipActionDiff {
  * action (in baseline, not in current) is the carve regression we care about:
  * the sectioned ship stopped doing something the monolith did.
  */
-export function compareShipActions(baseline: ShipBaseline, current: ShipAction[]): ShipActionDiff {
+export function compareShipActions(
+  baseline: ShipBaseline,
+  current: ShipAction[],
+): ShipActionDiff {
   const cur = new Set(current);
   const base = new Set(baseline.actions);
-  const missing = baseline.actions.filter(a => !cur.has(a));
-  const added = current.filter(a => !base.has(a));
+  const missing = baseline.actions.filter((a) => !cur.has(a));
+  const added = current.filter((a) => !base.has(a));
   return { missing, added, ok: missing.length === 0 };
 }

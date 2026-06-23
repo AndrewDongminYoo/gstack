@@ -28,11 +28,11 @@ export interface TokenUsage {
 }
 
 export type RunError =
-  | 'auth'       // Credentials missing or invalid.
-  | 'timeout'    // Exceeded timeoutMs.
-  | 'rate_limit' // Provider rate-limited us; backoff exceeded.
-  | 'binary_missing' // CLI not found on PATH.
-  | 'unknown';   // Catch-all with reason populated.
+  | "auth" // Credentials missing or invalid.
+  | "timeout" // Exceeded timeoutMs.
+  | "rate_limit" // Provider rate-limited us; backoff exceeded.
+  | "binary_missing" // CLI not found on PATH.
+  | "unknown"; // Catch-all with reason populated.
 
 export interface RunResult {
   /** Provider's textual output for the prompt. */
@@ -55,7 +55,7 @@ export interface AvailabilityCheck {
   reason?: string;
 }
 
-export type Family = 'claude' | 'gpt' | 'gemini';
+export type Family = "claude" | "gpt" | "gemini";
 
 export interface ProviderAdapter {
   /** Stable name used in output tables and config (e.g., 'claude', 'gpt', 'gemini'). */

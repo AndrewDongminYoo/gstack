@@ -22,8 +22,8 @@
  * those tests stand on.
  */
 
-import { describe, test, expect } from 'bun:test';
-import { readFileSync } from 'node:fs';
+import { describe, test, expect } from "bun:test";
+import { readFileSync } from "node:fs";
 import {
   isPermissionDialogVisible,
   isNumberedOptionListVisible,
@@ -43,9 +43,9 @@ import {
   devexStep0Boundary,
   type ClaudePtyOptions,
   type AskUserQuestionFingerprint,
-} from './claude-pty-runner';
+} from "./claude-pty-runner";
 
-describe('isPermissionDialogVisible', () => {
+describe("isPermissionDialogVisible", () => {
   test('matches "Bash command requires permission" prompts', () => {
     const sample = `
       Some preamble output
@@ -96,7 +96,7 @@ describe('isPermissionDialogVisible', () => {
     expect(isPermissionDialogVisible(sample)).toBe(true);
   });
 
-  test('does NOT match a skill AskUserQuestion list', () => {
+  test("does NOT match a skill AskUserQuestion list", () => {
     const sample = `
       D1 — Premise challenge: do users actually want this?
 
@@ -107,7 +107,7 @@ describe('isPermissionDialogVisible', () => {
     expect(isPermissionDialogVisible(sample)).toBe(false);
   });
 
-  test('does NOT match a plan-ready confirmation', () => {
+  test("does NOT match a plan-ready confirmation", () => {
     const sample = `
       Ready to execute the plan?
 
@@ -156,8 +156,8 @@ describe('isPermissionDialogVisible', () => {
   });
 });
 
-describe('isNumberedOptionListVisible', () => {
-  test('matches a basic ❯ 1. + 2. cursor list', () => {
+describe("isNumberedOptionListVisible", () => {
+  test("matches a basic ❯ 1. + 2. cursor list", () => {
     const sample = `
       ❯ 1. Option one
         2. Option two
@@ -166,21 +166,21 @@ describe('isNumberedOptionListVisible', () => {
     expect(isNumberedOptionListVisible(sample)).toBe(true);
   });
 
-  test('returns false on a single-option prompt', () => {
+  test("returns false on a single-option prompt", () => {
     const sample = `
       ❯ 1. Only option
     `;
     expect(isNumberedOptionListVisible(sample)).toBe(false);
   });
 
-  test('returns false when no cursor renders', () => {
+  test("returns false when no cursor renders", () => {
     const sample = `
       Just some prose with 1. a numbered point and 2. another.
     `;
     expect(isNumberedOptionListVisible(sample)).toBe(false);
   });
 
-  test('overlaps permission dialogs (this is why D5 short-circuits)', () => {
+  test("overlaps permission dialogs (this is why D5 short-circuits)", () => {
     // The whole point of D5: this string matches BOTH classifiers, so the
     // runner must consult isPermissionDialogVisible to disambiguate.
     const sample = `
@@ -194,8 +194,8 @@ describe('isNumberedOptionListVisible', () => {
   });
 });
 
-describe('isProseAUQVisible', () => {
-  test('matches 4 lettered options A) B) C) D) at line starts (plan-eng prose AUQ shape)', () => {
+describe("isProseAUQVisible", () => {
+  test("matches 4 lettered options A) B) C) D) at line starts (plan-eng prose AUQ shape)", () => {
     const sample = `
 What would you like me to review? Options:
 A) Point me at an existing design doc or plan file (path).
@@ -208,7 +208,7 @@ Recommendation: A if you have a doc in mind, otherwise B.
     expect(isProseAUQVisible(sample)).toBe(true);
   });
 
-  test('matches 2 lettered options (minimum threshold)', () => {
+  test("matches 2 lettered options (minimum threshold)", () => {
     const sample = `
 A) First option
 B) Second option
@@ -216,7 +216,7 @@ B) Second option
     expect(isProseAUQVisible(sample)).toBe(true);
   });
 
-  test('matches 3 numbered options 1. 2. 3. without ❯ 1. cursor (autoplan prose AUQ shape)', () => {
+  test("matches 3 numbered options 1. 2. 3. without ❯ 1. cursor (autoplan prose AUQ shape)", () => {
     const sample = `
 What's the task? A few options:
   1. You have a plan idea in mind — describe it.
@@ -227,7 +227,7 @@ What's the task? A few options:
     expect(isProseAUQVisible(sample)).toBe(true);
   });
 
-  test('returns false when ❯ 1. cursor is present in the recent tail (native UI handled by isNumberedOptionListVisible)', () => {
+  test("returns false when ❯ 1. cursor is present in the recent tail (native UI handled by isNumberedOptionListVisible)", () => {
     const sample = `
 ❯ 1. First option
   2. Second option
@@ -236,26 +236,26 @@ What's the task? A few options:
     expect(isProseAUQVisible(sample)).toBe(false);
   });
 
-  test('does NOT suppress numbered-prose detection when ❯ 1. is only in early scrollback (trust dialog)', () => {
+  test("does NOT suppress numbered-prose detection when ❯ 1. is only in early scrollback (trust dialog)", () => {
     // Boot trust dialog rendered ❯ 1. Yes at startup, then a long body of
     // model output, then prose-rendered numbered options now. The historic
     // ❯ 1. is in the full buffer but NOT in the recent tail. Should detect
     // the prose AUQ.
-    const trustHeader = '❯ 1. Yes, trust\n  2. No\n';
-    const filler = 'x'.repeat(5000); // pushes trust dialog out of last 4KB tail
+    const trustHeader = "❯ 1. Yes, trust\n  2. No\n";
+    const filler = "x".repeat(5000); // pushes trust dialog out of last 4KB tail
     const proseAUQ = `\n  1. Review the docs\n  2. Investigate the code\n  3. Defer to next session\n❯  \n`;
     const sample = trustHeader + filler + proseAUQ;
     expect(isProseAUQVisible(sample)).toBe(true);
   });
 
-  test('returns false on single lettered option', () => {
+  test("returns false on single lettered option", () => {
     const sample = `
 A) Only one option mentioned in passing.
 `;
     expect(isProseAUQVisible(sample)).toBe(false);
   });
 
-  test('matches 2 numbered options (threshold matches lettered branch — tails miss option 1)', () => {
+  test("matches 2 numbered options (threshold matches lettered branch — tails miss option 1)", () => {
     const sample = `
 1. First note.
 2. Second note.
@@ -263,7 +263,7 @@ A) Only one option mentioned in passing.
     expect(isProseAUQVisible(sample)).toBe(true);
   });
 
-  test('returns false on a single numbered option', () => {
+  test("returns false on a single numbered option", () => {
     const sample = `
 1. Only one option mentioned.
 `;
@@ -278,7 +278,7 @@ This refers to (see option B) above and also to point A) earlier.
     expect(isProseAUQVisible(sample)).toBe(false);
   });
 
-  test('matches with leading whitespace and ❯ prefix on options', () => {
+  test("matches with leading whitespace and ❯ prefix on options", () => {
     const sample = `
    A) Option with whitespace prefix
 ❯  B) Option with cursor prefix
@@ -287,14 +287,16 @@ This refers to (see option B) above and also to point A) earlier.
     expect(isProseAUQVisible(sample)).toBe(true);
   });
 
-  test('returns false on plain text with no option markers', () => {
-    expect(isProseAUQVisible('Just some plain text output from the model.')).toBe(false);
-    expect(isProseAUQVisible('')).toBe(false);
+  test("returns false on plain text with no option markers", () => {
+    expect(
+      isProseAUQVisible("Just some plain text output from the model."),
+    ).toBe(false);
+    expect(isProseAUQVisible("")).toBe(false);
   });
 
   // Pattern 3: markdown bold-bullet options — office-hours renders its mode
   // question this way under --disallowedTools, with no letter/number marker.
-  test('matches office-hours markdown bold-bullet mode question (Pattern 3)', () => {
+  test("matches office-hours markdown bold-bullet mode question (Pattern 3)", () => {
     const sample = `
 > Before we dig in — what's your goal with this?
 >
@@ -319,7 +321,7 @@ Here is what shipped:
     expect(isProseAUQVisible(sample)).toBe(false);
   });
 
-  test('a question with fewer than 3 bold bullets stays false (guard)', () => {
+  test("a question with fewer than 3 bold bullets stays false (guard)", () => {
     const sample = `
 Which approach do you prefer?
 - **Option one** is simpler
@@ -328,7 +330,7 @@ Which approach do you prefer?
     expect(isProseAUQVisible(sample)).toBe(false);
   });
 
-  test('plain (non-bold) bullets after a question do not trigger Pattern 3', () => {
+  test("plain (non-bold) bullets after a question do not trigger Pattern 3", () => {
     // Only bold bullets count — plain "- text" prose lists are too common.
     const sample = `
 What should we do about this?
@@ -339,7 +341,7 @@ What should we do about this?
     expect(isProseAUQVisible(sample)).toBe(false);
   });
 
-  test('Pattern 3 still defers to a live native cursor list (❯ 1.)', () => {
+  test("Pattern 3 still defers to a live native cursor list (❯ 1.)", () => {
     const sample = `
 > What's your goal?
 ❯ 1. **Building a startup**
@@ -355,53 +357,53 @@ What should we do about this?
   // line-anchored Patterns 1-3. These are the dominant Shape-B render mode in
   // the plan-design smoke + floor timeouts — verbatim de-spinnered bytes from
   // the real failing runs (bdm3sucql.output).
-  test('matches the real collapsed floor render (colon-delimited, Pattern 4/5)', () => {
+  test("matches the real collapsed floor render (colon-delimited, Pattern 4/5)", () => {
     const sample =
-      'The review is blocked on D1—reply withA, B, r Cabovetocontinue:' +
-      '- A(recommended): Spec thefull P1AskUserQuestioncopy in this review' +
-      '-B:LeaveP1copytotheimplementerwithstructuralrequirements' +
-      'C: Add a placeholder template to the plan';
+      "The review is blocked on D1—reply withA, B, r Cabovetocontinue:" +
+      "- A(recommended): Spec thefull P1AskUserQuestioncopy in this review" +
+      "-B:LeaveP1copytotheimplementerwithstructuralrequirements" +
+      "C: Add a placeholder template to the plan";
     expect(isProseAUQVisible(sample)).toBe(true);
   });
 
-  test('matches the real collapsed plan-mode render (Recommendation + collapsed A)/B), Pattern 4/5)', () => {
+  test("matches the real collapsed plan-mode render (Recommendation + collapsed A)/B), Pattern 4/5)", () => {
     const sample =
-      'Recommendation:A—writethecopynow.(recommended)A) Writ the fullcopy in thisdesign review— now.' +
-      '(recommended) Completeness:10/10 B) Leveit to theimplemente — task spec is enough.' +
-      'Reply withA (write the copy now)orB(leavetoimplementer)';
+      "Recommendation:A—writethecopynow.(recommended)A) Writ the fullcopy in thisdesign review— now." +
+      "(recommended) Completeness:10/10 B) Leveit to theimplemente — task spec is enough." +
+      "Reply withA (write the copy now)orB(leavetoimplementer)";
     expect(isProseAUQVisible(sample)).toBe(true);
   });
 
   test('collapsed-form requires BOTH signals — single B) + word "recommendation" stays false', () => {
     // Only one punctuated letter marker: the two-signal contract is not met.
     const sample =
-      'We should consider option B) here. My recommendation is to do it now.';
+      "We should consider option B) here. My recommendation is to do it now.";
     expect(isProseAUQVisible(sample)).toBe(false);
   });
 
   test('collapsed-form requires letter punctuation — comma-only "ReplywithA,B,orC" stays false', () => {
     // Reply-instruction present, but the letters carry no ) : or ( punctuation,
     // so they could be incidental enumerations in running prose. Stays false.
-    const sample = 'ReplywithA,B,orC';
+    const sample = "ReplywithA,B,orC";
     expect(isProseAUQVisible(sample)).toBe(false);
   });
 
-  test('collapsed-form does not regress the existing FP guard (see option B) ... point A))', () => {
+  test("collapsed-form does not regress the existing FP guard (see option B) ... point A))", () => {
     // The classic citation FP: a model referencing prior options in prose.
     // No reply-instruction / recommendation marker on its own line, so the
     // collapsed-form signal does not fire either.
     const sample =
-      'As noted (see option B) above, and the earlier point A) we discussed, this is fine.';
+      "As noted (see option B) above, and the earlier point A) we discussed, this is fine.";
     expect(isProseAUQVisible(sample)).toBe(false);
   });
 });
 
-describe('classifyVisible (runtime path through the runner classifier)', () => {
+describe("classifyVisible (runtime path through the runner classifier)", () => {
   // These tests call the actual classifier so a future contributor who
   // reorders branches (e.g. moves the permission short-circuit before
   // isPlanReadyVisible) is caught deterministically.
 
-  test('skill question → returns asked', () => {
+  test("skill question → returns asked", () => {
     const visible = `
       D1 — Choose your scope mode
 
@@ -411,10 +413,10 @@ describe('classifyVisible (runtime path through the runner classifier)', () => {
         4. SCOPE REDUCTION
     `;
     const result = classifyVisible(visible);
-    expect(result?.outcome).toBe('asked');
+    expect(result?.outcome).toBe("asked");
   });
 
-  test('permission dialog (Bash) → returns null (skip, keep polling)', () => {
+  test("permission dialog (Bash) → returns null (skip, keep polling)", () => {
     const visible = `
       Bash command \`gstack-update-check\` requires permission to run.
 
@@ -425,7 +427,7 @@ describe('classifyVisible (runtime path through the runner classifier)', () => {
     expect(classifyVisible(visible)).toBeNull(); // post-filter
   });
 
-  test('plan-ready confirmation → returns plan_ready (wins over asked)', () => {
+  test("plan-ready confirmation → returns plan_ready (wins over asked)", () => {
     const visible = `
       Ready to execute the plan?
 
@@ -433,20 +435,20 @@ describe('classifyVisible (runtime path through the runner classifier)', () => {
         2. No, keep planning
     `;
     const result = classifyVisible(visible);
-    expect(result?.outcome).toBe('plan_ready');
+    expect(result?.outcome).toBe("plan_ready");
   });
 
-  test('silent write to unsanctioned path → returns silent_write', () => {
+  test("silent write to unsanctioned path → returns silent_write", () => {
     const visible = `
       ⏺ Write(src/app/dangerous-write.ts)
       ⎿  Wrote 42 lines
     `;
     const result = classifyVisible(visible);
-    expect(result?.outcome).toBe('silent_write');
-    expect(result?.summary).toContain('src/app/dangerous-write.ts');
+    expect(result?.outcome).toBe("silent_write");
+    expect(result?.summary).toContain("src/app/dangerous-write.ts");
   });
 
-  test('write to sanctioned path (.claude/plans) → returns null (allowed)', () => {
+  test("write to sanctioned path (.claude/plans) → returns null (allowed)", () => {
     const visible = `
       ⏺ Write(/Users/me/.claude/plans/some-plan.md)
       ⎿  Wrote 42 lines
@@ -454,7 +456,7 @@ describe('classifyVisible (runtime path through the runner classifier)', () => {
     expect(classifyVisible(visible)).toBeNull();
   });
 
-  test('write while a permission dialog is on screen → returns null (gated, not silent, not asked)', () => {
+  test("write while a permission dialog is on screen → returns null (gated, not silent, not asked)", () => {
     const visible = `
       ⏺ Write(src/app/edit-with-permission.ts)
 
@@ -471,7 +473,7 @@ describe('classifyVisible (runtime path through the runner classifier)', () => {
     expect(classifyVisible(visible)).toBeNull();
   });
 
-  test('write while a real skill question is on screen → returns asked (write is captured but not silent)', () => {
+  test("write while a real skill question is on screen → returns asked (write is captured but not silent)", () => {
     const visible = `
       ⏺ Write(src/app/foo.ts)
 
@@ -484,17 +486,17 @@ describe('classifyVisible (runtime path through the runner classifier)', () => {
     // silent_write is suppressed (numbered prompt is visible) and the
     // outcome is 'asked' — Step 0 fired.
     const result = classifyVisible(visible);
-    expect(result?.outcome).toBe('asked');
+    expect(result?.outcome).toBe("asked");
   });
 
-  test('idle / no signals → returns null', () => {
+  test("idle / no signals → returns null", () => {
     const visible = `
       Some prose without any classifier signals.
     `;
     expect(classifyVisible(visible)).toBeNull();
   });
 
-  test('TAIL_SCAN_BYTES is exported as 1500', () => {
+  test("TAIL_SCAN_BYTES is exported as 1500", () => {
     // Shared between runner and routing test; a regression that desyncs the
     // recent-tail window would surface here.
     expect(TAIL_SCAN_BYTES).toBe(1500);
@@ -502,17 +504,17 @@ describe('classifyVisible (runtime path through the runner classifier)', () => {
 
   // D4-B: strictPlanWrites detector. Catches the transcript bug where the
   // model writes findings to the plan file before any AskUserQuestion fires.
-  test('strictPlanWrites: plan write before any AUQ → wrote_findings_before_asking', () => {
+  test("strictPlanWrites: plan write before any AUQ → wrote_findings_before_asking", () => {
     const visible = `
       ⏺ Edit(/Users/me/.claude/plans/some-plan.md)
       ⎿  Updated 12 lines
     `;
     const result = classifyVisible(visible, { strictPlanWrites: true });
-    expect(result?.outcome).toBe('wrote_findings_before_asking');
-    expect(result?.summary).toContain('.claude/plans/some-plan.md');
+    expect(result?.outcome).toBe("wrote_findings_before_asking");
+    expect(result?.summary).toContain(".claude/plans/some-plan.md");
   });
 
-  test('strictPlanWrites: plan write AFTER an AUQ render → not flagged', () => {
+  test("strictPlanWrites: plan write AFTER an AUQ render → not flagged", () => {
     // AUQ renders first, then the model writes the plan post-answer. This is
     // the legitimate end-of-workflow flow and must NOT trigger the detector.
     const visible = `
@@ -527,26 +529,26 @@ describe('classifyVisible (runtime path through the runner classifier)', () => {
     const result = classifyVisible(visible, { strictPlanWrites: true });
     // Outcome is 'asked' (the numbered list rendered); the post-AUQ plan
     // write is ignored by the detector.
-    expect(result?.outcome).toBe('asked');
+    expect(result?.outcome).toBe("asked");
   });
 
-  test('strictPlanWrites: AUQ first then plan write — write_pos > auq_pos → not flagged', () => {
+  test("strictPlanWrites: AUQ first then plan write — write_pos > auq_pos → not flagged", () => {
     // Same scenario, more explicit ordering: the regex finds the write at a
     // position AFTER the numbered list. Detector lets it through.
     const visible = [
-      'D1 — Choose your approach',
-      '',
-      '❯ 1. Approach A',
-      '  2. Approach B',
-      '',
-      '⏺ Write(/Users/me/.claude/plans/draft.md)',
-      '⎿  Wrote 42 lines',
-    ].join('\n');
+      "D1 — Choose your approach",
+      "",
+      "❯ 1. Approach A",
+      "  2. Approach B",
+      "",
+      "⏺ Write(/Users/me/.claude/plans/draft.md)",
+      "⎿  Wrote 42 lines",
+    ].join("\n");
     const result = classifyVisible(visible, { strictPlanWrites: true });
-    expect(result?.outcome).toBe('asked');
+    expect(result?.outcome).toBe("asked");
   });
 
-  test('strictPlanWrites: only a permission dialog visible → plan write still flagged', () => {
+  test("strictPlanWrites: only a permission dialog visible → plan write still flagged", () => {
     // A permission dialog ❯ 1./2. is NOT an AUQ; pre-AUQ plan writes still
     // hit the detector even when a permission prompt is on screen.
     const visible = `
@@ -560,10 +562,10 @@ describe('classifyVisible (runtime path through the runner classifier)', () => {
         2. No
     `;
     const result = classifyVisible(visible, { strictPlanWrites: true });
-    expect(result?.outcome).toBe('wrote_findings_before_asking');
+    expect(result?.outcome).toBe("wrote_findings_before_asking");
   });
 
-  test('strictPlanWrites OFF: plan write before AUQ → returns null (legacy behavior preserved)', () => {
+  test("strictPlanWrites OFF: plan write before AUQ → returns null (legacy behavior preserved)", () => {
     const visible = `
       ⏺ Edit(/Users/me/.claude/plans/some-plan.md)
       ⎿  Updated 12 lines
@@ -573,76 +575,76 @@ describe('classifyVisible (runtime path through the runner classifier)', () => {
   });
 });
 
-describe('parseNumberedOptions', () => {
-  test('extracts options from a clean cursor list', () => {
+describe("parseNumberedOptions", () => {
+  test("extracts options from a clean cursor list", () => {
     const visible = `
       ❯ 1. HOLD SCOPE
         2. SCOPE EXPANSION
     `;
     const opts = parseNumberedOptions(visible);
     expect(opts).toHaveLength(2);
-    expect(opts[0]).toEqual({ index: 1, label: 'HOLD SCOPE' });
-    expect(opts[1]).toEqual({ index: 2, label: 'SCOPE EXPANSION' });
+    expect(opts[0]).toEqual({ index: 1, label: "HOLD SCOPE" });
+    expect(opts[1]).toEqual({ index: 2, label: "SCOPE EXPANSION" });
   });
 
-  test('returns empty array on prose-with-numbers (no cursor)', () => {
-    expect(parseNumberedOptions('text 1. one 2. two')).toEqual([]);
+  test("returns empty array on prose-with-numbers (no cursor)", () => {
+    expect(parseNumberedOptions("text 1. one 2. two")).toEqual([]);
   });
 
-  test('extracts options when the cursor is INLINE with prompt header (box-layout)', () => {
+  test("extracts options when the cursor is INLINE with prompt header (box-layout)", () => {
     // Real /plan-ceo-review rendering: the TTY's cursor-positioning escapes
     // collapse divider + header + prompt + cursor onto one logical line.
     // Subsequent options (2..7) still start their own lines.
     const visible = [
-      '────────────────────────────────────────',
-      '☐ Review scope                                                     What scope do you want me to CEO-review?                                                     ❯ 1. The branch\'s diff vs main',
-      '   Review the full branch: ~10K LOC.',
-      '2. A specific plan file or design doc',
-      '   You point me at a file (path) and I review that.',
-      '3. An idea you\'ll describe inline',
-      '4. Cancel — wrong skill',
-      '5. Type something.',
-      '────────────────────────────────────────',
-      '6. Chat about this',
-      '7. Skip interview and plan immediately',
-    ].join('\n');
+      "────────────────────────────────────────",
+      "☐ Review scope                                                     What scope do you want me to CEO-review?                                                     ❯ 1. The branch's diff vs main",
+      "   Review the full branch: ~10K LOC.",
+      "2. A specific plan file or design doc",
+      "   You point me at a file (path) and I review that.",
+      "3. An idea you'll describe inline",
+      "4. Cancel — wrong skill",
+      "5. Type something.",
+      "────────────────────────────────────────",
+      "6. Chat about this",
+      "7. Skip interview and plan immediately",
+    ].join("\n");
     const opts = parseNumberedOptions(visible);
     expect(opts).toHaveLength(7);
     expect(opts[0]).toEqual({ index: 1, label: "The branch's diff vs main" });
     expect(opts[1]?.index).toBe(2);
     expect(opts[6]?.index).toBe(7);
-    expect(opts[6]?.label).toBe('Skip interview and plan immediately');
+    expect(opts[6]?.label).toBe("Skip interview and plan immediately");
   });
 
-  test('inline-cursor and start-of-line cursor both produce 7 options for the box-layout case', () => {
+  test("inline-cursor and start-of-line cursor both produce 7 options for the box-layout case", () => {
     // The inline path captures option 1 from the cursor line itself; the
     // subsequent-lines path captures 2..7 with the existing optionRe.
     const inlineLayout = [
-      'header text                                                     ❯ 1. first option',
-      '2. second',
-      '3. third',
-    ].join('\n');
+      "header text                                                     ❯ 1. first option",
+      "2. second",
+      "3. third",
+    ].join("\n");
     expect(parseNumberedOptions(inlineLayout)).toEqual([
-      { index: 1, label: 'first option' },
-      { index: 2, label: 'second' },
-      { index: 3, label: 'third' },
+      { index: 1, label: "first option" },
+      { index: 2, label: "second" },
+      { index: 3, label: "third" },
     ]);
 
     const cleanLayout = [
-      '  ❯ 1. first option',
-      '    2. second',
-      '    3. third',
-    ].join('\n');
+      "  ❯ 1. first option",
+      "    2. second",
+      "    3. third",
+    ].join("\n");
     expect(parseNumberedOptions(cleanLayout)).toEqual([
-      { index: 1, label: 'first option' },
-      { index: 2, label: 'second' },
-      { index: 3, label: 'third' },
+      { index: 1, label: "first option" },
+      { index: 2, label: "second" },
+      { index: 3, label: "third" },
     ]);
   });
 });
 
-describe('runPlanSkillObservation env passthrough surface', () => {
-  test('ClaudePtyOptions exposes env: Record<string, string>', () => {
+describe("runPlanSkillObservation env passthrough surface", () => {
+  test("ClaudePtyOptions exposes env: Record<string, string>", () => {
     // Type-level guard: this file would fail to compile if the env field
     // were removed or its shape regressed. The actual env merge happens in
     // launchClaudePty's spawn call (`env: { ...process.env, ...opts.env }`),
@@ -650,13 +652,16 @@ describe('runPlanSkillObservation env passthrough surface', () => {
     // runPlanSkillObservation -> launchClaudePty handoff is only caught by
     // the live PTY test, not here.
     const opts: ClaudePtyOptions = {
-      env: { QUESTION_TUNING: 'false', EXPLAIN_LEVEL: 'default' },
+      env: { QUESTION_TUNING: "false", EXPLAIN_LEVEL: "default" },
     };
-    expect(opts.env).toEqual({ QUESTION_TUNING: 'false', EXPLAIN_LEVEL: 'default' });
+    expect(opts.env).toEqual({
+      QUESTION_TUNING: "false",
+      EXPLAIN_LEVEL: "default",
+    });
   });
 });
 
-describe('launchClaudePty model pin (static tripwire)', () => {
+describe("launchClaudePty model pin (static tripwire)", () => {
   // Why static-grep, not a behavioral assert: the spawn fires immediately
   // inside launchClaudePty, so asserting the built args array would require
   // extracting an arg-builder seam — which rewrites the exact region kyoto-v5's
@@ -665,14 +670,17 @@ describe('launchClaudePty model pin (static tripwire)', () => {
   // is the live PTY smoke (skill-e2e-plan-*-plan-mode.test.ts) running under the
   // pinned model. These grep-level guards stop a refactor from silently
   // dropping the pin or reordering it past extraArgs.
-  const src = readFileSync(new URL('./claude-pty-runner.ts', import.meta.url), 'utf-8');
+  const src = readFileSync(
+    new URL("./claude-pty-runner.ts", import.meta.url),
+    "utf-8",
+  );
 
-  test('ClaudePtyOptions exposes model?: string', () => {
-    const opts: ClaudePtyOptions = { model: 'claude-sonnet-4-6' };
-    expect(opts.model).toBe('claude-sonnet-4-6');
+  test("ClaudePtyOptions exposes model?: string", () => {
+    const opts: ClaudePtyOptions = { model: "claude-sonnet-4-6" };
+    expect(opts.model).toBe("claude-sonnet-4-6");
   });
 
-  test('spawn args push --model from the EVALS_MODEL fallback chain', () => {
+  test("spawn args push --model from the EVALS_MODEL fallback chain", () => {
     expect(src).toContain("args.push('--model', model)");
     // opts.model -> EVALS_MODEL -> 'claude-sonnet-4-6' (mirrors session-runner.ts:144)
     expect(src).toMatch(
@@ -680,15 +688,17 @@ describe('launchClaudePty model pin (static tripwire)', () => {
     );
   });
 
-  test('--model is pushed BEFORE extraArgs so a per-test --model override wins', () => {
+  test("--model is pushed BEFORE extraArgs so a per-test --model override wins", () => {
     const modelPush = src.indexOf("args.push('--model', model)");
-    const extraArgsPush = src.indexOf('if (opts.extraArgs) args.push(...opts.extraArgs)');
+    const extraArgsPush = src.indexOf(
+      "if (opts.extraArgs) args.push(...opts.extraArgs)",
+    );
     expect(modelPush).toBeGreaterThan(-1);
     expect(extraArgsPush).toBeGreaterThan(-1);
     expect(modelPush).toBeLessThan(extraArgsPush);
   });
 
-  test('all three plan-skill wrappers forward model to launchClaudePty', () => {
+  test("all three plan-skill wrappers forward model to launchClaudePty", () => {
     // Count must match the number of wrappers (observation, counting, floor).
     const forwards = src.match(/^\s*model: opts\.model,$/gm) ?? [];
     expect(forwards.length).toBe(3);
@@ -699,43 +709,43 @@ describe('launchClaudePty model pin (static tripwire)', () => {
 // Per-finding count primitives — Section 3 unit tests #1–#5, #7, #12.
 // ────────────────────────────────────────────────────────────────────────────
 
-describe('optionsSignature', () => {
+describe("optionsSignature", () => {
   test('returns a "|"-joined `index:label` string for a clean list', () => {
     const sig = optionsSignature([
-      { index: 1, label: 'HOLD SCOPE' },
-      { index: 2, label: 'SCOPE EXPANSION' },
+      { index: 1, label: "HOLD SCOPE" },
+      { index: 2, label: "SCOPE EXPANSION" },
     ]);
-    expect(sig).toBe('1:HOLD SCOPE|2:SCOPE EXPANSION');
+    expect(sig).toBe("1:HOLD SCOPE|2:SCOPE EXPANSION");
   });
 
-  test('order-independent: shuffled inputs produce the same signature', () => {
+  test("order-independent: shuffled inputs produce the same signature", () => {
     // parseNumberedOptions already returns sorted, but defensive sort means
     // a future caller that hands us shuffled input still produces a stable
     // dedupe signature.
     const a = optionsSignature([
-      { index: 2, label: 'B' },
-      { index: 1, label: 'A' },
-      { index: 3, label: 'C' },
+      { index: 2, label: "B" },
+      { index: 1, label: "A" },
+      { index: 3, label: "C" },
     ]);
     const b = optionsSignature([
-      { index: 1, label: 'A' },
-      { index: 2, label: 'B' },
-      { index: 3, label: 'C' },
+      { index: 1, label: "A" },
+      { index: 2, label: "B" },
+      { index: 3, label: "C" },
     ]);
     expect(a).toBe(b);
   });
 
-  test('empty list returns empty string', () => {
-    expect(optionsSignature([])).toBe('');
+  test("empty list returns empty string", () => {
+    expect(optionsSignature([])).toBe("");
   });
 
-  test('single-item list returns just that entry', () => {
-    expect(optionsSignature([{ index: 1, label: 'Only' }])).toBe('1:Only');
+  test("single-item list returns just that entry", () => {
+    expect(optionsSignature([{ index: 1, label: "Only" }])).toBe("1:Only");
   });
 });
 
-describe('parseQuestionPrompt', () => {
-  test('captures 1-line prompt above the cursor', () => {
+describe("parseQuestionPrompt", () => {
+  test("captures 1-line prompt above the cursor", () => {
     const visible = `
       D1 — Pick a mode
 
@@ -743,10 +753,10 @@ describe('parseQuestionPrompt', () => {
         2. SCOPE EXPANSION
     `;
     const prompt = parseQuestionPrompt(visible);
-    expect(prompt).toBe('D1 — Pick a mode');
+    expect(prompt).toBe("D1 — Pick a mode");
   });
 
-  test('captures multi-line prompt above the cursor', () => {
+  test("captures multi-line prompt above the cursor", () => {
     const visible = `
       D2 — Approach selection
 
@@ -757,21 +767,21 @@ describe('parseQuestionPrompt', () => {
     `;
     const prompt = parseQuestionPrompt(visible);
     // Multi-line prompts get joined with single spaces.
-    expect(prompt).toContain('D2 — Approach selection');
-    expect(prompt).toContain('Which architecture should we follow?');
+    expect(prompt).toContain("D2 — Approach selection");
+    expect(prompt).toContain("Which architecture should we follow?");
   });
 
   test('returns "" when no cursor is rendered', () => {
-    expect(parseQuestionPrompt('Just some prose.\nNo cursor.')).toBe('');
+    expect(parseQuestionPrompt("Just some prose.\nNo cursor.")).toBe("");
   });
 
-  test('truncates to 240 chars', () => {
-    const longPrompt = 'A'.repeat(500);
+  test("truncates to 240 chars", () => {
+    const longPrompt = "A".repeat(500);
     const visible = `${longPrompt}\n\n      ❯ 1. yes\n        2. no`;
     expect(parseQuestionPrompt(visible).length).toBeLessThanOrEqual(240);
   });
 
-  test('does not pull text from a previous numbered list above', () => {
+  test("does not pull text from a previous numbered list above", () => {
     const visible = `
       ❯ 1. previous answered question
         2. previous option two
@@ -783,117 +793,127 @@ describe('parseQuestionPrompt', () => {
     `;
     const prompt = parseQuestionPrompt(visible);
     // Stops at the previous numbered-list line; should NOT contain "previous answered question".
-    expect(prompt).toContain('D2 — A new question text');
-    expect(prompt).not.toContain('previous answered question');
+    expect(prompt).toContain("D2 — A new question text");
+    expect(prompt).not.toContain("previous answered question");
   });
 
-  test('normalizes whitespace (collapses runs of spaces and tabs)', () => {
+  test("normalizes whitespace (collapses runs of spaces and tabs)", () => {
     const visible = `D1   —    Spaced     out
 
       ❯ 1. yes
         2. no`;
-    expect(parseQuestionPrompt(visible)).toBe('D1 — Spaced out');
+    expect(parseQuestionPrompt(visible)).toBe("D1 — Spaced out");
   });
 
-  test('inline-cursor box-layout: extracts prompt text BEFORE ❯1. on the cursor line', () => {
+  test("inline-cursor box-layout: extracts prompt text BEFORE ❯1. on the cursor line", () => {
     // Real /plan-ceo-review rendering: divider + ☐ header + prompt text +
     // cursor are all on one logical line because TTY cursor-positioning
     // escapes collapse the box layout under stripAnsi.
     const visible = [
-      '──────────────────',
-      '☐ Review scope                                                     What scope do you want me to CEO-review?                                                     ❯ 1. The branch\'s diff vs main',
-      '2. A specific plan file',
-      '3. An idea inline',
-    ].join('\n');
+      "──────────────────",
+      "☐ Review scope                                                     What scope do you want me to CEO-review?                                                     ❯ 1. The branch's diff vs main",
+      "2. A specific plan file",
+      "3. An idea inline",
+    ].join("\n");
     const prompt = parseQuestionPrompt(visible);
     // Should extract "Review scope" and the prompt text, dropping the ☐ box-drawing sigil.
-    expect(prompt).toContain('Review scope');
-    expect(prompt).toContain('What scope do you want me to CEO-review?');
-    expect(prompt).not.toContain('❯');
+    expect(prompt).toContain("Review scope");
+    expect(prompt).toContain("What scope do you want me to CEO-review?");
+    expect(prompt).not.toContain("❯");
     expect(prompt).not.toMatch(/^☐/);
   });
 });
 
-describe('auqFingerprint', () => {
-  test('returns the same fingerprint for identical inputs', () => {
+describe("auqFingerprint", () => {
+  test("returns the same fingerprint for identical inputs", () => {
     const opts = [
-      { index: 1, label: 'A' },
-      { index: 2, label: 'B' },
+      { index: 1, label: "A" },
+      { index: 2, label: "B" },
     ];
-    expect(auqFingerprint('hello', opts)).toBe(auqFingerprint('hello', opts));
+    expect(auqFingerprint("hello", opts)).toBe(auqFingerprint("hello", opts));
   });
 
-  test('different prompts with shared option labels produce DIFFERENT fingerprints', () => {
+  test("different prompts with shared option labels produce DIFFERENT fingerprints", () => {
     // The collision regression Codex F1 caught: option-label-only fingerprints
     // collapsed multiple distinct findings into one when they shared menu shape.
     const sharedOpts = [
-      { index: 1, label: 'Add to plan' },
-      { index: 2, label: 'Defer' },
-      { index: 3, label: 'Build now' },
+      { index: 1, label: "Add to plan" },
+      { index: 2, label: "Defer" },
+      { index: 3, label: "Build now" },
     ];
-    const fpFinding1 = auqFingerprint('D5 — Architecture: bypass helper?', sharedOpts);
-    const fpFinding2 = auqFingerprint('D6 — Tests: zero coverage?', sharedOpts);
+    const fpFinding1 = auqFingerprint(
+      "D5 — Architecture: bypass helper?",
+      sharedOpts,
+    );
+    const fpFinding2 = auqFingerprint("D6 — Tests: zero coverage?", sharedOpts);
     expect(fpFinding1).not.toBe(fpFinding2);
   });
 
-  test('same prompt with different options produces DIFFERENT fingerprints', () => {
-    const prompt = 'D1 — Pick a mode';
+  test("same prompt with different options produces DIFFERENT fingerprints", () => {
+    const prompt = "D1 — Pick a mode";
     const fpA = auqFingerprint(prompt, [
-      { index: 1, label: 'HOLD SCOPE' },
-      { index: 2, label: 'SCOPE EXPANSION' },
+      { index: 1, label: "HOLD SCOPE" },
+      { index: 2, label: "SCOPE EXPANSION" },
     ]);
     const fpB = auqFingerprint(prompt, [
-      { index: 1, label: 'HOLD SCOPE' },
-      { index: 2, label: 'SCOPE REDUCTION' },
+      { index: 1, label: "HOLD SCOPE" },
+      { index: 2, label: "SCOPE REDUCTION" },
     ]);
     expect(fpA).not.toBe(fpB);
   });
 
-  test('whitespace-only differences in prompt do NOT change the fingerprint', () => {
+  test("whitespace-only differences in prompt do NOT change the fingerprint", () => {
     // Same content, different rendering whitespace (TTY redraw artifact)
     // must produce the same fingerprint so dedupe survives reflow.
-    const opts = [{ index: 1, label: 'A' }, { index: 2, label: 'B' }];
-    const fpA = auqFingerprint('Pick   a     mode', opts);
-    const fpB = auqFingerprint('Pick a mode', opts);
+    const opts = [
+      { index: 1, label: "A" },
+      { index: 2, label: "B" },
+    ];
+    const fpA = auqFingerprint("Pick   a     mode", opts);
+    const fpB = auqFingerprint("Pick a mode", opts);
     expect(fpA).toBe(fpB);
   });
 
-  test('empty prompt + same options collide (caller must guard against this)', () => {
+  test("empty prompt + same options collide (caller must guard against this)", () => {
     // Documents the contract: empty-prompt fingerprints WILL collide if the
     // caller fingerprints them. runPlanSkillCounting must skip empty-prompt
     // AUQs and re-poll instead.
-    const opts = [{ index: 1, label: 'A' }];
-    expect(auqFingerprint('', opts)).toBe(auqFingerprint('', opts));
+    const opts = [{ index: 1, label: "A" }];
+    expect(auqFingerprint("", opts)).toBe(auqFingerprint("", opts));
   });
 });
 
-describe('COMPLETION_SUMMARY_RE', () => {
-  test('matches GSTACK REVIEW REPORT heading', () => {
-    expect(COMPLETION_SUMMARY_RE.test('## GSTACK REVIEW REPORT')).toBe(true);
+describe("COMPLETION_SUMMARY_RE", () => {
+  test("matches GSTACK REVIEW REPORT heading", () => {
+    expect(COMPLETION_SUMMARY_RE.test("## GSTACK REVIEW REPORT")).toBe(true);
   });
 
-  test('matches Completion Summary heading (ceo + eng)', () => {
-    expect(COMPLETION_SUMMARY_RE.test('## Completion Summary')).toBe(true);
-    expect(COMPLETION_SUMMARY_RE.test('## Completion summary')).toBe(true);
+  test("matches Completion Summary heading (ceo + eng)", () => {
+    expect(COMPLETION_SUMMARY_RE.test("## Completion Summary")).toBe(true);
+    expect(COMPLETION_SUMMARY_RE.test("## Completion summary")).toBe(true);
   });
 
-  test('matches Status: clean (CEO review-log shape)', () => {
-    expect(COMPLETION_SUMMARY_RE.test('Status: clean')).toBe(true);
-    expect(COMPLETION_SUMMARY_RE.test('Status: issues_open')).toBe(true);
+  test("matches Status: clean (CEO review-log shape)", () => {
+    expect(COMPLETION_SUMMARY_RE.test("Status: clean")).toBe(true);
+    expect(COMPLETION_SUMMARY_RE.test("Status: issues_open")).toBe(true);
   });
 
-  test('matches VERDICT: line', () => {
-    expect(COMPLETION_SUMMARY_RE.test('VERDICT: CLEARED — Eng Review passed')).toBe(true);
+  test("matches VERDICT: line", () => {
+    expect(
+      COMPLETION_SUMMARY_RE.test("VERDICT: CLEARED — Eng Review passed"),
+    ).toBe(true);
   });
 
   test('does NOT match prose mentions of "verdict" mid-line', () => {
     // VERDICT must be at the start of a line to count.
-    expect(COMPLETION_SUMMARY_RE.test('the final verdict: undecided')).toBe(false);
+    expect(COMPLETION_SUMMARY_RE.test("the final verdict: undecided")).toBe(
+      false,
+    );
   });
 });
 
-describe('assertReviewReportAtBottom', () => {
-  test('passes when REVIEW REPORT is the only/last ## heading', () => {
+describe("assertReviewReportAtBottom", () => {
+  test("passes when REVIEW REPORT is the only/last ## heading", () => {
     const content = `# Plan
 
 ## Context
@@ -910,7 +930,7 @@ more stuff
     expect(r.ok).toBe(true);
   });
 
-  test('fails when REVIEW REPORT is missing', () => {
+  test("fails when REVIEW REPORT is missing", () => {
     const content = `# Plan
 
 ## Context
@@ -921,7 +941,7 @@ stuff
     expect(r.reason).toMatch(/no GSTACK REVIEW REPORT/);
   });
 
-  test('fails when REVIEW REPORT exists but a ## heading follows it', () => {
+  test("fails when REVIEW REPORT exists but a ## heading follows it", () => {
     const content = `# Plan
 
 ## GSTACK REVIEW REPORT
@@ -934,10 +954,10 @@ oops
     const r = assertReviewReportAtBottom(content);
     expect(r.ok).toBe(false);
     expect(r.reason).toMatch(/trailing ## heading/);
-    expect(r.trailingHeadings).toEqual(['## Late Section']);
+    expect(r.trailingHeadings).toEqual(["## Late Section"]);
   });
 
-  test('passes when only ### subheadings follow REVIEW REPORT (deeper nesting allowed)', () => {
+  test("passes when only ### subheadings follow REVIEW REPORT (deeper nesting allowed)", () => {
     const content = `## GSTACK REVIEW REPORT
 
 ### Cross-model tension
@@ -948,7 +968,7 @@ oops
     expect(r.ok).toBe(true);
   });
 
-  test('fails with multiple trailing ## headings reported', () => {
+  test("fails with multiple trailing ## headings reported", () => {
     const content = `## GSTACK REVIEW REPORT
 
 ## First trailing
@@ -961,9 +981,12 @@ oops
   });
 });
 
-describe('Step0BoundaryPredicate per-skill', () => {
+describe("Step0BoundaryPredicate per-skill", () => {
   // Helper to build a synthetic fingerprint for predicate tests.
-  function fp(promptSnippet: string, optionLabels: string[]): AskUserQuestionFingerprint {
+  function fp(
+    promptSnippet: string,
+    optionLabels: string[],
+  ): AskUserQuestionFingerprint {
     const options = optionLabels.map((label, i) => ({ index: i + 1, label }));
     return {
       signature: auqFingerprint(promptSnippet, options),
@@ -974,9 +997,14 @@ describe('Step0BoundaryPredicate per-skill', () => {
     };
   }
 
-  describe('ceoStep0Boundary', () => {
-    test('FIRES on Step 0F mode-pick AUQ (HOLD SCOPE in options)', () => {
-      const f = fp('Pick a mode', ['HOLD SCOPE', 'SCOPE EXPANSION', 'SELECTIVE EXPANSION', 'SCOPE REDUCTION']);
+  describe("ceoStep0Boundary", () => {
+    test("FIRES on Step 0F mode-pick AUQ (HOLD SCOPE in options)", () => {
+      const f = fp("Pick a mode", [
+        "HOLD SCOPE",
+        "SCOPE EXPANSION",
+        "SELECTIVE EXPANSION",
+        "SCOPE REDUCTION",
+      ]);
       expect(ceoStep0Boundary(f)).toBe(true);
     });
 
@@ -985,79 +1013,115 @@ describe('Step0BoundaryPredicate per-skill', () => {
       // and we route via "Skip interview and plan immediately" to bypass
       // Step 0 entirely. Boundary must fire on this AUQ so subsequent
       // AUQs go to reviewCount.
-      const f = fp(
-        'What scope do you want me to CEO-review?',
-        [
-          "The branch's diff vs main",
-          'A specific plan file',
-          "An idea you'll describe inline",
-          'Cancel — wrong skill',
-          'Type something.',
-          'Chat about this',
-          'Skip interview and plan immediately',
-        ],
-      );
+      const f = fp("What scope do you want me to CEO-review?", [
+        "The branch's diff vs main",
+        "A specific plan file",
+        "An idea you'll describe inline",
+        "Cancel — wrong skill",
+        "Type something.",
+        "Chat about this",
+        "Skip interview and plan immediately",
+      ]);
       expect(ceoStep0Boundary(f)).toBe(true);
     });
 
-    test('does NOT fire on premise challenge AUQs', () => {
-      const f = fp('D1 — Premise check: is this the right problem?', ['Yes', 'No', 'Other']);
+    test("does NOT fire on premise challenge AUQs", () => {
+      const f = fp("D1 — Premise check: is this the right problem?", [
+        "Yes",
+        "No",
+        "Other",
+      ]);
       expect(ceoStep0Boundary(f)).toBe(false);
     });
 
-    test('does NOT fire on review-section AUQs', () => {
-      const f = fp('Architecture: bypass helper?', ['Reuse existing', 'Roll new', 'Defer']);
+    test("does NOT fire on review-section AUQs", () => {
+      const f = fp("Architecture: bypass helper?", [
+        "Reuse existing",
+        "Roll new",
+        "Defer",
+      ]);
       expect(ceoStep0Boundary(f)).toBe(false);
     });
   });
 
-  describe('engStep0Boundary', () => {
-    test('FIRES on cross-project learnings prompt', () => {
-      const f = fp('Enable cross-project learnings on this machine?', ['Yes', 'No']);
+  describe("engStep0Boundary", () => {
+    test("FIRES on cross-project learnings prompt", () => {
+      const f = fp("Enable cross-project learnings on this machine?", [
+        "Yes",
+        "No",
+      ]);
       expect(engStep0Boundary(f)).toBe(true);
     });
 
-    test('FIRES on scope reduction recommendation', () => {
-      const f = fp('Scope reduction recommendation: cut to MVP?', ['Reduce', 'Proceed', 'Modify']);
+    test("FIRES on scope reduction recommendation", () => {
+      const f = fp("Scope reduction recommendation: cut to MVP?", [
+        "Reduce",
+        "Proceed",
+        "Modify",
+      ]);
       expect(engStep0Boundary(f)).toBe(true);
     });
 
-    test('does NOT fire on review-section AUQs', () => {
-      const f = fp('Architecture: shared mutable state?', ['Refactor', 'Defer', 'Skip']);
+    test("does NOT fire on review-section AUQs", () => {
+      const f = fp("Architecture: shared mutable state?", [
+        "Refactor",
+        "Defer",
+        "Skip",
+      ]);
       expect(engStep0Boundary(f)).toBe(false);
     });
   });
 
-  describe('designStep0Boundary', () => {
-    test('FIRES on design system / posture mention', () => {
-      const f = fp('Pick a design posture for this review', ['Polish', 'Triage', 'Expansion']);
+  describe("designStep0Boundary", () => {
+    test("FIRES on design system / posture mention", () => {
+      const f = fp("Pick a design posture for this review", [
+        "Polish",
+        "Triage",
+        "Expansion",
+      ]);
       expect(designStep0Boundary(f)).toBe(true);
     });
 
-    test('FIRES on first-dimension prompt', () => {
-      const f = fp('First dimension: visual hierarchy. Score?', ['7', '8', '9']);
+    test("FIRES on first-dimension prompt", () => {
+      const f = fp("First dimension: visual hierarchy. Score?", [
+        "7",
+        "8",
+        "9",
+      ]);
       expect(designStep0Boundary(f)).toBe(true);
     });
 
-    test('does NOT fire on later dimension AUQs', () => {
-      const f = fp('Spacing dimension score?', ['7', '8', '9']);
+    test("does NOT fire on later dimension AUQs", () => {
+      const f = fp("Spacing dimension score?", ["7", "8", "9"]);
       expect(designStep0Boundary(f)).toBe(false);
     });
   });
 
-  describe('devexStep0Boundary', () => {
-    test('FIRES on developer persona selection', () => {
-      const f = fp('Pick the target persona for this review', ['Senior backend', 'Junior frontend', 'Other']);
+  describe("devexStep0Boundary", () => {
+    test("FIRES on developer persona selection", () => {
+      const f = fp("Pick the target persona for this review", [
+        "Senior backend",
+        "Junior frontend",
+        "Other",
+      ]);
       expect(devexStep0Boundary(f)).toBe(true);
     });
 
-    test('FIRES on TTHW target prompt', () => {
-      const f = fp('What is the TTHW target for first run?', ['<5 min', '<15 min', '<30 min']);
+    test("FIRES on TTHW target prompt", () => {
+      const f = fp("What is the TTHW target for first run?", [
+        "<5 min",
+        "<15 min",
+        "<30 min",
+      ]);
       expect(devexStep0Boundary(f)).toBe(true);
     });
 
-    test('does NOT fire on review-section AUQs', () => {
-      const f = fp('Friction point: 5-min CI wait. Address?', ['Now', 'Defer', 'Skip']);
+    test("does NOT fire on review-section AUQs", () => {
+      const f = fp("Friction point: 5-min CI wait. Address?", [
+        "Now",
+        "Defer",
+        "Skip",
+      ]);
       expect(devexStep0Boundary(f)).toBe(false);
     });
   });
