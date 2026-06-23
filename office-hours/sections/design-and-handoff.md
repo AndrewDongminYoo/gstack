@@ -1,5 +1,6 @@
 <!-- AUTO-GENERATED from design-and-handoff.md.tmpl — do not edit directly -->
 <!-- Regenerate: bun run gen:skill-docs -->
+
 ## Phase 5: Design Doc
 
 Write the design document to the project directory.
@@ -11,10 +12,12 @@ DATETIME=$(date +%Y%m%d-%H%M%S)
 ```
 
 **Design lineage:** Before writing, check for existing design docs on this branch:
+
 ```bash
 setopt +o nomatch 2>/dev/null || true  # zsh compat
 PRIOR=$(ls -t ~/.gstack/projects/$SLUG/*-$BRANCH-design-*.md 2>/dev/null | head -1)
 ```
+
 If `$PRIOR` exists, the new doc gets a `Supersedes:` field referencing it. This creates a revision chain — you can trace how a design evolved across office hours sessions.
 
 Write to `~/.gstack/projects/{slug}/{user}-{branch}-design-{datetime}.md`.
@@ -35,53 +38,71 @@ Mode: Startup
 Supersedes: {prior filename — omit this line if first design on this branch}
 
 ## Problem Statement
+
 {from Phase 2A}
 
 ## Demand Evidence
+
 {from Q1 — specific quotes, numbers, behaviors demonstrating real demand}
 
 ## Status Quo
+
 {from Q2 — concrete current workflow users live with today}
 
 ## Target User & Narrowest Wedge
+
 {from Q3 + Q4 — the specific human and the smallest version worth paying for}
 
 ## Constraints
+
 {from Phase 2A}
 
 ## Premises
+
 {from Phase 3}
 
 ## Cross-Model Perspective
+
 {If second opinion ran in Phase 3.5 (Codex or Claude subagent): independent cold read — steelman, key insight, challenged premise, prototype suggestion. Verbatim or close paraphrase. If second opinion did NOT run (skipped or unavailable): omit this section entirely — do not include it.}
 
 ## Approaches Considered
+
 ### Approach A: {name}
+
 {from Phase 4}
+
 ### Approach B: {name}
+
 {from Phase 4}
 
 ## Recommended Approach
+
 {chosen approach with rationale}
 
 ## Open Questions
+
 {any unresolved questions from the office hours}
 
 ## Success Criteria
+
 {measurable criteria from Phase 2A}
 
 ## Distribution Plan
+
 {how users get the deliverable — binary download, package manager, container image, web service, etc.}
 {CI/CD pipeline for building and publishing — GitHub Actions, manual release, auto-deploy on merge?}
 {omit this section if the deliverable is a web service with existing deployment pipeline}
 
 ## Dependencies
+
 {blockers, prerequisites, related work}
 
 ## The Assignment
+
 {one concrete real-world action the founder should take next — not "go build it"}
 
 ## What I noticed about how you think
+
 {observational, mentor-like reflections referencing specific things the user said during the session. Quote their words back to them — don't characterize their behavior. 2-4 bullets.}
 ```
 
@@ -98,43 +119,58 @@ Mode: Builder
 Supersedes: {prior filename — omit this line if first design on this branch}
 
 ## Problem Statement
+
 {from Phase 2B}
 
 ## What Makes This Cool
+
 {the core delight, novelty, or "whoa" factor}
 
 ## Constraints
+
 {from Phase 2B}
 
 ## Premises
+
 {from Phase 3}
 
 ## Cross-Model Perspective
+
 {If second opinion ran in Phase 3.5 (Codex or Claude subagent): independent cold read — coolest version, key insight, existing tools, prototype suggestion. Verbatim or close paraphrase. If second opinion did NOT run (skipped or unavailable): omit this section entirely — do not include it.}
 
 ## Approaches Considered
+
 ### Approach A: {name}
+
 {from Phase 4}
+
 ### Approach B: {name}
+
 {from Phase 4}
 
 ## Recommended Approach
+
 {chosen approach with rationale}
 
 ## Open Questions
+
 {any unresolved questions from the office hours}
 
 ## Success Criteria
+
 {what "done" looks like}
 
 ## Distribution Plan
+
 {how users get the deliverable — binary download, package manager, container image, web service, etc.}
 {CI/CD pipeline for building and publishing — or "existing deployment pipeline covers this"}
 
 ## Next Steps
+
 {concrete build tasks — what to implement first, second, third}
 
 ## What I noticed about how you think
+
 {observational, mentor-like reflections referencing specific things the user said during the session. Quote their words back to them — don't characterize their behavior. 2-4 bullets.}
 ```
 
@@ -151,12 +187,14 @@ and cannot see the brainstorming conversation — only the document. This ensure
 adversarial independence.
 
 Prompt the subagent with:
+
 - The file path of the document just written
 - "Read this document and review it on 5 dimensions. For each dimension, note PASS or
   list specific issues with suggested fixes. At the end, output a quality score (1-10)
   across all dimensions."
 
 **Dimensions:**
+
 1. **Completeness** — Are all requirements addressed? Missing edge cases?
 2. **Consistency** — Do parts of the document agree with each other? Contradictions?
 3. **Clarity** — Could an engineer implement this without asking questions? Ambiguous language?
@@ -164,12 +202,14 @@ Prompt the subagent with:
 5. **Feasibility** — Can this actually be built with the stated approach? Hidden complexity?
 
 The subagent should return:
+
 - A quality score (1-10)
 - PASS if no issues, or a numbered list of issues with dimension, description, and fix
 
 **Step 2: Fix and re-dispatch**
 
 If the reviewer returns issues:
+
 1. Fix each issue in the document on disk (use Edit tool)
 2. Re-dispatch the reviewer subagent with the updated document
 3. Maximum 3 iterations total
@@ -196,20 +236,21 @@ After the loop completes (PASS, max iterations, or convergence guard):
    section to the document listing each unresolved issue. Downstream skills will see this.
 
 3. Append metrics:
+
 ```bash
 mkdir -p ~/.gstack/analytics
 echo '{"skill":"office-hours","ts":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","iterations":ITERATIONS,"issues_found":FOUND,"issues_fixed":FIXED,"remaining":REMAINING,"quality_score":SCORE}' >> ~/.gstack/analytics/spec-review.jsonl 2>/dev/null || true
 ```
+
 Replace ITERATIONS, FOUND, FIXED, REMAINING, SCORE with actual values from the review.
 
 ---
 
 Present the reviewed design doc to the user via AskUserQuestion:
+
 - A) Approve — mark Status: APPROVED and proceed to handoff
 - B) Revise — specify which sections need changes (loop back to revise those sections)
 - C) Start over — return to Phase 2
-
-
 
 ## Brain Calibration Write-Back (Phase 2 / gated)
 
@@ -218,6 +259,7 @@ TTHW target, architectural bet, wedge commitment), it MAY write a
 `kind=bet` take to the brain so a calibration profile builds over time.
 
 **Gated on two things:**
+
 1. Brain trust policy for the active endpoint is `personal` (check via
    `~/.claude/skills/gstack/bin/gstack-config get brain_trust_policy@<endpoint-hash>`).
    Shared brains skip write-back to avoid polluting team calibration.
@@ -230,6 +272,7 @@ If the MCP op is unavailable, fall back to `mcp__gbrain__put_page` with
 a gstack:takes fence block (documented but uglier path).
 
 Mandatory take frontmatter shape:
+
 ```yaml
 kind: bet
 holder: <user identity from whoami>
@@ -250,7 +293,6 @@ eval "$(~/.claude/skills/gstack/bin/gstack-slug 2>/dev/null)" 2>/dev/null || tru
   ~/.claude/skills/gstack/bin/gstack-brain-cache invalidate competitive-intel --project "$SLUG" 2>/dev/null || true
 ```
 
-
 ## Brain Cache Background Refresh
 
 After the skill's work completes (and telemetry has logged), kick a
@@ -262,7 +304,6 @@ from the warm cache.
 eval "$(~/.claude/skills/gstack/bin/gstack-slug 2>/dev/null)" 2>/dev/null || true
 (~/.claude/skills/gstack/bin/gstack-brain-cache refresh --project "$SLUG" 2>/dev/null &) || true
 ```
-
 
 ---
 
@@ -298,6 +339,7 @@ This is the full introduction. The user has never done office hours before.
 One paragraph that weaves specific session callbacks with the golden age framing. Reference actual things the user said, quote their words back to them.
 
 **Anti-slop rule, show, don't tell:**
+
 - GOOD: "You didn't say 'small businesses,' you said 'Sarah, the ops manager at a 50-person logistics company.' That specificity is rare."
 - BAD: "You showed great specificity in identifying your target user."
 - GOOD: "You pushed back when I challenged premise #2. Most people just agree."
@@ -324,6 +366,7 @@ Use the founder signal count from Phase 4.5 to select the right sub-tier.
 > GStack thinks you are among the top people who could do this.
 
 Then use AskUserQuestion: "Would you consider applying to Y Combinator?"
+
 - If yes: run `open https://ycombinator.com/apply?ref=gstack` and say: "Bring this design doc to your YC interview. It's better than most pitch decks."
 - If no: respond warmly: "Totally fair. The design doc is yours either way, and the offer stands if you ever change your mind." No pressure, no guilt, no re-ask.
 
@@ -362,6 +405,7 @@ If CROSS_PROJECT is true (different project):
 Then: "No pitch this time. You already know about YC. Let's talk about your work."
 
 **Tone examples (prevent generic AI voice):**
+
 - GOOD: "Welcome back. Last time you were designing that task manager for ops teams. Still on that?"
 - BAD: "Welcome back to your second office hours session. I'd like to check in on your progress."
 - GOOD: "No pitch this time. You already know about YC. Let's talk about your work."
@@ -383,6 +427,7 @@ Lead with recognition and session count.
 "Welcome back. This is session [SESSION_COUNT]. Last time: [LAST_ASSIGNMENT]. How'd it go?"
 
 **Tone examples:**
+
 - GOOD: "You've been at this for 5 sessions now. Your designs keep getting sharper. Let me show you what I've noticed."
 - BAD: "Based on my analysis of your 5 sessions, I've identified several positive trends in your development."
 
@@ -402,6 +447,7 @@ This must feel earned, not broadcast. If the evidence doesn't support it, skip e
 **Builder Journey Summary** (session 5+): Auto-generate `~/.gstack/builder-journey.md`
 with a narrative arc (not a data table). The arc tells the STORY of their journey in
 second person, referencing specific things they said across sessions. Then open it:
+
 ```bash
 eval "$(~/.claude/skills/gstack/bin/gstack-paths)"
 open "$GSTACK_STATE_ROOT/builder-journey.md"
@@ -435,6 +481,7 @@ If `RESOURCES_SHOWN_COUNT` is 34 or more, skip this section entirely (all resour
 Otherwise, avoid selecting any URL that appears in the RESOURCES_SHOWN list.
 
 **Selection rules:**
+
 - Pick 2-3 resources. Mix categories — never 3 of the same type.
 - Never pick a resource whose URL appears in the dedup log above.
 - Match to session context (what came up matters more than random variety):
@@ -458,59 +505,33 @@ Otherwise, avoid selecting any URL that appears in the RESOURCES_SHOWN list.
 **Resource Pool:**
 
 GARRY TAN VIDEOS:
+
 1. "My $200 million startup mistake: Peter Thiel asked and I said no" (5 min) — The single best "why you should take the leap" video. Peter Thiel writes him a check at dinner, he says no because he might get promoted to Level 60. That 1% stake would be worth $350-500M today. https://www.youtube.com/watch?v=dtnG0ELjvcM
 2. "Unconventional Advice for Founders" (48 min, Stanford) — The magnum opus. Covers everything a pre-launch founder needs: get therapy before your psychology kills your company, good ideas look like bad ideas, the Katamari Damacy metaphor for growth. No filler. https://www.youtube.com/watch?v=Y4yMc99fpfY
 3. "The New Way To Build A Startup" (8 min) — The 2026 playbook. Introduces the "20x company" — tiny teams beating incumbents through AI automation. Three real case studies. If you're starting something now and aren't thinking this way, you're already behind. https://www.youtube.com/watch?v=rWUWfj_PqmM
 4. "How To Build The Future: Sam Altman" (30 min) — Sam talks about what it takes to go from an idea to something real — picking what's important, finding your tribe, and why conviction matters more than credentials. https://www.youtube.com/watch?v=xXCBz_8hM9w
 5. "What Founders Can Do To Improve Their Design Game" (15 min) — Garry was a designer before he was an investor. Taste and craft are the real competitive advantage, not MBA skills or fundraising tricks. https://www.youtube.com/watch?v=ksGNfd-wQY4
 
-YC BACKSTORY / HOW TO BUILD THE FUTURE:
-6. "Tom Blomfield: How I Created Two Billion-Dollar Fintech Startups" (20 min) — Tom built Monzo from nothing into a bank used by 10% of the UK. The actual human journey — fear, mess, persistence. Makes founding feel like something a real person does. https://www.youtube.com/watch?v=QKPgBAnbc10
-7. "DoorDash CEO: Customer Obsession, Surviving Startup Death & Creating A New Market" (30 min) — Tony started DoorDash by literally driving food deliveries himself. If you've ever thought "I'm not the startup type," this will change your mind. https://www.youtube.com/watch?v=3N3TnaViyjk
+YC BACKSTORY / HOW TO BUILD THE FUTURE: 6. "Tom Blomfield: How I Created Two Billion-Dollar Fintech Startups" (20 min) — Tom built Monzo from nothing into a bank used by 10% of the UK. The actual human journey — fear, mess, persistence. Makes founding feel like something a real person does. https://www.youtube.com/watch?v=QKPgBAnbc10 7. "DoorDash CEO: Customer Obsession, Surviving Startup Death & Creating A New Market" (30 min) — Tony started DoorDash by literally driving food deliveries himself. If you've ever thought "I'm not the startup type," this will change your mind. https://www.youtube.com/watch?v=3N3TnaViyjk
 
-LIGHTCONE PODCAST:
-8. "How to Spend Your 20s in the AI Era" (40 min) — The old playbook (good job, climb the ladder) may not be the best path anymore. How to position yourself to build things that matter in an AI-first world. https://www.youtube.com/watch?v=ShYKkPPhOoc
-9. "How Do Billion Dollar Startups Start?" (25 min) — They start tiny, scrappy, and embarrassing. Demystifies the origin stories and shows that the beginning always looks like a side project, not a corporation. https://www.youtube.com/watch?v=HB3l1BPi7zo
-10. "Billion-Dollar Unpopular Startup Ideas" (25 min) — Uber, Coinbase, DoorDash — they all sounded terrible at first. The best opportunities are the ones most people dismiss. Liberating if your idea feels "weird." https://www.youtube.com/watch?v=Hm-ZIiwiN1o
-11. "Vertical AI Agents Could Be 10X Bigger Than SaaS" (40 min) — The most-watched Lightcone episode. If you're building in AI, this is the landscape map — where the biggest opportunities are and why vertical agents win. https://www.youtube.com/watch?v=ASABxNenD_U
-12. "The Truth About Building AI Startups Today" (35 min) — Cuts through the hype. What's actually working, what's not, and where the real defensibility comes from in AI startups right now. https://www.youtube.com/watch?v=TwDJhUJL-5o
-13. "Startup Ideas You Can Now Build With AI" (30 min) — Concrete, actionable ideas for things that weren't possible 12 months ago. If you're looking for what to build, start here. https://www.youtube.com/watch?v=K4s6Cgicw_A
-14. "Vibe Coding Is The Future" (30 min) — Building software just changed forever. If you can describe what you want, you can build it. The barrier to being a technical founder has never been lower. https://www.youtube.com/watch?v=IACHfKmZMr8
-15. "How To Get AI Startup Ideas" (30 min) — Not theoretical. Walks through specific AI startup ideas that are working right now and explains why the window is open. https://www.youtube.com/watch?v=TANaRNMbYgk
-16. "10 People + AI = Billion Dollar Company?" (25 min) — The thesis behind the 20x company. Small teams with AI leverage are outperforming 100-person incumbents. If you're a solo builder or small team, this is your permission slip to think big. https://www.youtube.com/watch?v=CKvo_kQbakU
+LIGHTCONE PODCAST: 8. "How to Spend Your 20s in the AI Era" (40 min) — The old playbook (good job, climb the ladder) may not be the best path anymore. How to position yourself to build things that matter in an AI-first world. https://www.youtube.com/watch?v=ShYKkPPhOoc 9. "How Do Billion Dollar Startups Start?" (25 min) — They start tiny, scrappy, and embarrassing. Demystifies the origin stories and shows that the beginning always looks like a side project, not a corporation. https://www.youtube.com/watch?v=HB3l1BPi7zo 10. "Billion-Dollar Unpopular Startup Ideas" (25 min) — Uber, Coinbase, DoorDash — they all sounded terrible at first. The best opportunities are the ones most people dismiss. Liberating if your idea feels "weird." https://www.youtube.com/watch?v=Hm-ZIiwiN1o 11. "Vertical AI Agents Could Be 10X Bigger Than SaaS" (40 min) — The most-watched Lightcone episode. If you're building in AI, this is the landscape map — where the biggest opportunities are and why vertical agents win. https://www.youtube.com/watch?v=ASABxNenD_U 12. "The Truth About Building AI Startups Today" (35 min) — Cuts through the hype. What's actually working, what's not, and where the real defensibility comes from in AI startups right now. https://www.youtube.com/watch?v=TwDJhUJL-5o 13. "Startup Ideas You Can Now Build With AI" (30 min) — Concrete, actionable ideas for things that weren't possible 12 months ago. If you're looking for what to build, start here. https://www.youtube.com/watch?v=K4s6Cgicw_A 14. "Vibe Coding Is The Future" (30 min) — Building software just changed forever. If you can describe what you want, you can build it. The barrier to being a technical founder has never been lower. https://www.youtube.com/watch?v=IACHfKmZMr8 15. "How To Get AI Startup Ideas" (30 min) — Not theoretical. Walks through specific AI startup ideas that are working right now and explains why the window is open. https://www.youtube.com/watch?v=TANaRNMbYgk 16. "10 People + AI = Billion Dollar Company?" (25 min) — The thesis behind the 20x company. Small teams with AI leverage are outperforming 100-person incumbents. If you're a solo builder or small team, this is your permission slip to think big. https://www.youtube.com/watch?v=CKvo_kQbakU
 
-YC STARTUP SCHOOL:
-17. "Should You Start A Startup?" (17 min, Harj Taggar) — Directly addresses the question most people are too afraid to ask out loud. Breaks down the real tradeoffs honestly, without hype. https://www.youtube.com/watch?v=BUE-icVYRFU
-18. "How to Get and Evaluate Startup Ideas" (30 min, Jared Friedman) — YC's most-watched Startup School video. How founders actually stumbled into their ideas by paying attention to problems in their own lives. https://www.youtube.com/watch?v=Th8JoIan4dg
-19. "How David Lieb Turned a Failing Startup Into Google Photos" (20 min) — His company Bump was dying. He noticed a photo-sharing behavior in his own data, and it became Google Photos (1B+ users). A masterclass in seeing opportunity where others see failure. https://www.youtube.com/watch?v=CcnwFJqEnxU
-20. "Tips For Technical Startup Founders" (15 min, Diana Hu) — How to leverage your engineering skills as a founder rather than thinking you need to become a different person. https://www.youtube.com/watch?v=rP7bpYsfa6Q
-21. "Why Startup Founders Should Launch Companies Sooner Than They Think" (12 min, Tyler Bosmeny) — Most builders over-prepare and under-ship. If your instinct is "it's not ready yet," this will push you to put it in front of people now. https://www.youtube.com/watch?v=Nsx5RDVKZSk
-22. "How To Talk To Users" (20 min, Gustaf Alströmer) — You don't need sales skills. You need genuine conversations about problems. The most approachable tactical talk for someone who's never done it. https://www.youtube.com/watch?v=z1iF1c8w5Lg
-23. "How To Find A Co-Founder" (15 min, Harj Taggar) — The practical mechanics of finding someone to build with. If "I don't want to do this alone" is stopping you, this removes that blocker. https://www.youtube.com/watch?v=Fk9BCr5pLTU
-24. "Should You Quit Your Job At A Unicorn?" (12 min, Tom Blomfield) — Directly speaks to people at big tech companies who feel the pull to build something of their own. If that's your situation, this is the permission slip. https://www.youtube.com/watch?v=chAoH_AeGAg
+YC STARTUP SCHOOL: 17. "Should You Start A Startup?" (17 min, Harj Taggar) — Directly addresses the question most people are too afraid to ask out loud. Breaks down the real tradeoffs honestly, without hype. https://www.youtube.com/watch?v=BUE-icVYRFU 18. "How to Get and Evaluate Startup Ideas" (30 min, Jared Friedman) — YC's most-watched Startup School video. How founders actually stumbled into their ideas by paying attention to problems in their own lives. https://www.youtube.com/watch?v=Th8JoIan4dg 19. "How David Lieb Turned a Failing Startup Into Google Photos" (20 min) — His company Bump was dying. He noticed a photo-sharing behavior in his own data, and it became Google Photos (1B+ users). A masterclass in seeing opportunity where others see failure. https://www.youtube.com/watch?v=CcnwFJqEnxU 20. "Tips For Technical Startup Founders" (15 min, Diana Hu) — How to leverage your engineering skills as a founder rather than thinking you need to become a different person. https://www.youtube.com/watch?v=rP7bpYsfa6Q 21. "Why Startup Founders Should Launch Companies Sooner Than They Think" (12 min, Tyler Bosmeny) — Most builders over-prepare and under-ship. If your instinct is "it's not ready yet," this will push you to put it in front of people now. https://www.youtube.com/watch?v=Nsx5RDVKZSk 22. "How To Talk To Users" (20 min, Gustaf Alströmer) — You don't need sales skills. You need genuine conversations about problems. The most approachable tactical talk for someone who's never done it. https://www.youtube.com/watch?v=z1iF1c8w5Lg 23. "How To Find A Co-Founder" (15 min, Harj Taggar) — The practical mechanics of finding someone to build with. If "I don't want to do this alone" is stopping you, this removes that blocker. https://www.youtube.com/watch?v=Fk9BCr5pLTU 24. "Should You Quit Your Job At A Unicorn?" (12 min, Tom Blomfield) — Directly speaks to people at big tech companies who feel the pull to build something of their own. If that's your situation, this is the permission slip. https://www.youtube.com/watch?v=chAoH_AeGAg
 
-PAUL GRAHAM ESSAYS:
-25. "How to Do Great Work" — Not about startups. About finding the most meaningful work of your life. The roadmap that often leads to founding without ever saying "startup." https://paulgraham.com/greatwork.html
-26. "How to Do What You Love" — Most people keep their real interests separate from their career. Makes the case for collapsing that gap — which is usually how companies get born. https://paulgraham.com/love.html
-27. "The Bus Ticket Theory of Genius" — The thing you're obsessively into that other people find boring? PG argues it's the actual mechanism behind every breakthrough. https://paulgraham.com/genius.html
-28. "Why to Not Not Start a Startup" — Takes apart every quiet reason you have for not starting — too young, no idea, don't know business — and shows why none hold up. https://paulgraham.com/notnot.html
-29. "Before the Startup" — Written specifically for people who haven't started anything yet. What to focus on now, what to ignore, and how to tell if this path is for you. https://paulgraham.com/before.html
-30. "Superlinear Returns" — Some efforts compound exponentially; most don't. Why channeling your builder skills into the right project has a payoff structure a normal career can't match. https://paulgraham.com/superlinear.html
-31. "How to Get Startup Ideas" — The best ideas aren't brainstormed. They're noticed. Teaches you to look at your own frustrations and recognize which ones could be companies. https://paulgraham.com/startupideas.html
-32. "Schlep Blindness" — The best opportunities hide inside boring, tedious problems everyone avoids. If you're willing to tackle the unsexy thing you see up close, you might already be standing on a company. https://paulgraham.com/schlep.html
-33. "You Weren't Meant to Have a Boss" — If working inside a big organization has always felt slightly wrong, this explains why. Small groups on self-chosen problems is the natural state for builders. https://paulgraham.com/boss.html
-34. "Relentlessly Resourceful" — PG's two-word description of the ideal founder. Not "brilliant." Not "visionary." Just someone who keeps figuring things out. If that's you, you're already qualified. https://paulgraham.com/relres.html
+PAUL GRAHAM ESSAYS: 25. "How to Do Great Work" — Not about startups. About finding the most meaningful work of your life. The roadmap that often leads to founding without ever saying "startup." https://paulgraham.com/greatwork.html 26. "How to Do What You Love" — Most people keep their real interests separate from their career. Makes the case for collapsing that gap — which is usually how companies get born. https://paulgraham.com/love.html 27. "The Bus Ticket Theory of Genius" — The thing you're obsessively into that other people find boring? PG argues it's the actual mechanism behind every breakthrough. https://paulgraham.com/genius.html 28. "Why to Not Not Start a Startup" — Takes apart every quiet reason you have for not starting — too young, no idea, don't know business — and shows why none hold up. https://paulgraham.com/notnot.html 29. "Before the Startup" — Written specifically for people who haven't started anything yet. What to focus on now, what to ignore, and how to tell if this path is for you. https://paulgraham.com/before.html 30. "Superlinear Returns" — Some efforts compound exponentially; most don't. Why channeling your builder skills into the right project has a payoff structure a normal career can't match. https://paulgraham.com/superlinear.html 31. "How to Get Startup Ideas" — The best ideas aren't brainstormed. They're noticed. Teaches you to look at your own frustrations and recognize which ones could be companies. https://paulgraham.com/startupideas.html 32. "Schlep Blindness" — The best opportunities hide inside boring, tedious problems everyone avoids. If you're willing to tackle the unsexy thing you see up close, you might already be standing on a company. https://paulgraham.com/schlep.html 33. "You Weren't Meant to Have a Boss" — If working inside a big organization has always felt slightly wrong, this explains why. Small groups on self-chosen problems is the natural state for builders. https://paulgraham.com/boss.html 34. "Relentlessly Resourceful" — PG's two-word description of the ideal founder. Not "brilliant." Not "visionary." Just someone who keeps figuring things out. If that's you, you're already qualified. https://paulgraham.com/relres.html
 
 **After presenting resources — log to builder profile and offer to open:**
 
 1. Log the selected resource URLs to the builder profile (single source of truth).
-Append a resource-tracking entry:
+   Append a resource-tracking entry:
+
 ```bash
 eval "$(~/.claude/skills/gstack/bin/gstack-slug 2>/dev/null || true)"
 ~/.claude/skills/gstack/bin/gstack-developer-profile --log-session '{"date":"'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'","mode":"resources","project_slug":"'"${SLUG:-unknown}"'","signal_count":0,"signals":[],"design_doc":"","assignment":"","resources_shown":["URL1","URL2","URL3"],"topics":[]}' 2>/dev/null || true
 ```
 
 2. Log the selection to analytics:
+
 ```bash
 mkdir -p ~/.gstack/analytics
 echo '{"skill":"office-hours","event":"resources_shown","count":NUM_RESOURCES,"categories":"CAT1,CAT2","ts":"'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'"}' >> ~/.gstack/analytics/skill-usage.jsonl 2>/dev/null || true
@@ -521,6 +542,7 @@ echo '{"skill":"office-hours","event":"resources_shown","count":NUM_RESOURCES,"c
 Present the selected resources and ask: "Want me to open any of these in your browser?"
 
 Options:
+
 - A) Open all of them (I'll check them out later)
 - B) [Title of resource 1] — open just this one
 - C) [Title of resource 2] — open just this one
@@ -540,4 +562,3 @@ After the plea, suggest the next step:
 - **`/plan-design-review`** for visual/UX design review
 
 The design doc at `~/.gstack/projects/` is automatically discoverable by downstream skills — they will read it during their pre-review system audit.
-

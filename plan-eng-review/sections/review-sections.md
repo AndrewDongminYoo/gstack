@@ -1,5 +1,6 @@
 <!-- AUTO-GENERATED from review-sections.md.tmpl — do not edit directly -->
 <!-- Regenerate: bun run gen:skill-docs -->
+
 ## Review Sections (after scope is agreed)
 
 **Anti-skip rule:** Never condense, abbreviate, or skip any review section (1-4) regardless of plan type (strategy, spec, code, infra). Every section in this skill exists for a reason. "This is a strategy doc so implementation sections don't apply" is always wrong — implementation details are where strategy breaks down. If a section genuinely has zero findings, say "No issues found" and move on — but you must evaluate it.
@@ -28,6 +29,7 @@ If `CROSS_PROJECT` is `unset` (first time): Use AskUserQuestion:
 > where cross-contamination would be a concern.
 
 Options:
+
 - A) Enable cross-project learnings (recommended)
 - B) Keep learnings project-scoped only
 
@@ -45,15 +47,17 @@ This makes the compounding visible. The user should see that gstack is getting
 smarter on their codebase over time.
 
 ### 1. Architecture review
+
 Evaluate:
-* Overall system design and component boundaries.
-* Dependency graph and coupling concerns.
-* Data flow patterns and potential bottlenecks.
-* Scaling characteristics and single points of failure.
-* Security architecture (auth, data access, API boundaries).
-* Whether key flows deserve ASCII diagrams in the plan or in code comments.
-* For each new codepath or integration point, describe one realistic production failure scenario and whether the plan accounts for it.
-* **Distribution architecture:** If this introduces a new artifact (binary, package, container), how does it get built, published, and updated? Is the CI/CD pipeline part of the plan or deferred?
+
+- Overall system design and component boundaries.
+- Dependency graph and coupling concerns.
+- Data flow patterns and potential bottlenecks.
+- Scaling characteristics and single points of failure.
+- Security architecture (auth, data access, API boundaries).
+- Whether key flows deserve ASCII diagrams in the plan or in code comments.
+- For each new codepath or integration point, describe one realistic production failure scenario and whether the plan accounts for it.
+- **Distribution architecture:** If this introduces a new artifact (binary, package, container), how does it get built, published, and updated? Is the CI/CD pipeline part of the plan or deferred?
 
 For each issue found in this section, call AskUserQuestion individually. One issue per call. Present options, state your recommendation, explain WHY. Do NOT batch multiple issues into one AskUserQuestion. Use the preamble's AskUserQuestion Format section. The AskUserQuestion call is a tool_use, not prose — call the tool directly.
 
@@ -63,13 +67,13 @@ For each issue found in this section, call AskUserQuestion individually. One iss
 
 Every finding MUST include a confidence score (1-10):
 
-| Score | Meaning | Display rule |
-|-------|---------|-------------|
-| 9-10 | Verified by reading specific code. Concrete bug or exploit demonstrated. | Show normally |
-| 7-8 | High confidence pattern match. Very likely correct. | Show normally |
-| 5-6 | Moderate. Could be a false positive. | Show with caveat: "Medium confidence, verify this is actually an issue" |
-| 3-4 | Low confidence. Pattern is suspicious but may be fine. | Suppress from main report. Include in appendix only. |
-| 1-2 | Speculation. | Only report if severity would be P0. |
+| Score | Meaning                                                                  | Display rule                                                            |
+| ----- | ------------------------------------------------------------------------ | ----------------------------------------------------------------------- |
+| 9-10  | Verified by reading specific code. Concrete bug or exploit demonstrated. | Show normally                                                           |
+| 7-8   | High confidence pattern match. Very likely correct.                      | Show normally                                                           |
+| 5-6   | Moderate. Could be a false positive.                                     | Show with caveat: "Medium confidence, verify this is actually an issue" |
+| 3-4   | Low confidence. Pattern is suspicious but may be fine.                   | Suppress from main report. Include in appendix only.                    |
+| 1-2   | Speculation.                                                             | Only report if severity would be P0.                                    |
 
 **Finding format:**
 
@@ -109,12 +113,12 @@ is deliberately out of scope for the lighter gate — see the deferred
 
 The FP classes the gate kills (measured against Django Sprint 2.5 #1539):
 
-| FP class | Why the gate catches it |
-|---|---|
-| "field doesn't exist on model" | Requires quoting the model class body or Meta; the field's absence becomes obvious |
-| "dict.get() might be None" | Requires quoting the dict initialization (e.g. Django form's `cleaned_data` is `{}`-initialized) |
-| "save() might lose fields" | Requires quoting the ORM signature or model definition |
-| "update_fields might miss X" | Requires quoting the field set; if X doesn't exist, the FP is self-evident |
+| FP class                       | Why the gate catches it                                                                          |
+| ------------------------------ | ------------------------------------------------------------------------------------------------ |
+| "field doesn't exist on model" | Requires quoting the model class body or Meta; the field's absence becomes obvious               |
+| "dict.get() might be None"     | Requires quoting the dict initialization (e.g. Django form's `cleaned_data` is `{}`-initialized) |
+| "save() might lose fields"     | Requires quoting the ORM signature or model definition                                           |
+| "update_fields might miss X"   | Requires quoting the field set; if X doesn't exist, the FP is self-evident                       |
 
 **Calibration learning:** If you report a finding with confidence < 7 and the user
 confirms it IS a real issue, that is a calibration event. Your initial confidence was
@@ -122,13 +126,15 @@ too low. Log the corrected pattern as a learning so future reviews catch it with
 higher confidence.
 
 ### 2. Code quality review
+
 Evaluate:
-* Code organization and module structure.
-* DRY violations—be aggressive here.
-* Error handling patterns and missing edge cases (call these out explicitly).
-* Technical debt hotspots.
-* Areas that are over-engineered or under-engineered relative to my preferences.
-* Existing ASCII diagrams in touched files — are they still accurate after this change?
+
+- Code organization and module structure.
+- DRY violations—be aggressive here.
+- Error handling patterns and missing edge cases (call these out explicitly).
+- Technical debt hotspots.
+- Areas that are over-engineered or under-engineered relative to my preferences.
+- Existing ASCII diagrams in touched files — are they still accurate after this change?
 
 For each issue found in this section, call AskUserQuestion individually. One issue per call. Present options, state your recommendation, explain WHY. Do NOT batch multiple issues into one AskUserQuestion. Use the preamble's AskUserQuestion Format section. The AskUserQuestion call is a tool_use, not prose — call the tool directly.
 
@@ -201,6 +207,7 @@ Add these to your diagram alongside the code branches. A user flow with no test 
 **Step 3. Check each branch against existing tests:**
 
 Go through your diagram branch by branch — both code paths AND user flows. For each one, search for a test that exercises it:
+
 - Function `processPayment()` → look for `billing.test.ts`, `billing.spec.ts`, `test/billing_test.rb`
 - An if/else → look for tests covering BOTH the true AND false path
 - An error handler → look for a test that triggers that specific error condition
@@ -209,24 +216,28 @@ Go through your diagram branch by branch — both code paths AND user flows. For
 - An interaction edge case → look for a test that simulates the unexpected action
 
 Quality scoring rubric:
-- ★★★  Tests behavior with edge cases AND error paths
-- ★★   Tests correct behavior, happy path only
-- ★    Smoke test / existence check / trivial assertion (e.g., "it renders", "it doesn't throw")
+
+- ★★★ Tests behavior with edge cases AND error paths
+- ★★ Tests correct behavior, happy path only
+- ★ Smoke test / existence check / trivial assertion (e.g., "it renders", "it doesn't throw")
 
 ### E2E Test Decision Matrix
 
 When checking each branch, also determine whether a unit test or E2E/integration test is the right tool:
 
 **RECOMMEND E2E (mark as [→E2E] in the diagram):**
+
 - Common user flow spanning 3+ components/services (e.g., signup → verify email → first login)
 - Integration point where mocking hides real failures (e.g., API → queue → worker → DB)
 - Auth/payment/data-destruction flows — too important to trust unit tests alone
 
 **RECOMMEND EVAL (mark as [→EVAL] in the diagram):**
+
 - Critical LLM call that needs a quality eval (e.g., prompt change → test output still meets quality bar)
 - Changes to prompt templates, system instructions, or tool definitions
 
 **STICK WITH UNIT TESTS:**
+
 - Pure function with clear inputs/outputs
 - Internal helper with no side effects
 - Edge case of a single function (null input, empty array)
@@ -237,6 +248,7 @@ When checking each branch, also determine whether a unit test or E2E/integration
 **IRON RULE:** When the coverage audit identifies a REGRESSION — code that previously worked but the diff broke — a regression test is added to the plan as a critical requirement. No AskUserQuestion. No skipping. Regressions are the highest-priority test because they prove something broke.
 
 A regression is when:
+
 - The diff modifies existing behavior (not new code)
 - The existing test suite (if any) doesn't cover the changed path
 - The change introduces a new failure mode for existing callers
@@ -264,14 +276,15 @@ COVERAGE: 5/13 paths tested (38%)  |  Code paths: 3/5 (60%)  |  User flows: 2/8 
 QUALITY: ★★★:2 ★★:2 ★:1  |  GAPS: 8 (2 E2E, 1 eval)
 ```
 
-Legend: ★★★ behavior + edge + error  |  ★★ happy path  |  ★ smoke check
-[→E2E] = needs integration test  |  [→EVAL] = needs LLM eval
+Legend: ★★★ behavior + edge + error | ★★ happy path | ★ smoke check
+[→E2E] = needs integration test | [→EVAL] = needs LLM eval
 
 **Fast path:** All paths covered → "Test review: All new code paths have test coverage ✓" Continue.
 
 **Step 5. Add missing tests to the plan:**
 
 For each GAP identified in the diagram, add a test requirement to the plan. Be specific:
+
 - What test file to create (match existing naming conventions)
 - What the test should assert (specific inputs → expected outputs/behavior)
 - Whether it's a unit test, E2E test, or eval (use the decision matrix)
@@ -293,20 +306,25 @@ Write to `~/.gstack/projects/{slug}/{user}-{branch}-eng-review-test-plan-{dateti
 
 ```markdown
 # Test Plan
+
 Generated by /plan-eng-review on {date}
 Branch: {branch}
 Repo: {owner/repo}
 
 ## Affected Pages/Routes
+
 - {URL path} — {what to test and why}
 
 ## Key Interactions to Verify
+
 - {interaction description} on {page}
 
 ## Edge Cases
+
 - {edge case} on {page}
 
 ## Critical Paths
+
 - {end-to-end flow that must work}
 ```
 
@@ -319,11 +337,13 @@ For each issue found in this section, call AskUserQuestion individually. One iss
 **STOP.** Do NOT proceed to the next review section, edit the plan file with the proposed fix, or call ExitPlanMode until the user responds. An issue with an "obvious fix" is still an issue and still needs explicit user approval before it lands in the plan. Loading the AskUserQuestion schema via ToolSearch and then writing the recommendation as chat prose is the failure mode this gate exists to prevent.
 
 ### 4. Performance review
+
 Evaluate:
-* N+1 queries and database access patterns.
-* Memory-usage concerns.
-* Caching opportunities.
-* Slow or high-complexity code paths.
+
+- N+1 queries and database access patterns.
+- Memory-usage concerns.
+- Caching opportunities.
+- Slow or high-complexity code paths.
 
 For each issue found in this section, call AskUserQuestion individually. One issue per call. Present options, state your recommendation, explain WHY. Do NOT batch multiple issues into one AskUserQuestion. Use the preamble's AskUserQuestion Format section. The AskUserQuestion call is a tool_use, not prose — call the tool directly.
 
@@ -357,6 +377,7 @@ echo "CODEX_MODE: $_CODEX_MODE"
 ```
 
 Branch on the echoed `CODEX_MODE`:
+
 - **`disabled`** — the user turned Codex reviews off (`codex_reviews=disabled`). Skip this section entirely; do NOT fall back to a Claude subagent — disabled means no extra review step. Print: "Codex review skipped (codex_reviews disabled). Re-enable: `gstack-config set codex_reviews enabled`."
 - **`not_installed`** — Codex CLI absent. Print: "Codex not installed — using Claude subagent. Install for cross-model coverage: `npm install -g @openai/codex`." Fall back to the Claude subagent path.
 - **`not_authed`** — installed but no credentials. Print: "Codex installed but not authenticated — using Claude subagent. Run `codex login` or set `$CODEX_API_KEY`." Fall back to the Claude subagent path.
@@ -395,6 +416,7 @@ codex exec "<prompt>" -C "$_REPO_ROOT" -s read-only -c 'model_reasoning_effort="
 ```
 
 Use a 5-minute timeout (`timeout: 300000`). After the command completes, read stderr:
+
 ```bash
 cat "$TMPERR_PV"
 ```
@@ -409,6 +431,7 @@ CODEX SAYS (plan review — outside voice):
 ```
 
 **Error handling:** All errors are non-blocking — the outside voice is informational.
+
 - Auth failure (stderr contains "auth", "login", "unauthorized"): "Codex auth failed. Run \`codex login\` to authenticate." Fall back to the Claude subagent below.
 - Timeout: "Codex timed out after 5 minutes." Fall back to the Claude subagent below.
 - Empty response: "Codex returned no response." Fall back to the Claude subagent below.
@@ -450,9 +473,11 @@ For each substantive tension point, use AskUserQuestion:
 > argues [Y]. [One sentence on what context you might be missing.]"
 >
 > RECOMMENDATION: Choose [A or B] because [one-line reason explaining which argument
-> is more compelling and why]. Completeness: A=X/10, B=Y/10.
+>
+> > is more compelling and why]. Completeness: A=X/10, B=Y/10.
 
 Options:
+
 - A) Accept the outside voice's recommendation (I'll apply this change)
 - B) Keep the current approach (reject the outside voice)
 - C) Investigate further before deciding
@@ -464,6 +489,7 @@ outside voice. If the user chooses B, the current approach stands — do not re-
 If no tension points exist, note: "No cross-model tension — both reviewers agree."
 
 **Persist the result:**
+
 ```bash
 ~/.claude/skills/gstack/bin/gstack-review-log '{"skill":"codex-plan-review","timestamp":"'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'","status":"STATUS","source":"SOURCE","commit":"'"$(git rev-parse --short HEAD)"'"}'
 ```
@@ -484,44 +510,53 @@ agree with the outside voice. Cross-model consensus is a strong signal — prese
 such — but the user makes the decision.
 
 ## CRITICAL RULE — How to ask questions
+
 Follow the AskUserQuestion format from the Preamble above. Additional rules for plan reviews:
-* **One issue = one AskUserQuestion call.** Never combine multiple issues into one question.
-* Describe the problem concretely, with file and line references.
-* Present 2-3 options, including "do nothing" where that's reasonable.
-* For each option, specify in one line: effort (human: ~X / CC: ~Y), risk, and maintenance burden. If the complete option is only marginally more effort than the shortcut with CC, recommend the complete option.
-* **Map the reasoning to my engineering preferences above.** One sentence connecting your recommendation to a specific preference (DRY, explicit > clever, minimal diff, etc.).
-* Label with issue NUMBER + option LETTER (e.g., "3A", "3B").
-* **Coverage vs kind:** for every per-issue AskUserQuestion you raise in this review, decide whether the options differ in coverage or in kind. If coverage (e.g., more tests vs fewer, complete error handling vs happy-path-only, full edge-case coverage vs shortcut), include `Completeness: N/10` on each option. If kind (e.g., architectural choice between two different systems, posture-over-posture, A/B/C where each is a different kind of thing), skip the score and add one line: `Note: options differ in kind, not coverage — no completeness score.` Do NOT fabricate scores on kind-differentiated questions — filler scores are worse than no score.
-* **Zero findings:** if a section has zero findings, state "No issues, moving on" and proceed. Otherwise, use AskUserQuestion for each finding — a finding with an "obvious fix" is still a finding and still needs user approval before any change lands in the plan.
+
+- **One issue = one AskUserQuestion call.** Never combine multiple issues into one question.
+- Describe the problem concretely, with file and line references.
+- Present 2-3 options, including "do nothing" where that's reasonable.
+- For each option, specify in one line: effort (human: ~X / CC: ~Y), risk, and maintenance burden. If the complete option is only marginally more effort than the shortcut with CC, recommend the complete option.
+- **Map the reasoning to my engineering preferences above.** One sentence connecting your recommendation to a specific preference (DRY, explicit > clever, minimal diff, etc.).
+- Label with issue NUMBER + option LETTER (e.g., "3A", "3B").
+- **Coverage vs kind:** for every per-issue AskUserQuestion you raise in this review, decide whether the options differ in coverage or in kind. If coverage (e.g., more tests vs fewer, complete error handling vs happy-path-only, full edge-case coverage vs shortcut), include `Completeness: N/10` on each option. If kind (e.g., architectural choice between two different systems, posture-over-posture, A/B/C where each is a different kind of thing), skip the score and add one line: `Note: options differ in kind, not coverage — no completeness score.` Do NOT fabricate scores on kind-differentiated questions — filler scores are worse than no score.
+- **Zero findings:** if a section has zero findings, state "No issues, moving on" and proceed. Otherwise, use AskUserQuestion for each finding — a finding with an "obvious fix" is still a finding and still needs user approval before any change lands in the plan.
 
 ## Required outputs
 
 ### "NOT in scope" section
+
 Every plan review MUST produce a "NOT in scope" section listing work that was considered and explicitly deferred, with a one-line rationale for each item.
 
 ### "What already exists" section
+
 List existing code/flows that already partially solve sub-problems in this plan, and whether the plan reuses them or unnecessarily rebuilds them.
 
 ### TODOS.md updates
+
 After all review sections are complete, present each potential TODO as its own individual AskUserQuestion. Never batch TODOs — one per question. Never silently skip this step. Follow the format in `.claude/skills/review/TODOS-format.md`.
 
 For each TODO, describe:
-* **What:** One-line description of the work.
-* **Why:** The concrete problem it solves or value it unlocks.
-* **Pros:** What you gain by doing this work.
-* **Cons:** Cost, complexity, or risks of doing it.
-* **Context:** Enough detail that someone picking this up in 3 months understands the motivation, the current state, and where to start.
-* **Depends on / blocked by:** Any prerequisites or ordering constraints.
+
+- **What:** One-line description of the work.
+- **Why:** The concrete problem it solves or value it unlocks.
+- **Pros:** What you gain by doing this work.
+- **Cons:** Cost, complexity, or risks of doing it.
+- **Context:** Enough detail that someone picking this up in 3 months understands the motivation, the current state, and where to start.
+- **Depends on / blocked by:** Any prerequisites or ordering constraints.
 
 Then present options: **A)** Add to TODOS.md **B)** Skip — not valuable enough **C)** Build it now in this PR instead of deferring.
 
 Do NOT just append vague bullet points. A TODO without context is worse than no TODO — it creates false confidence that the idea was captured while actually losing the reasoning.
 
 ### Diagrams
+
 The plan itself should use ASCII diagrams for any non-trivial data flow, state machine, or processing pipeline. Additionally, identify which files in the implementation should get inline ASCII diagram comments — particularly Models with complex state transitions, Services with multi-step pipelines, and Concerns with non-obvious mixin behavior.
 
 ### Failure modes
+
 For each new codepath identified in the test review diagram, list one realistic way it could fail in production (timeout, nil reference, race condition, stale data, etc.) and whether:
+
 1. A test covers that failure
 2. Error handling exists for it
 3. The user would see a clear error or a silent failure
@@ -538,8 +573,8 @@ Analyze the plan's implementation steps for parallel execution opportunities. Th
 
 1. **Dependency table** — for each implementation step/workstream:
 
-| Step | Modules touched | Depends on |
-|------|----------------|------------|
+| Step        | Modules touched                           | Depends on          |
+| ----------- | ----------------------------------------- | ------------------- |
 | (step name) | (directories/modules, NOT specific files) | (other steps, or —) |
 
 Work at the module/directory level, not file level. Plans describe intent ("add API endpoints"), not specific files. Module-level ("controllers/, models/") is reliable; file-level is guesswork.
@@ -566,6 +601,7 @@ aggregate across phases.
 
 ```markdown
 ## Implementation Tasks
+
 Synthesized from this review's findings. Each task derives from a specific
 finding above. Run with Claude Code or Codex; checkbox as you ship.
 
@@ -577,6 +613,7 @@ finding above. Run with Claude Code or Codex; checkbox as you ship.
 ```
 
 Rules:
+
 - P1 blocks ship; P2 should land same branch; P3 is a follow-up TODO.
 - If a finding produced no actionable task, do not invent one.
 - If a section had zero findings, emit `_No new tasks from <section>._`
@@ -626,30 +663,33 @@ If zero tasks were identified in this review, still touch the JSONL file
 (`: > "$TASKS_FILE"`) so the aggregator sees that the phase produced output
 this run (an empty file means "ran, no findings" — distinct from "didn't run").
 
-
 ### Completion summary
+
 At the end of the review, fill in and display this summary so the user can see all findings at a glance:
-- Step 0: Scope Challenge — ___ (scope accepted as-is / scope reduced per recommendation)
-- Architecture Review: ___ issues found
-- Code Quality Review: ___ issues found
-- Test Review: diagram produced, ___ gaps identified
-- Performance Review: ___ issues found
+
+- Step 0: Scope Challenge — \_\_\_ (scope accepted as-is / scope reduced per recommendation)
+- Architecture Review: \_\_\_ issues found
+- Code Quality Review: \_\_\_ issues found
+- Test Review: diagram produced, \_\_\_ gaps identified
+- Performance Review: \_\_\_ issues found
 - NOT in scope: written
 - What already exists: written
-- TODOS.md updates: ___ items proposed to user
-- Failure modes: ___ critical gaps flagged
+- TODOS.md updates: \_\_\_ items proposed to user
+- Failure modes: \_\_\_ critical gaps flagged
 - Outside voice: ran (codex/claude) / skipped
-- Parallelization: ___ lanes, ___ parallel / ___ sequential
+- Parallelization: **_ lanes, _** parallel / \_\_\_ sequential
 - Lake Score: X/Y recommendations chose complete option
 
 ## Retrospective learning
+
 Check the git log for this branch. If there are prior commits suggesting a previous review cycle (e.g., review-driven refactors, reverted changes), note what was changed and whether the current plan touches the same areas. Be more aggressive reviewing areas that were previously problematic.
 
 ## Formatting rules
-* NUMBER issues (1, 2, 3...) and LETTERS for options (A, B, C...).
-* Label with NUMBER + LETTER (e.g., "3A", "3B").
-* One sentence max per option. Pick in under 5 seconds.
-* After each review section, pause and ask for feedback before moving on.
+
+- NUMBER issues (1, 2, 3...) and LETTERS for options (A, B, C...).
+- Label with NUMBER + LETTER (e.g., "3A", "3B").
+- One sentence max per option. Pick in under 5 seconds.
+- After each review section, pause and ask for feedback before moving on.
 
 ## Review Log
 
@@ -669,10 +709,11 @@ command breaks the review readiness dashboard in /ship.
 The second command records the architecture verdict as a durable cross-session decision (so a future session inherits the chosen approach and what was hardened, not just the count). Same `~/.gstack/` write pattern as review-log, non-interactive, best-effort (`|| true`). Substitute `ARCH_SUMMARY` (e.g. "N findings, all folded" or "M unresolved") and `KEY_DECISION` (the load-bearing architecture call from the report, one line — omit if the review found nothing durable).
 
 Substitute values from the Completion Summary:
+
 - **TIMESTAMP**: current ISO 8601 datetime
 - **STATUS**: "clean" if 0 unresolved decisions AND 0 critical gaps; otherwise "issues_open"
 - **unresolved**: number from "Unresolved decisions" count
-- **critical_gaps**: number from "Failure modes: ___ critical gaps flagged"
+- **critical_gaps**: number from "Failure modes: \_\_\_ critical gaps flagged"
 - **issues_found**: total issues found across all review sections (Architecture + Code Quality + Performance + Test gaps)
 - **MODE**: FULL_REVIEW / SCOPE_REDUCED
 - **COMMIT**: output of `git rev-parse --short HEAD`
@@ -710,6 +751,7 @@ Display:
 ```
 
 **Review tiers:**
+
 - **Eng Review (required by default):** The only review that gates shipping. Covers architecture, code quality, tests, performance. Can be disabled globally with \`gstack-config set skip_eng_review true\` (the "don't bother me" setting).
 - **CEO Review (optional):** Use your judgment. Recommend it for big product/business changes, new user-facing features, or scope decisions. Skip for bug fixes, refactors, infra, and cleanup.
 - **Design Review (optional):** Use your judgment. Recommend it for UI/UX changes. Skip for backend-only, infra, or prompt-only changes.
@@ -717,12 +759,14 @@ Display:
 - **Outside Voice (optional):** Independent plan review from a different AI model. Offered after all review sections complete in /plan-ceo-review and /plan-eng-review. Falls back to Claude subagent if Codex is unavailable. Never gates shipping.
 
 **Verdict logic:**
+
 - **CLEARED**: Eng Review has >= 1 entry within 7 days from either \`review\` or \`plan-eng-review\` with status "clean" (or \`skip_eng_review\` is \`true\`)
 - **NOT CLEARED**: Eng Review missing, stale (>7 days), or has open issues
 - CEO, Design, and Codex reviews are shown for context but never block shipping
 - If \`skip_eng_review\` config is \`true\`, Eng Review shows "SKIPPED (global)" and verdict is CLEARED
 
 **Staleness detection:** After displaying the dashboard, check if any existing reviews may be stale:
+
 - Parse the \`---HEAD---\` section from the bash output to get the current HEAD commit hash
 - For each review entry that has a \`commit\` field: compare it against the current HEAD. If different, count elapsed commits: \`git rev-list --count STORED_COMMIT..HEAD\`. Display: "Note: {skill} review from {date} may be stale — {N} commits since review"
 - For entries without a \`commit\` field (legacy entries): display "Note: {skill} review from {date} has no commit tracking — consider re-running for accurate staleness detection"
@@ -765,15 +809,17 @@ Summary. For prior reviews, use the JSONL fields directly — they contain all r
 Produce this markdown table:
 
 \`\`\`markdown
+
 ## GSTACK REVIEW REPORT
 
-| Review | Trigger | Why | Runs | Status | Findings |
-|--------|---------|-----|------|--------|----------|
-| CEO Review | \`/plan-ceo-review\` | Scope & strategy | {runs} | {status} | {findings} |
-| Codex Review | \`/codex review\` | Independent 2nd opinion | {runs} | {status} | {findings} |
-| Eng Review | \`/plan-eng-review\` | Architecture & tests (required) | {runs} | {status} | {findings} |
-| Design Review | \`/plan-design-review\` | UI/UX gaps | {runs} | {status} | {findings} |
-| DX Review | \`/plan-devex-review\` | Developer experience gaps | {runs} | {status} | {findings} |
+| Review        | Trigger                 | Why                             | Runs   | Status   | Findings   |
+| ------------- | ----------------------- | ------------------------------- | ------ | -------- | ---------- |
+| CEO Review    | \`/plan-ceo-review\`    | Scope & strategy                | {runs} | {status} | {findings} |
+| Codex Review  | \`/codex review\`       | Independent 2nd opinion         | {runs} | {status} | {findings} |
+| Eng Review    | \`/plan-eng-review\`    | Architecture & tests (required) | {runs} | {status} | {findings} |
+| Design Review | \`/plan-design-review\` | UI/UX gaps                      | {runs} | {status} | {findings} |
+| DX Review     | \`/plan-devex-review\`  | Developer experience gaps       | {runs} | {status} | {findings} |
+
 \`\`\`
 
 Below the table, add these lines. **CODEX** and **CROSS-MODEL** are optional (omit when
@@ -849,8 +895,6 @@ staleness detection: if those files are later deleted, the learning can be flagg
 **Only log genuine discoveries.** Don't log obvious things. Don't log things the user
 already knows. A good test: would this insight save time in a future session? If yes, log it.
 
-
-
 ## Brain Calibration Write-Back (Phase 2 / gated)
 
 When the skill makes a typed prediction worth tracking (scope decision,
@@ -858,6 +902,7 @@ TTHW target, architectural bet, wedge commitment), it MAY write a
 `kind=bet` take to the brain so a calibration profile builds over time.
 
 **Gated on two things:**
+
 1. Brain trust policy for the active endpoint is `personal` (check via
    `~/.claude/skills/gstack/bin/gstack-config get brain_trust_policy@<endpoint-hash>`).
    Shared brains skip write-back to avoid polluting team calibration.
@@ -870,6 +915,7 @@ If the MCP op is unavailable, fall back to `mcp__gbrain__put_page` with
 a gstack:takes fence block (documented but uglier path).
 
 Mandatory take frontmatter shape:
+
 ```yaml
 kind: bet
 holder: <user identity from whoami>
@@ -888,7 +934,6 @@ eval "$(~/.claude/skills/gstack/bin/gstack-slug 2>/dev/null)" 2>/dev/null || tru
   # (no per-skill invalidation targets configured)
 ```
 
-
 ## Brain Cache Background Refresh
 
 After the skill's work completes (and telemetry has logged), kick a
@@ -900,7 +945,6 @@ from the warm cache.
 eval "$(~/.claude/skills/gstack/bin/gstack-slug 2>/dev/null)" 2>/dev/null || true
 (~/.claude/skills/gstack/bin/gstack-brain-cache refresh --project "$SLUG" 2>/dev/null &) || true
 ```
-
 
 ## Next Steps — Review Chaining
 
@@ -915,10 +959,11 @@ After displaying the Review Readiness Dashboard, check if additional reviews wou
 **If no additional reviews are needed** (or `skip_eng_review` is `true` in the dashboard config, meaning this eng review was optional): state "All relevant reviews complete. Run /ship when ready."
 
 Use AskUserQuestion with only the applicable options:
+
 - **A)** Run /plan-design-review (only if UI scope detected and no design review exists)
 - **B)** Run /plan-ceo-review (only if significant product change and no CEO review exists)
 - **C)** Ready to implement — run /ship when done
 
 ## Unresolved decisions
-If the user does not respond to an AskUserQuestion or interrupts to move on, note which decisions were left unresolved. At the end of the review, list these as "Unresolved decisions that may bite you later" — never silently default to an option.
 
+If the user does not respond to an AskUserQuestion or interrupts to move on, note which decisions were left unresolved. At the end of the review, list these as "Unresolved decisions that may bite you later" — never silently default to an option.

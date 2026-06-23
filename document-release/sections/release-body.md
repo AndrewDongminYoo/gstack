@@ -1,23 +1,27 @@
 <!-- AUTO-GENERATED from release-body.md.tmpl — do not edit directly -->
 <!-- Regenerate: bun run gen:skill-docs -->
+
 ## Step 2: Per-File Documentation Audit
 
 Read each documentation file and cross-reference it against the diff. Use these generic heuristics
 (adapt to whatever project you're in — these are not gstack-specific):
 
 **README.md:**
+
 - Does it describe all features and capabilities visible in the diff?
 - Are install/setup instructions consistent with the changes?
 - Are examples, demos, and usage descriptions still valid?
 - Are troubleshooting steps still accurate?
 
 **ARCHITECTURE.md:**
+
 - Do ASCII diagrams and component descriptions match the current code?
 - Are design decisions and "why" explanations still accurate?
 - Be conservative — only update things clearly contradicted by the diff. Architecture docs
   describe things unlikely to change frequently.
 
 **CONTRIBUTING.md — New contributor smoke test:**
+
 - Walk through the setup instructions as if you are a brand new contributor.
 - Are the listed commands accurate? Would each step succeed?
 - Do test tier descriptions match the current test infrastructure?
@@ -25,11 +29,13 @@ Read each documentation file and cross-reference it against the diff. Use these 
 - Flag anything that would fail or confuse a first-time contributor.
 
 **CLAUDE.md / project instructions:**
+
 - Does the project structure section match the actual file tree?
 - Are listed commands and scripts accurate?
 - Do build/test instructions match what's in package.json (or equivalent)?
 
 **Any other .md files:**
+
 - Read the file, determine its purpose and audience.
 - Cross-reference against the diff to check if it contradicts anything the file says.
 
@@ -51,6 +57,7 @@ just "Updated README.md" but "README.md: added /new-skill to skills table, updat
 from 9 to 10."
 
 **Never auto-update:**
+
 - README introduction or project positioning
 - ARCHITECTURE philosophy or design rationale
 - Security model descriptions
@@ -61,6 +68,7 @@ from 9 to 10."
 ## Step 4: Ask About Risky/Questionable Changes
 
 For each risky or questionable update identified in Step 2, use AskUserQuestion with:
+
 - Context: project name, branch, which doc file, what we're reviewing
 - The specific documentation decision
 - `RECOMMENDATION: Choose [X] because [one-line reason]`
@@ -80,6 +88,7 @@ A real incident occurred where an agent replaced existing CHANGELOG entries when
 preserved them. This skill must NEVER do that.
 
 **Rules:**
+
 1. Read the entire CHANGELOG.md first. Understand what is already there.
 2. Only modify wording within existing entries. Never delete, reorder, or replace entries.
 3. Never regenerate a CHANGELOG entry from scratch. The entry was written by `/ship` from the
@@ -165,16 +174,16 @@ git diff <base>...HEAD -- VERSION
 
    a. Read the CHANGELOG entry for the current VERSION. What features does it describe?
    b. Read the full diff (`git diff <base>...HEAD --stat` and `git diff <base>...HEAD --name-only`).
-      Are there significant changes (new features, new skills, new commands, major refactors)
-      that are NOT mentioned in the CHANGELOG entry for the current version?
+   Are there significant changes (new features, new skills, new commands, major refactors)
+   that are NOT mentioned in the CHANGELOG entry for the current version?
    c. **If the CHANGELOG entry covers everything:** Skip — output "VERSION: Already bumped to
-      vX.Y.Z, covers all changes."
+   vX.Y.Z, covers all changes."
    d. **If there are significant uncovered changes:** Use AskUserQuestion explaining what the
-      current version covers vs what's new, and ask:
-      - RECOMMENDATION: Choose A because the new changes warrant their own version
-      - A) Bump to next patch (X.Y.Z+1) — give the new changes their own version
-      - B) Keep current version — add new changes to the existing CHANGELOG entry
-      - C) Skip — leave version as-is, handle later
+   current version covers vs what's new, and ask:
+   - RECOMMENDATION: Choose A because the new changes warrant their own version
+   - A) Bump to next patch (X.Y.Z+1) — give the new changes their own version
+   - B) Keep current version — add new changes to the existing CHANGELOG entry
+   - C) Skip — leave version as-is, handle later
 
    The key insight: a VERSION bump set for "feature A" should not silently absorb "feature B"
    if feature B is substantial enough to deserve its own version entry.
@@ -212,11 +221,13 @@ git push
 1. Read the existing PR/MR body into a PID-unique tempfile (use the platform detected in Step 0):
 
 **If GitHub:**
+
 ```bash
 gh pr view --json body -q .body > /tmp/gstack-pr-body-$$.md
 ```
 
 **If GitLab:**
+
 ```bash
 glab mr view -F json 2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin).get('description',''))" > /tmp/gstack-pr-body-$$.md
 ```
@@ -227,16 +238,16 @@ glab mr view -F json 2>/dev/null | python3 -c "import sys,json; print(json.load(
 3. The Documentation section should include:
 
    a. **Doc diff preview** — for each file modified, describe what specifically changed (e.g.,
-      "README.md: added /document-release to skills table, updated skill count from 9 to 10").
+   "README.md: added /document-release to skills table, updated skill count from 9 to 10").
 
    b. **Documentation debt** — if the coverage map from Step 1.5 found gaps, append a
-      `### Documentation Debt` subsection listing:
-      - Critical gaps: new public surface with zero documentation coverage
-      - Common gaps: features with reference-only coverage (no how-to or tutorial)
-      - Stale diagrams: architecture diagrams with entity names that drifted from the code
-      - Each item should include a one-line description of what's missing and which Diataxis
-        quadrant would fill it (e.g., "⚠️ `/new-skill` — has reference in AGENTS.md but no
-        how-to example in README")
+   `### Documentation Debt` subsection listing:
+   - Critical gaps: new public surface with zero documentation coverage
+   - Common gaps: features with reference-only coverage (no how-to or tutorial)
+   - Stale diagrams: architecture diagrams with entity names that drifted from the code
+   - Each item should include a one-line description of what's missing and which Diataxis
+     quadrant would fill it (e.g., "⚠️ `/new-skill` — has reference in AGENTS.md but no
+     how-to example in README")
 
    If there are any documentation debt items, suggest adding a `docs-debt` label to the PR.
 
@@ -252,12 +263,14 @@ REDACT_VIS=$(~/.claude/skills/gstack/bin/gstack-config get redact_repo_visibilit
 ```
 
 **If GitHub:**
+
 ```bash
 gh pr edit --body-file /tmp/gstack-pr-body-$$.md
 ```
 
 **If GitLab:**
 Read the contents of `/tmp/gstack-pr-body-$$.md` using the Read tool, then pass it to `glab mr update` using a heredoc to avoid shell metacharacter issues:
+
 ```bash
 glab mr update -d "$(cat <<'MRBODY'
 <paste the file contents here>
@@ -290,11 +303,13 @@ If `VERSION` does not exist or is empty, skip this sub-step entirely.
 2. Read the current PR/MR title:
 
 **If GitHub:**
+
 ```bash
 CURRENT_TITLE=$(gh pr view --json title -q .title 2>/dev/null || true)
 ```
 
 **If GitLab:**
+
 ```bash
 CURRENT_TITLE=$(glab mr view -F json 2>/dev/null | jq -r .title 2>/dev/null || true)
 ```
@@ -312,11 +327,13 @@ The helper handles three cases: title already correct (no-op), title has a diffe
 4. If `NEW_TITLE` differs from `CURRENT_TITLE`, update it:
 
 **If GitHub:**
+
 ```bash
 gh pr edit --title "$NEW_TITLE"
 ```
 
 **If GitLab:**
+
 ```bash
 glab mr update -t "$NEW_TITLE"
 ```
@@ -338,6 +355,7 @@ Documentation health:
 ```
 
 Where status is one of:
+
 - Updated — with description of what changed
 - Current — no changes needed
 - Voice polished — wording adjusted
@@ -388,6 +406,7 @@ echo "CODEX_MODE: $_CODEX_MODE"
 ```
 
 Branch on the echoed `CODEX_MODE`:
+
 - **`disabled`** — the user turned Codex reviews off (`codex_reviews=disabled`). Skip this section entirely; do NOT fall back to a Claude subagent — disabled means no extra review step. Print: "Codex review skipped (codex_reviews disabled). Re-enable: `gstack-config set codex_reviews enabled`."
 - **`not_installed`** — Codex CLI absent. Print: "Codex not installed — using Claude subagent. Install for cross-model coverage: `npm install -g @openai/codex`." Fall back to the Claude subagent path.
 - **`not_authed`** — installed but no credentials. Print: "Codex installed but not authenticated — using Claude subagent. Run `codex login` or set `$CODEX_API_KEY`." Fall back to the Claude subagent path.
@@ -432,6 +451,7 @@ codex exec "<prompt>" -C "$_REPO_ROOT" -s read-only -c 'model_reasoning_effort="
 ```
 
 Use a 5-minute timeout (`timeout: 300000`). After the command completes, read stderr:
+
 ```bash
 cat "$TMPERR_DOC"
 ```
@@ -439,10 +459,11 @@ cat "$TMPERR_DOC"
 Present the full output verbatim under `CODEX SAYS (documentation review):`.
 
 **Error handling:** All errors are non-blocking — the documentation review is informational.
+
 - Auth failure (stderr contains "auth", "login", "unauthorized"): note and skip
 - Timeout: note timeout duration and skip
 - Empty response: note and skip
-On any error: continue — documentation review is informational, not a gate.
+  On any error: continue — documentation review is informational, not a gate.
 
 **If `CODEX_MODE: not_installed` or `not_authed` (or Codex errored at runtime):**
 
@@ -459,6 +480,7 @@ present the findings, then use AskUserQuestion ONCE:
 > doc review only reports; nothing is edited without your say-so. Completeness: A=9/10, B=4/10, C=8/10.
 
 Options:
+
 - A) Apply all the doc fixes now
 - B) Skip — leave docs as-is
 - C) Decide per-finding
@@ -467,9 +489,11 @@ On A or per-finding approvals, make the approved edits yourself (the tool never 
 rewrites docs). On B, note the gaps in the output so they're visible.
 
 **Persist the result:**
+
 ```bash
 ~/.claude/skills/gstack/bin/gstack-review-log '{"skill":"codex-doc-review","timestamp":"'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'","status":"STATUS","source":"SOURCE","commit":"'"$(git rev-parse --short HEAD)"'"}'
 ```
+
 Substitute: STATUS = "clean" if no gaps, "issues_found" if gaps exist. SOURCE = "codex" if Codex ran, "claude" if the subagent ran.
 
 **Cleanup:** Run `rm -f "$TMPERR_DOC"` after processing (if Codex was used).

@@ -1,5 +1,6 @@
 <!-- AUTO-GENERATED from review-sections.md.tmpl — do not edit directly -->
 <!-- Regenerate: bun run gen:skill-docs -->
+
 ## Review Sections (11 sections, after scope and mode are agreed)
 
 **Anti-skip rule:** Never condense, abbreviate, or skip any review section (1-11) regardless of plan type (strategy, spec, code, infra). Every section in this skill exists for a reason. "This is a strategy doc so implementation sections don't apply" is always wrong — implementation details are where strategy breaks down. If a section genuinely has zero findings, say "No issues found" and move on — but you must evaluate it.
@@ -7,24 +8,27 @@
 **Anti-shortcut clause:** The plan file is the OUTPUT of the interactive review, not a substitute for it. Writing every finding into one plan write and calling ExitPlanMode without firing AskUserQuestion is the precise failure mode of the May 2026 transcript bug — the model explored, found issues, and dumped them into a deliverable rather than walking the user through them. If you have ANY non-trivial finding in any review section, the path from finding to ExitPlanMode goes THROUGH AskUserQuestion. Zero findings in every section is the only path to ExitPlanMode that bypasses AskUserQuestion. If you find yourself wanting to write a plan with findings before asking, stop and call AskUserQuestion now — that's the bug, recognize it.
 
 ### Section 1: Architecture Review
+
 Evaluate and diagram:
-* Overall system design and component boundaries. Draw the dependency graph.
-* Data flow — all four paths. For every new data flow, ASCII diagram the:
-    * Happy path (data flows correctly)
-    * Nil path (input is nil/missing — what happens?)
-    * Empty path (input is present but empty/zero-length — what happens?)
-    * Error path (upstream call fails — what happens?)
-* State machines. ASCII diagram for every new stateful object. Include impossible/invalid transitions and what prevents them.
-* Coupling concerns. Which components are now coupled that weren't before? Is that coupling justified? Draw the before/after dependency graph.
-* Scaling characteristics. What breaks first under 10x load? Under 100x?
-* Single points of failure. Map them.
-* Security architecture. Auth boundaries, data access patterns, API surfaces. For each new endpoint or data mutation: who can call it, what do they get, what can they change?
-* Production failure scenarios. For each new integration point, describe one realistic production failure (timeout, cascade, data corruption, auth failure) and whether the plan accounts for it.
-* Rollback posture. If this ships and immediately breaks, what's the rollback procedure? Git revert? Feature flag? DB migration rollback? How long?
+
+- Overall system design and component boundaries. Draw the dependency graph.
+- Data flow — all four paths. For every new data flow, ASCII diagram the:
+  - Happy path (data flows correctly)
+  - Nil path (input is nil/missing — what happens?)
+  - Empty path (input is present but empty/zero-length — what happens?)
+  - Error path (upstream call fails — what happens?)
+- State machines. ASCII diagram for every new stateful object. Include impossible/invalid transitions and what prevents them.
+- Coupling concerns. Which components are now coupled that weren't before? Is that coupling justified? Draw the before/after dependency graph.
+- Scaling characteristics. What breaks first under 10x load? Under 100x?
+- Single points of failure. Map them.
+- Security architecture. Auth boundaries, data access patterns, API surfaces. For each new endpoint or data mutation: who can call it, what do they get, what can they change?
+- Production failure scenarios. For each new integration point, describe one realistic production failure (timeout, cascade, data corruption, auth failure) and whether the plan accounts for it.
+- Rollback posture. If this ships and immediately breaks, what's the rollback procedure? Git revert? Feature flag? DB migration rollback? How long?
 
 **EXPANSION and SELECTIVE EXPANSION additions:**
-* What would make this architecture beautiful? Not just correct — elegant. Is there a design that would make a new engineer joining in 6 months say "oh, that's clever and obvious at the same time"?
-* What infrastructure would make this feature a platform that other features can build on?
+
+- What would make this architecture beautiful? Not just correct — elegant. Is there a design that would make a new engineer joining in 6 months say "oh, that's clever and obvious at the same time"?
+- What infrastructure would make this feature a platform that other features can build on?
 
 **SELECTIVE EXPANSION:** If any accepted cherry-picks from Step 0D affect the architecture, evaluate their architectural fit here. Flag any that create coupling concerns or don't integrate cleanly — this is a chance to revisit the decision with new information.
 
@@ -33,8 +37,10 @@ Required ASCII diagram: full system architecture showing new components and thei
 **Reminder: Do NOT make any code changes. Review only.**
 
 ### Section 2: Error & Rescue Map
+
 This is the section that catches silent failures. It is not optional.
 For every new method, service, or codepath that can fail, fill in this table:
+
 ```
   METHOD/CODEPATH          | WHAT CAN GO WRONG           | EXCEPTION CLASS
   -------------------------|-----------------------------|-----------------
@@ -53,35 +59,41 @@ For every new method, service, or codepath that can fail, fill in this table:
   ConnectionPoolExhausted      | N ← GAP   | —                      | 500 error ← BAD
   RecordNotFound               | Y         | Return nil, log warning | "Not found" message
 ```
+
 Rules for this section:
-* Catch-all error handling (`rescue StandardError`, `catch (Exception e)`, `except Exception`) is ALWAYS a smell. Name the specific exceptions.
-* Catching an error with only a generic log message is insufficient. Log the full context: what was being attempted, with what arguments, for what user/request.
-* Every rescued error must either: retry with backoff, degrade gracefully with a user-visible message, or re-raise with added context. "Swallow and continue" is almost never acceptable.
-* For each GAP (unrescued error that should be rescued): specify the rescue action and what the user should see.
-* For LLM/AI service calls specifically: what happens when the response is malformed? When it's empty? When it hallucinates invalid JSON? When the model returns a refusal? Each of these is a distinct failure mode.
-**STOP.** AskUserQuestion once per issue. Do NOT batch. Recommend + WHY. If this section turned up zero findings, state "No issues, moving on" and proceed. If the section has findings, you MUST call AskUserQuestion as a tool_use — a finding with an "obvious fix" is still a finding and still needs user approval before any change lands in the plan. Do NOT proceed until the user responds.
-**Reminder: Do NOT make any code changes. Review only.**
+
+- Catch-all error handling (`rescue StandardError`, `catch (Exception e)`, `except Exception`) is ALWAYS a smell. Name the specific exceptions.
+- Catching an error with only a generic log message is insufficient. Log the full context: what was being attempted, with what arguments, for what user/request.
+- Every rescued error must either: retry with backoff, degrade gracefully with a user-visible message, or re-raise with added context. "Swallow and continue" is almost never acceptable.
+- For each GAP (unrescued error that should be rescued): specify the rescue action and what the user should see.
+- For LLM/AI service calls specifically: what happens when the response is malformed? When it's empty? When it hallucinates invalid JSON? When the model returns a refusal? Each of these is a distinct failure mode.
+  **STOP.** AskUserQuestion once per issue. Do NOT batch. Recommend + WHY. If this section turned up zero findings, state "No issues, moving on" and proceed. If the section has findings, you MUST call AskUserQuestion as a tool_use — a finding with an "obvious fix" is still a finding and still needs user approval before any change lands in the plan. Do NOT proceed until the user responds.
+  **Reminder: Do NOT make any code changes. Review only.**
 
 ### Section 3: Security & Threat Model
+
 Security is not a sub-bullet of architecture. It gets its own section.
 Evaluate:
-* Attack surface expansion. What new attack vectors does this plan introduce? New endpoints, new params, new file paths, new background jobs?
-* Input validation. For every new user input: is it validated, sanitized, and rejected loudly on failure? What happens with: nil, empty string, string when integer expected, string exceeding max length, unicode edge cases, HTML/script injection attempts?
-* Authorization. For every new data access: is it scoped to the right user/role? Is there a direct object reference vulnerability? Can user A access user B's data by manipulating IDs?
-* Secrets and credentials. New secrets? In env vars, not hardcoded? Rotatable?
-* Dependency risk. New gems/npm packages? Security track record?
-* Data classification. PII, payment data, credentials? Handling consistent with existing patterns?
-* Injection vectors. SQL, command, template, LLM prompt injection — check all.
-* Audit logging. For sensitive operations: is there an audit trail?
+
+- Attack surface expansion. What new attack vectors does this plan introduce? New endpoints, new params, new file paths, new background jobs?
+- Input validation. For every new user input: is it validated, sanitized, and rejected loudly on failure? What happens with: nil, empty string, string when integer expected, string exceeding max length, unicode edge cases, HTML/script injection attempts?
+- Authorization. For every new data access: is it scoped to the right user/role? Is there a direct object reference vulnerability? Can user A access user B's data by manipulating IDs?
+- Secrets and credentials. New secrets? In env vars, not hardcoded? Rotatable?
+- Dependency risk. New gems/npm packages? Security track record?
+- Data classification. PII, payment data, credentials? Handling consistent with existing patterns?
+- Injection vectors. SQL, command, template, LLM prompt injection — check all.
+- Audit logging. For sensitive operations: is there an audit trail?
 
 For each finding: threat, likelihood (High/Med/Low), impact (High/Med/Low), and whether the plan mitigates it.
 **STOP.** AskUserQuestion once per issue. Do NOT batch. Recommend + WHY. If this section turned up zero findings, state "No issues, moving on" and proceed. If the section has findings, you MUST call AskUserQuestion as a tool_use — a finding with an "obvious fix" is still a finding and still needs user approval before any change lands in the plan. Do NOT proceed until the user responds.
 **Reminder: Do NOT make any code changes. Review only.**
 
 ### Section 4: Data Flow & Interaction Edge Cases
+
 This section traces data through the system and interactions through the UI with adversarial thoroughness.
 
 **Data Flow Tracing:** For every new data flow, produce an ASCII diagram showing:
+
 ```
   INPUT ──▶ VALIDATION ──▶ TRANSFORM ──▶ PERSIST ──▶ OUTPUT
     │            │              │            │           │
@@ -91,9 +103,11 @@ This section traces data through the system and interactions through the UI with
   [wrong    [wrong type?] [OOM?]        [locked?]    [encoding?]
    type?]
 ```
+
 For each node: what happens on each shadow path? Is it tested?
 
 **Interaction Edge Cases:** For every new user-visible interaction, evaluate:
+
 ```
   INTERACTION          | EDGE CASE              | HANDLED? | HOW?
   ---------------------|------------------------|----------|--------
@@ -111,25 +125,30 @@ For each node: what happens on each shadow path? Is it tested?
                        | Job runs twice (dup)   | ?        |
                        | Queue backs up 2 hours | ?        |
 ```
+
 Flag any unhandled edge case as a gap. For each gap, specify the fix.
 **STOP.** AskUserQuestion once per issue. Do NOT batch. Recommend + WHY. If this section turned up zero findings, state "No issues, moving on" and proceed. If the section has findings, you MUST call AskUserQuestion as a tool_use — a finding with an "obvious fix" is still a finding and still needs user approval before any change lands in the plan. Do NOT proceed until the user responds.
 **Reminder: Do NOT make any code changes. Review only.**
 
 ### Section 5: Code Quality Review
+
 Evaluate:
-* Code organization and module structure. Does new code fit existing patterns? If it deviates, is there a reason?
-* DRY violations. Be aggressive. If the same logic exists elsewhere, flag it and reference the file and line.
-* Naming quality. Are new classes, methods, and variables named for what they do, not how they do it?
-* Error handling patterns. (Cross-reference with Section 2 — this section reviews the patterns; Section 2 maps the specifics.)
-* Missing edge cases. List explicitly: "What happens when X is nil?" "When the API returns 429?" etc.
-* Over-engineering check. Any new abstraction solving a problem that doesn't exist yet?
-* Under-engineering check. Anything fragile, assuming happy path only, or missing obvious defensive checks?
-* Cyclomatic complexity. Flag any new method that branches more than 5 times. Propose a refactor.
-**STOP.** AskUserQuestion once per issue. Do NOT batch. Recommend + WHY. If this section turned up zero findings, state "No issues, moving on" and proceed. If the section has findings, you MUST call AskUserQuestion as a tool_use — a finding with an "obvious fix" is still a finding and still needs user approval before any change lands in the plan. Do NOT proceed until the user responds.
-**Reminder: Do NOT make any code changes. Review only.**
+
+- Code organization and module structure. Does new code fit existing patterns? If it deviates, is there a reason?
+- DRY violations. Be aggressive. If the same logic exists elsewhere, flag it and reference the file and line.
+- Naming quality. Are new classes, methods, and variables named for what they do, not how they do it?
+- Error handling patterns. (Cross-reference with Section 2 — this section reviews the patterns; Section 2 maps the specifics.)
+- Missing edge cases. List explicitly: "What happens when X is nil?" "When the API returns 429?" etc.
+- Over-engineering check. Any new abstraction solving a problem that doesn't exist yet?
+- Under-engineering check. Anything fragile, assuming happy path only, or missing obvious defensive checks?
+- Cyclomatic complexity. Flag any new method that branches more than 5 times. Propose a refactor.
+  **STOP.** AskUserQuestion once per issue. Do NOT batch. Recommend + WHY. If this section turned up zero findings, state "No issues, moving on" and proceed. If the section has findings, you MUST call AskUserQuestion as a tool_use — a finding with an "obvious fix" is still a finding and still needs user approval before any change lands in the plan. Do NOT proceed until the user responds.
+  **Reminder: Do NOT make any code changes. Review only.**
 
 ### Section 6: Test Review
+
 Make a complete diagram of every new thing this plan introduces:
+
 ```
   NEW UX FLOWS:
     [list each new user-visible interaction]
@@ -149,17 +168,20 @@ Make a complete diagram of every new thing this plan introduces:
   NEW ERROR/RESCUE PATHS:
     [list each — cross-reference Section 2]
 ```
+
 For each item in the diagram:
-* What type of test covers it? (Unit / Integration / System / E2E)
-* Does a test for it exist in the plan? If not, write the test spec header.
-* What is the happy path test?
-* What is the failure path test? (Be specific — which failure?)
-* What is the edge case test? (nil, empty, boundary values, concurrent access)
+
+- What type of test covers it? (Unit / Integration / System / E2E)
+- Does a test for it exist in the plan? If not, write the test spec header.
+- What is the happy path test?
+- What is the failure path test? (Be specific — which failure?)
+- What is the edge case test? (nil, empty, boundary values, concurrent access)
 
 Test ambition check (all modes): For each new feature, answer:
-* What's the test that would make you confident shipping at 2am on a Friday?
-* What's the test a hostile QA engineer would write to break this?
-* What's the chaos test?
+
+- What's the test that would make you confident shipping at 2am on a Friday?
+- What's the test a hostile QA engineer would write to break this?
+- What's the chaos test?
 
 Test pyramid check: Many unit, fewer integration, few E2E? Or inverted?
 Flakiness risk: Flag any test depending on time, randomness, external services, or ordering.
@@ -170,82 +192,96 @@ For LLM/prompt changes: Check CLAUDE.md for the "Prompt/LLM changes" file patter
 **Reminder: Do NOT make any code changes. Review only.**
 
 ### Section 7: Performance Review
+
 Evaluate:
-* N+1 queries. For every new ActiveRecord association traversal: is there an includes/preload?
-* Memory usage. For every new data structure: what's the maximum size in production?
-* Database indexes. For every new query: is there an index?
-* Caching opportunities. For every expensive computation or external call: should it be cached?
-* Background job sizing. For every new job: worst-case payload, runtime, retry behavior?
-* Slow paths. Top 3 slowest new codepaths and estimated p99 latency.
-* Connection pool pressure. New DB connections, Redis connections, HTTP connections?
-**STOP.** AskUserQuestion once per issue. Do NOT batch. Recommend + WHY. If this section turned up zero findings, state "No issues, moving on" and proceed. If the section has findings, you MUST call AskUserQuestion as a tool_use — a finding with an "obvious fix" is still a finding and still needs user approval before any change lands in the plan. Do NOT proceed until the user responds.
-**Reminder: Do NOT make any code changes. Review only.**
+
+- N+1 queries. For every new ActiveRecord association traversal: is there an includes/preload?
+- Memory usage. For every new data structure: what's the maximum size in production?
+- Database indexes. For every new query: is there an index?
+- Caching opportunities. For every expensive computation or external call: should it be cached?
+- Background job sizing. For every new job: worst-case payload, runtime, retry behavior?
+- Slow paths. Top 3 slowest new codepaths and estimated p99 latency.
+- Connection pool pressure. New DB connections, Redis connections, HTTP connections?
+  **STOP.** AskUserQuestion once per issue. Do NOT batch. Recommend + WHY. If this section turned up zero findings, state "No issues, moving on" and proceed. If the section has findings, you MUST call AskUserQuestion as a tool_use — a finding with an "obvious fix" is still a finding and still needs user approval before any change lands in the plan. Do NOT proceed until the user responds.
+  **Reminder: Do NOT make any code changes. Review only.**
 
 ### Section 8: Observability & Debuggability Review
+
 New systems break. This section ensures you can see why.
 Evaluate:
-* Logging. For every new codepath: structured log lines at entry, exit, and each significant branch?
-* Metrics. For every new feature: what metric tells you it's working? What tells you it's broken?
-* Tracing. For new cross-service or cross-job flows: trace IDs propagated?
-* Alerting. What new alerts should exist?
-* Dashboards. What new dashboard panels do you want on day 1?
-* Debuggability. If a bug is reported 3 weeks post-ship, can you reconstruct what happened from logs alone?
-* Admin tooling. New operational tasks that need admin UI or rake tasks?
-* Runbooks. For each new failure mode: what's the operational response?
+
+- Logging. For every new codepath: structured log lines at entry, exit, and each significant branch?
+- Metrics. For every new feature: what metric tells you it's working? What tells you it's broken?
+- Tracing. For new cross-service or cross-job flows: trace IDs propagated?
+- Alerting. What new alerts should exist?
+- Dashboards. What new dashboard panels do you want on day 1?
+- Debuggability. If a bug is reported 3 weeks post-ship, can you reconstruct what happened from logs alone?
+- Admin tooling. New operational tasks that need admin UI or rake tasks?
+- Runbooks. For each new failure mode: what's the operational response?
 
 **EXPANSION and SELECTIVE EXPANSION addition:**
-* What observability would make this feature a joy to operate? (For SELECTIVE EXPANSION, include observability for any accepted cherry-picks.)
-**STOP.** AskUserQuestion once per issue. Do NOT batch. Recommend + WHY. If this section turned up zero findings, state "No issues, moving on" and proceed. If the section has findings, you MUST call AskUserQuestion as a tool_use — a finding with an "obvious fix" is still a finding and still needs user approval before any change lands in the plan. Do NOT proceed until the user responds.
-**Reminder: Do NOT make any code changes. Review only.**
+
+- What observability would make this feature a joy to operate? (For SELECTIVE EXPANSION, include observability for any accepted cherry-picks.)
+  **STOP.** AskUserQuestion once per issue. Do NOT batch. Recommend + WHY. If this section turned up zero findings, state "No issues, moving on" and proceed. If the section has findings, you MUST call AskUserQuestion as a tool_use — a finding with an "obvious fix" is still a finding and still needs user approval before any change lands in the plan. Do NOT proceed until the user responds.
+  **Reminder: Do NOT make any code changes. Review only.**
 
 ### Section 9: Deployment & Rollout Review
+
 Evaluate:
-* Migration safety. For every new DB migration: backward-compatible? Zero-downtime? Table locks?
-* Feature flags. Should any part be behind a feature flag?
-* Rollout order. Correct sequence: migrate first, deploy second?
-* Rollback plan. Explicit step-by-step.
-* Deploy-time risk window. Old code and new code running simultaneously — what breaks?
-* Environment parity. Tested in staging?
-* Post-deploy verification checklist. First 5 minutes? First hour?
-* Smoke tests. What automated checks should run immediately post-deploy?
+
+- Migration safety. For every new DB migration: backward-compatible? Zero-downtime? Table locks?
+- Feature flags. Should any part be behind a feature flag?
+- Rollout order. Correct sequence: migrate first, deploy second?
+- Rollback plan. Explicit step-by-step.
+- Deploy-time risk window. Old code and new code running simultaneously — what breaks?
+- Environment parity. Tested in staging?
+- Post-deploy verification checklist. First 5 minutes? First hour?
+- Smoke tests. What automated checks should run immediately post-deploy?
 
 **EXPANSION and SELECTIVE EXPANSION addition:**
-* What deploy infrastructure would make shipping this feature routine? (For SELECTIVE EXPANSION, assess whether accepted cherry-picks change the deployment risk profile.)
-**STOP.** AskUserQuestion once per issue. Do NOT batch. Recommend + WHY. If this section turned up zero findings, state "No issues, moving on" and proceed. If the section has findings, you MUST call AskUserQuestion as a tool_use — a finding with an "obvious fix" is still a finding and still needs user approval before any change lands in the plan. Do NOT proceed until the user responds.
-**Reminder: Do NOT make any code changes. Review only.**
+
+- What deploy infrastructure would make shipping this feature routine? (For SELECTIVE EXPANSION, assess whether accepted cherry-picks change the deployment risk profile.)
+  **STOP.** AskUserQuestion once per issue. Do NOT batch. Recommend + WHY. If this section turned up zero findings, state "No issues, moving on" and proceed. If the section has findings, you MUST call AskUserQuestion as a tool_use — a finding with an "obvious fix" is still a finding and still needs user approval before any change lands in the plan. Do NOT proceed until the user responds.
+  **Reminder: Do NOT make any code changes. Review only.**
 
 ### Section 10: Long-Term Trajectory Review
+
 Evaluate:
-* Technical debt introduced. Code debt, operational debt, testing debt, documentation debt.
-* Path dependency. Does this make future changes harder?
-* Knowledge concentration. Documentation sufficient for a new engineer?
-* Reversibility. Rate 1-5: 1 = one-way door, 5 = easily reversible.
-* Ecosystem fit. Aligns with Rails/JS ecosystem direction?
-* The 1-year question. Read this plan as a new engineer in 12 months — obvious?
+
+- Technical debt introduced. Code debt, operational debt, testing debt, documentation debt.
+- Path dependency. Does this make future changes harder?
+- Knowledge concentration. Documentation sufficient for a new engineer?
+- Reversibility. Rate 1-5: 1 = one-way door, 5 = easily reversible.
+- Ecosystem fit. Aligns with Rails/JS ecosystem direction?
+- The 1-year question. Read this plan as a new engineer in 12 months — obvious?
 
 **EXPANSION and SELECTIVE EXPANSION additions:**
-* What comes after this ships? Phase 2? Phase 3? Does the architecture support that trajectory?
-* Platform potential. Does this create capabilities other features can leverage?
-* (SELECTIVE EXPANSION only) Retrospective: Were the right cherry-picks accepted? Did any rejected expansions turn out to be load-bearing for the accepted ones?
-**STOP.** AskUserQuestion once per issue. Do NOT batch. Recommend + WHY. If this section turned up zero findings, state "No issues, moving on" and proceed. If the section has findings, you MUST call AskUserQuestion as a tool_use — a finding with an "obvious fix" is still a finding and still needs user approval before any change lands in the plan. Do NOT proceed until the user responds.
-**Reminder: Do NOT make any code changes. Review only.**
+
+- What comes after this ships? Phase 2? Phase 3? Does the architecture support that trajectory?
+- Platform potential. Does this create capabilities other features can leverage?
+- (SELECTIVE EXPANSION only) Retrospective: Were the right cherry-picks accepted? Did any rejected expansions turn out to be load-bearing for the accepted ones?
+  **STOP.** AskUserQuestion once per issue. Do NOT batch. Recommend + WHY. If this section turned up zero findings, state "No issues, moving on" and proceed. If the section has findings, you MUST call AskUserQuestion as a tool_use — a finding with an "obvious fix" is still a finding and still needs user approval before any change lands in the plan. Do NOT proceed until the user responds.
+  **Reminder: Do NOT make any code changes. Review only.**
 
 ### Section 11: Design & UX Review (skip if no UI scope detected)
+
 The CEO calling in the designer. Not a pixel-level audit — that's /plan-design-review and /design-review. This is ensuring the plan has design intentionality.
 
 Evaluate:
-* Information architecture — what does the user see first, second, third?
-* Interaction state coverage map:
+
+- Information architecture — what does the user see first, second, third?
+- Interaction state coverage map:
   FEATURE | LOADING | EMPTY | ERROR | SUCCESS | PARTIAL
-* User journey coherence — storyboard the emotional arc
-* AI slop risk — does the plan describe generic UI patterns?
-* DESIGN.md alignment — does the plan match the stated design system?
-* Responsive intention — is mobile mentioned or afterthought?
-* Accessibility basics — keyboard nav, screen readers, contrast, touch targets
+- User journey coherence — storyboard the emotional arc
+- AI slop risk — does the plan describe generic UI patterns?
+- DESIGN.md alignment — does the plan match the stated design system?
+- Responsive intention — is mobile mentioned or afterthought?
+- Accessibility basics — keyboard nav, screen readers, contrast, touch targets
 
 **EXPANSION and SELECTIVE EXPANSION additions:**
-* What would make this UI feel *inevitable*?
-* What 30-minute UI touches would make users think "oh nice, they thought of that"?
+
+- What would make this UI feel _inevitable_?
+- What 30-minute UI touches would make users think "oh nice, they thought of that"?
 
 Required ASCII diagram: user flow showing screens/states and transitions.
 
@@ -281,6 +317,7 @@ echo "CODEX_MODE: $_CODEX_MODE"
 ```
 
 Branch on the echoed `CODEX_MODE`:
+
 - **`disabled`** — the user turned Codex reviews off (`codex_reviews=disabled`). Skip this section entirely; do NOT fall back to a Claude subagent — disabled means no extra review step. Print: "Codex review skipped (codex_reviews disabled). Re-enable: `gstack-config set codex_reviews enabled`."
 - **`not_installed`** — Codex CLI absent. Print: "Codex not installed — using Claude subagent. Install for cross-model coverage: `npm install -g @openai/codex`." Fall back to the Claude subagent path.
 - **`not_authed`** — installed but no credentials. Print: "Codex installed but not authenticated — using Claude subagent. Run `codex login` or set `$CODEX_API_KEY`." Fall back to the Claude subagent path.
@@ -319,6 +356,7 @@ codex exec "<prompt>" -C "$_REPO_ROOT" -s read-only -c 'model_reasoning_effort="
 ```
 
 Use a 5-minute timeout (`timeout: 300000`). After the command completes, read stderr:
+
 ```bash
 cat "$TMPERR_PV"
 ```
@@ -333,6 +371,7 @@ CODEX SAYS (plan review — outside voice):
 ```
 
 **Error handling:** All errors are non-blocking — the outside voice is informational.
+
 - Auth failure (stderr contains "auth", "login", "unauthorized"): "Codex auth failed. Run \`codex login\` to authenticate." Fall back to the Claude subagent below.
 - Timeout: "Codex timed out after 5 minutes." Fall back to the Claude subagent below.
 - Empty response: "Codex returned no response." Fall back to the Claude subagent below.
@@ -374,9 +413,11 @@ For each substantive tension point, use AskUserQuestion:
 > argues [Y]. [One sentence on what context you might be missing.]"
 >
 > RECOMMENDATION: Choose [A or B] because [one-line reason explaining which argument
-> is more compelling and why]. Completeness: A=X/10, B=Y/10.
+>
+> > is more compelling and why]. Completeness: A=X/10, B=Y/10.
 
 Options:
+
 - A) Accept the outside voice's recommendation (I'll apply this change)
 - B) Keep the current approach (reject the outside voice)
 - C) Investigate further before deciding
@@ -388,6 +429,7 @@ outside voice. If the user chooses B, the current approach stands — do not re-
 If no tension points exist, note: "No cross-model tension — both reviewers agree."
 
 **Persist the result:**
+
 ```bash
 ~/.claude/skills/gstack/bin/gstack-review-log '{"skill":"codex-plan-review","timestamp":"'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'","status":"STATUS","source":"SOURCE","commit":"'"$(git rev-parse --short HEAD)"'"}'
 ```
@@ -408,61 +450,75 @@ agree with the outside voice. Cross-model consensus is a strong signal — prese
 such — but the user makes the decision.
 
 ## Post-Implementation Design Audit (if UI scope detected)
+
 After implementation, run `/design-review` on the live site to catch visual issues that can only be evaluated with rendered output.
 
 ## CRITICAL RULE — How to ask questions
+
 Follow the AskUserQuestion format from the Preamble above. Additional rules for plan reviews:
-* **One issue = one AskUserQuestion call.** Never combine multiple issues into one question.
-* Describe the problem concretely, with file and line references.
-* Present 2-3 options, including "do nothing" where reasonable.
-* For each option: effort, risk, and maintenance burden in one line.
-* **Map the reasoning to my engineering preferences above.** One sentence connecting your recommendation to a specific preference.
-* Label with issue NUMBER + option LETTER (e.g., "3A", "3B").
-* **Zero findings:** if a section has zero findings, state "No issues, moving on" and proceed. Otherwise, use AskUserQuestion for each finding — a finding with an "obvious fix" is still a finding and still needs user approval before any change lands in the plan.
+
+- **One issue = one AskUserQuestion call.** Never combine multiple issues into one question.
+- Describe the problem concretely, with file and line references.
+- Present 2-3 options, including "do nothing" where reasonable.
+- For each option: effort, risk, and maintenance burden in one line.
+- **Map the reasoning to my engineering preferences above.** One sentence connecting your recommendation to a specific preference.
+- Label with issue NUMBER + option LETTER (e.g., "3A", "3B").
+- **Zero findings:** if a section has zero findings, state "No issues, moving on" and proceed. Otherwise, use AskUserQuestion for each finding — a finding with an "obvious fix" is still a finding and still needs user approval before any change lands in the plan.
 
 ## Required Outputs
 
 ### "NOT in scope" section
+
 List work considered and explicitly deferred, with one-line rationale each.
 
 ### "What already exists" section
+
 List existing code/flows that partially solve sub-problems and whether the plan reuses them.
 
 ### "Dream state delta" section
+
 Where this plan leaves us relative to the 12-month ideal.
 
 ### Error & Rescue Registry (from Section 2)
+
 Complete table of every method that can fail, every exception class, rescued status, rescue action, user impact.
 
 ### Failure Modes Registry
+
 ```
   CODEPATH | FAILURE MODE   | RESCUED? | TEST? | USER SEES?     | LOGGED?
   ---------|----------------|----------|-------|----------------|--------
 ```
+
 Any row with RESCUED=N, TEST=N, USER SEES=Silent → **CRITICAL GAP**.
 
 ### TODOS.md updates
+
 Present each potential TODO as its own individual AskUserQuestion. Never batch TODOs — one per question. Never silently skip this step. Follow the format in `.claude/skills/review/TODOS-format.md`.
 
 For each TODO, describe:
-* **What:** One-line description of the work.
-* **Why:** The concrete problem it solves or value it unlocks.
-* **Pros:** What you gain by doing this work.
-* **Cons:** Cost, complexity, or risks of doing it.
-* **Context:** Enough detail that someone picking this up in 3 months understands the motivation, the current state, and where to start.
-* **Effort estimate:** S/M/L/XL (human team) → with CC+gstack: S→S, M→S, L→M, XL→L
-* **Priority:** P1/P2/P3
-* **Depends on / blocked by:** Any prerequisites or ordering constraints.
+
+- **What:** One-line description of the work.
+- **Why:** The concrete problem it solves or value it unlocks.
+- **Pros:** What you gain by doing this work.
+- **Cons:** Cost, complexity, or risks of doing it.
+- **Context:** Enough detail that someone picking this up in 3 months understands the motivation, the current state, and where to start.
+- **Effort estimate:** S/M/L/XL (human team) → with CC+gstack: S→S, M→S, L→M, XL→L
+- **Priority:** P1/P2/P3
+- **Depends on / blocked by:** Any prerequisites or ordering constraints.
 
 Then present options: **A)** Add to TODOS.md **B)** Skip — not valuable enough **C)** Build it now in this PR instead of deferring.
 
 ### Scope Expansion Decisions (EXPANSION and SELECTIVE EXPANSION only)
+
 For EXPANSION and SELECTIVE EXPANSION modes: expansion opportunities and delight items were surfaced and decided in Step 0D (opt-in/cherry-pick ceremony). The decisions are persisted in the CEO plan document. Reference the CEO plan for the full record. Do not re-surface them here — list the accepted expansions for completeness:
-* Accepted: {list items added to scope}
-* Deferred: {list items sent to TODOS.md}
-* Skipped: {list items rejected}
+
+- Accepted: {list items added to scope}
+- Deferred: {list items sent to TODOS.md}
+- Skipped: {list items rejected}
 
 ### Diagrams (mandatory, produce all that apply)
+
 1. System architecture
 2. Data flow (including shadow paths)
 3. State machine
@@ -471,6 +527,7 @@ For EXPANSION and SELECTIVE EXPANSION modes: expansion opportunities and delight
 6. Rollback flowchart
 
 ### Stale Diagram Audit
+
 List every ASCII diagram in files this plan touches. Still accurate?
 
 ## Implementation Tasks
@@ -484,6 +541,7 @@ aggregate across phases.
 
 ```markdown
 ## Implementation Tasks
+
 Synthesized from this review's findings. Each task derives from a specific
 finding above. Run with Claude Code or Codex; checkbox as you ship.
 
@@ -495,6 +553,7 @@ finding above. Run with Claude Code or Codex; checkbox as you ship.
 ```
 
 Rules:
+
 - P1 blocks ship; P2 should land same branch; P3 is a follow-up TODO.
 - If a finding produced no actionable task, do not invent one.
 - If a section had zero findings, emit `_No new tasks from <section>._`
@@ -544,8 +603,8 @@ If zero tasks were identified in this review, still touch the JSONL file
 (`: > "$TASKS_FILE"`) so the aggregator sees that the phase produced output
 this run (an empty file means "ran, no findings" — distinct from "didn't run").
 
-
 ### Completion Summary
+
 ```
   +====================================================================+
   |            MEGA PLAN REVIEW — COMPLETION SUMMARY                   |
@@ -582,6 +641,7 @@ this run (an empty file means "ran, no findings" — distinct from "didn't run")
 ```
 
 ### Unresolved Decisions
+
 If any AskUserQuestion goes unanswered, note it here. Never silently default.
 
 ## Handoff Note Cleanup
@@ -613,13 +673,14 @@ command breaks the review readiness dashboard in /ship.
 The second command records the accepted scope as a durable cross-session decision so the next session sees what was settled (and why) without re-litigating it. It writes to `~/.gstack/` (same pattern as review-log), is non-interactive, and is best-effort (`|| true` — never blocks the review). Substitute `SCOPE_SUMMARY` (e.g. "accepted 4 of 6 proposals" for expansion, or "held scope" / "cut 3 items" for HOLD/REDUCTION) and `VERDICT` (the one-line verdict from the summary).
 
 Before running this command, substitute the placeholder values from the Completion Summary you just produced:
+
 - **TIMESTAMP**: current ISO 8601 datetime (e.g., 2026-03-16T14:30:00)
 - **STATUS**: "clean" if 0 unresolved decisions AND 0 critical gaps; otherwise "issues_open"
 - **unresolved**: number from "Unresolved decisions" in the summary
-- **critical_gaps**: number from "Failure modes: ___ CRITICAL GAPS" in the summary
+- **critical_gaps**: number from "Failure modes: \_\_\_ CRITICAL GAPS" in the summary
 - **MODE**: the mode the user selected (SCOPE_EXPANSION / SELECTIVE_EXPANSION / HOLD_SCOPE / SCOPE_REDUCTION)
-- **scope_proposed**: number from "Scope proposals: ___ proposed" in the summary (0 for HOLD/REDUCTION)
-- **scope_accepted**: number from "Scope proposals: ___ accepted" in the summary (0 for HOLD/REDUCTION)
+- **scope_proposed**: number from "Scope proposals: \_\_\_ proposed" in the summary (0 for HOLD/REDUCTION)
+- **scope_accepted**: number from "Scope proposals: \_\_\_ accepted" in the summary (0 for HOLD/REDUCTION)
 - **scope_deferred**: number of items deferred to TODOS.md from scope decisions (0 for HOLD/REDUCTION)
 - **COMMIT**: output of `git rev-parse --short HEAD`
 
@@ -656,6 +717,7 @@ Display:
 ```
 
 **Review tiers:**
+
 - **Eng Review (required by default):** The only review that gates shipping. Covers architecture, code quality, tests, performance. Can be disabled globally with \`gstack-config set skip_eng_review true\` (the "don't bother me" setting).
 - **CEO Review (optional):** Use your judgment. Recommend it for big product/business changes, new user-facing features, or scope decisions. Skip for bug fixes, refactors, infra, and cleanup.
 - **Design Review (optional):** Use your judgment. Recommend it for UI/UX changes. Skip for backend-only, infra, or prompt-only changes.
@@ -663,12 +725,14 @@ Display:
 - **Outside Voice (optional):** Independent plan review from a different AI model. Offered after all review sections complete in /plan-ceo-review and /plan-eng-review. Falls back to Claude subagent if Codex is unavailable. Never gates shipping.
 
 **Verdict logic:**
+
 - **CLEARED**: Eng Review has >= 1 entry within 7 days from either \`review\` or \`plan-eng-review\` with status "clean" (or \`skip_eng_review\` is \`true\`)
 - **NOT CLEARED**: Eng Review missing, stale (>7 days), or has open issues
 - CEO, Design, and Codex reviews are shown for context but never block shipping
 - If \`skip_eng_review\` config is \`true\`, Eng Review shows "SKIPPED (global)" and verdict is CLEARED
 
 **Staleness detection:** After displaying the dashboard, check if any existing reviews may be stale:
+
 - Parse the \`---HEAD---\` section from the bash output to get the current HEAD commit hash
 - For each review entry that has a \`commit\` field: compare it against the current HEAD. If different, count elapsed commits: \`git rev-list --count STORED_COMMIT..HEAD\`. Display: "Note: {skill} review from {date} may be stale — {N} commits since review"
 - For entries without a \`commit\` field (legacy entries): display "Note: {skill} review from {date} has no commit tracking — consider re-running for accurate staleness detection"
@@ -711,15 +775,17 @@ Summary. For prior reviews, use the JSONL fields directly — they contain all r
 Produce this markdown table:
 
 \`\`\`markdown
+
 ## GSTACK REVIEW REPORT
 
-| Review | Trigger | Why | Runs | Status | Findings |
-|--------|---------|-----|------|--------|----------|
-| CEO Review | \`/plan-ceo-review\` | Scope & strategy | {runs} | {status} | {findings} |
-| Codex Review | \`/codex review\` | Independent 2nd opinion | {runs} | {status} | {findings} |
-| Eng Review | \`/plan-eng-review\` | Architecture & tests (required) | {runs} | {status} | {findings} |
-| Design Review | \`/plan-design-review\` | UI/UX gaps | {runs} | {status} | {findings} |
-| DX Review | \`/plan-devex-review\` | Developer experience gaps | {runs} | {status} | {findings} |
+| Review        | Trigger                 | Why                             | Runs   | Status   | Findings   |
+| ------------- | ----------------------- | ------------------------------- | ------ | -------- | ---------- |
+| CEO Review    | \`/plan-ceo-review\`    | Scope & strategy                | {runs} | {status} | {findings} |
+| Codex Review  | \`/codex review\`       | Independent 2nd opinion         | {runs} | {status} | {findings} |
+| Eng Review    | \`/plan-eng-review\`    | Architecture & tests (required) | {runs} | {status} | {findings} |
+| Design Review | \`/plan-design-review\` | UI/UX gaps                      | {runs} | {status} | {findings} |
+| DX Review     | \`/plan-devex-review\`  | Developer experience gaps       | {runs} | {status} | {findings} |
+
 \`\`\`
 
 Below the table, add these lines. **CODEX** and **CROSS-MODEL** are optional (omit when
@@ -781,6 +847,7 @@ After displaying the Review Readiness Dashboard, recommend the next review(s) ba
 **If both are needed, recommend eng review first** (required gate), then design review.
 
 Use AskUserQuestion to present the next step. Include only applicable options:
+
 - **A)** Run /plan-eng-review next (required gate)
 - **B)** Run /plan-design-review next (only if UI scope detected)
 - **C)** Skip — I'll handle reviews manually
@@ -790,6 +857,7 @@ Use AskUserQuestion to present the next step. Include only applicable options:
 At the end of the review, if the vision produced a compelling feature direction, offer to promote the CEO plan to the project repo. AskUserQuestion:
 
 "The vision from this review produced {N} accepted scope expansions. Want to promote it to a design doc in the repo?"
+
 - **A)** Promote to `docs/designs/{FEATURE}.md` (committed to repo, visible to the team)
 - **B)** Keep in `~/.gstack/projects/` only (local, personal reference)
 - **C)** Skip
@@ -797,11 +865,12 @@ At the end of the review, if the vision produced a compelling feature direction,
 If promoted, copy the CEO plan content to `docs/designs/{FEATURE}.md` (create the directory if needed) and update the `status` field in the original CEO plan from `ACTIVE` to `PROMOTED`.
 
 ## Formatting Rules
-* NUMBER issues (1, 2, 3...) and LETTERS for options (A, B, C...).
-* Label with NUMBER + LETTER (e.g., "3A", "3B").
-* One sentence max per option.
-* After each section, pause and wait for feedback.
-* Use **CRITICAL GAP** / **WARNING** / **OK** for scannability.
+
+- NUMBER issues (1, 2, 3...) and LETTERS for options (A, B, C...).
+- Label with NUMBER + LETTER (e.g., "3A", "3B").
+- One sentence max per option.
+- After each section, pause and wait for feedback.
+- Use **CRITICAL GAP** / **WARNING** / **OK** for scannability.
 
 ## Capture Learnings
 
@@ -828,8 +897,6 @@ staleness detection: if those files are later deleted, the learning can be flagg
 **Only log genuine discoveries.** Don't log obvious things. Don't log things the user
 already knows. A good test: would this insight save time in a future session? If yes, log it.
 
-
-
 ## Brain Calibration Write-Back (Phase 2 / gated)
 
 When the skill makes a typed prediction worth tracking (scope decision,
@@ -837,6 +904,7 @@ TTHW target, architectural bet, wedge commitment), it MAY write a
 `kind=bet` take to the brain so a calibration profile builds over time.
 
 **Gated on two things:**
+
 1. Brain trust policy for the active endpoint is `personal` (check via
    `~/.claude/skills/gstack/bin/gstack-config get brain_trust_policy@<endpoint-hash>`).
    Shared brains skip write-back to avoid polluting team calibration.
@@ -849,6 +917,7 @@ If the MCP op is unavailable, fall back to `mcp__gbrain__put_page` with
 a gstack:takes fence block (documented but uglier path).
 
 Mandatory take frontmatter shape:
+
 ```yaml
 kind: bet
 holder: <user identity from whoami>
@@ -869,7 +938,6 @@ eval "$(~/.claude/skills/gstack/bin/gstack-slug 2>/dev/null)" 2>/dev/null || tru
   ~/.claude/skills/gstack/bin/gstack-brain-cache invalidate competitive-intel --project "$SLUG" 2>/dev/null || true
 ```
 
-
 ## Brain Cache Background Refresh
 
 After the skill's work completes (and telemetry has logged), kick a
@@ -882,8 +950,8 @@ eval "$(~/.claude/skills/gstack/bin/gstack-slug 2>/dev/null)" 2>/dev/null || tru
 (~/.claude/skills/gstack/bin/gstack-brain-cache refresh --project "$SLUG" 2>/dev/null &) || true
 ```
 
-
 ## Mode Quick Reference
+
 ```
   ┌────────────────────────────────────────────────────────────────────────────────┐
   │                            MODE COMPARISON                                     │

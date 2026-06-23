@@ -1,5 +1,6 @@
 <!-- AUTO-GENERATED from proposal-and-preview.md.tmpl — do not edit directly -->
 <!-- Regenerate: bun run gen:skill-docs -->
+
 ## Phase 3: The Complete Proposal
 
 This is the soul of the skill. Propose EVERYTHING as one coherent package.
@@ -38,6 +39,7 @@ The SAFE/RISK breakdown is critical. Design coherence is table stakes — every 
 ### Your Design Knowledge (use to inform proposals — do NOT display as tables)
 
 **Aesthetic directions** (pick the one that fits the product):
+
 - Brutally Minimal — Type and whitespace only. No decoration. Modernist.
 - Maximalist Chaos — Dense, layered, pattern-heavy. Y2K meets contemporary.
 - Retro-Futuristic — Vintage tech nostalgia. CRT glow, pixel grids, warm monospace.
@@ -58,6 +60,7 @@ The SAFE/RISK breakdown is critical. Design coherence is table stakes — every 
 **Motion approaches:** minimal-functional (only transitions that aid comprehension) / intentional (subtle entrance animations, meaningful state transitions) / expressive (full choreography, scroll-driven, playful)
 
 **Font recommendations by purpose:**
+
 - Display/Hero: Satoshi, General Sans, Instrument Serif, Fraunces, Clash Grotesk, Cabinet Grotesk
 - Body: Instrument Sans, DM Sans, Source Sans 3, Geist, Plus Jakarta Sans, Outfit
 - Data/Tables: Geist (tabular-nums), DM Sans (tabular-nums), JetBrains Mono, IBM Plex Mono
@@ -80,6 +83,7 @@ propose something different this time (or explicitly acknowledge you're doubling
 because it fits the brief). Convergence across generations is slop.
 
 **AI slop anti-patterns** (never include in your recommendations):
+
 - Purple/violet gradients as default accent
 - 3-column feature grid with icons in colored circles
 - Centered everything with uniform spacing
@@ -142,8 +146,8 @@ $D check --image "$_DESIGN_DIR/variant-A.png" --brief "<the original brief>"
 
 Show each variant inline (Read tool on each PNG) for instant preview.
 
-**Before presenting to the user, self-gate:** For each variant, ask yourself: *"Would
-a human designer be embarrassed to put their name on this?"* If yes, discard the
+**Before presenting to the user, self-gate:** For each variant, ask yourself: _"Would
+a human designer be embarrassed to put their name on this?"_ If yes, discard the
 variant and regenerate. This is a hard gate. A mediocre AI mockup is worse than no
 mockup. Embarrassment triggers include: purple gradient hero, 3-column SaaS grid,
 centered-everything, Inter body text, generic stock-photo vibe, system-ui font,
@@ -190,6 +194,7 @@ board IS the chooser. AskUserQuestion is just the blocking wait mechanism.
 **After the user responds to AskUserQuestion:**
 
 Check for feedback files next to the board HTML:
+
 - `$_DESIGN_DIR/feedback.json` — written when user clicks Submit (final choice)
 - `$_DESIGN_DIR/feedback-pending.json` — written when user clicks Regenerate/Remix/More Like This
 
@@ -207,6 +212,7 @@ fi
 ```
 
 The feedback JSON has this shape:
+
 ```json
 {
   "preferred": "A",
@@ -222,6 +228,7 @@ Read `preferred`, `ratings`, `comments`, `overall` from the JSON. Proceed with
 the approved variant.
 
 **If `feedback-pending.json` found:** The user clicked Regenerate/Remix on the board.
+
 1. Read `regenerateAction` from the JSON (`"different"`, `"match"`, `"more_like_B"`,
    `"remix"`, or custom text)
 2. If `regenerateAction` is `"remix"`, read `remixSpec` (e.g. `{"layout":"A","colors":"B"}`)
@@ -261,6 +268,7 @@ Is this right?"
 Use AskUserQuestion to verify before proceeding.
 
 **Save the approved choice:**
+
 ```bash
 echo '{"approved_variant":"<V>","feedback":"<FB>","date":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","screen":"<SCREEN>","branch":"'$(git branch --show-current 2>/dev/null)'"}' > "$_DESIGN_DIR/approved.json"
 ```
@@ -271,6 +279,7 @@ After the user picks a direction:
 - If the user wants to iterate further: `$D iterate --feedback "<user's feedback>" --output "$_DESIGN_DIR/refined.png"`
 
 **Plan mode vs. implementation mode:**
+
 - **If in plan mode:** Add the approved mockup path (the full `$_DESIGN_DIR` path) and extracted tokens to the plan file under an "## Approved Design Direction" section. The design system gets written to DESIGN.md when the plan is implemented.
 - **If NOT in plan mode:** Proceed directly to Phase 6 and write DESIGN.md with the extracted tokens.
 
@@ -315,7 +324,7 @@ The agent writes a **single, self-contained HTML file** (no framework dependenci
 
 The page should make the user think "oh nice, they thought of this." It's selling the design system by showing what the product could feel like, not just listing hex codes and font names.
 
-If `open` fails (headless environment), tell the user: *"I wrote the preview to [path] — open it in your browser to see the fonts and colors rendered."*
+If `open` fails (headless environment), tell the user: _"I wrote the preview to [path] — open it in your browser to see the fonts and colors rendered."_
 
 If the user says skip the preview, go directly to Phase 6.
 
@@ -333,18 +342,21 @@ If `$D extract` was used in Phase 5 (Path A), use the extracted tokens as the pr
 # Design System — [Project Name]
 
 ## Product Context
+
 - **What this is:** [1-2 sentence description]
 - **Who it's for:** [target users]
 - **Space/industry:** [category, peers]
 - **Project type:** [web app / dashboard / marketing site / editorial / internal tool]
 
 ## Aesthetic Direction
+
 - **Direction:** [name]
 - **Decoration level:** [minimal / intentional / expressive]
 - **Mood:** [1-2 sentence description of how the product should feel]
 - **Reference sites:** [URLs, if research was done]
 
 ## Typography
+
 - **Display/Hero:** [font name] — [rationale]
 - **Body:** [font name] — [rationale]
 - **UI/Labels:** [font name or "same as body"]
@@ -354,6 +366,7 @@ If `$D extract` was used in Phase 5 (Path A), use the extracted tokens as the pr
 - **Scale:** [modular scale with specific px/rem values for each level]
 
 ## Color
+
 - **Approach:** [restrained / balanced / expressive]
 - **Primary:** [hex] — [what it represents, usage]
 - **Secondary:** [hex] — [usage]
@@ -362,24 +375,28 @@ If `$D extract` was used in Phase 5 (Path A), use the extracted tokens as the pr
 - **Dark mode:** [strategy — redesign surfaces, reduce saturation 10-20%]
 
 ## Spacing
+
 - **Base unit:** [4px or 8px]
 - **Density:** [compact / comfortable / spacious]
 - **Scale:** 2xs(2) xs(4) sm(8) md(16) lg(24) xl(32) 2xl(48) 3xl(64)
 
 ## Layout
+
 - **Approach:** [grid-disciplined / creative-editorial / hybrid]
 - **Grid:** [columns per breakpoint]
 - **Max content width:** [value]
 - **Border radius:** [hierarchical scale — e.g., sm:4px, md:8px, lg:12px, full:9999px]
 
 ## Motion
+
 - **Approach:** [minimal-functional / intentional / expressive]
 - **Easing:** enter(ease-out) exit(ease-in) move(ease-in-out)
 - **Duration:** micro(50-100ms) short(150-250ms) medium(250-400ms) long(400-700ms)
 
 ## Decisions Log
-| Date | Decision | Rationale |
-|------|----------|-----------|
+
+| Date    | Decision                      | Rationale                                                             |
+| ------- | ----------------------------- | --------------------------------------------------------------------- |
 | [today] | Initial design system created | Created by /design-consultation based on [product context / research] |
 ```
 
@@ -387,6 +404,7 @@ If `$D extract` was used in Phase 5 (Path A), use the extracted tokens as the pr
 
 ```markdown
 ## Design System
+
 Always read DESIGN.md before making any visual or UI decisions.
 All font choices, colors, spacing, and aesthetic direction are defined there.
 Do not deviate without explicit user approval.
@@ -396,6 +414,7 @@ In QA mode, flag any code that doesn't match DESIGN.md.
 **AskUserQuestion Q-final — show summary and confirm:**
 
 List all decisions. Flag any that used agent defaults without explicit user confirmation (the user should know what they're shipping). Options:
+
 - A) Ship it — write DESIGN.md and CLAUDE.md
 - B) I want to change something (specify what)
 - C) Start over
@@ -405,4 +424,3 @@ After shipping DESIGN.md, if the session produced screen-level mockups or page l
 "Want to see this design system as working Pretext-native HTML? Run /design-html."
 
 ---
-

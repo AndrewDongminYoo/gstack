@@ -1,5 +1,6 @@
 <!-- AUTO-GENERATED from audit-phases.md.tmpl — do not edit directly -->
 <!-- Regenerate: bun run gen:skill-docs -->
+
 **Scope gate (read first).** This section holds every scope-dependent phase (2-11), but you run ONLY the phases your resolved mode selected back in `## Mode Resolution` (always-loaded in the skeleton). Phases 0, 1, 12, 13, 14 always run; Phases 2-11 are scope-gated. "Execute in full" means work through this section applying that selection, NOT run a phase your mode did not select just because its prose lives here. Example: `--owasp` runs Phase 9 from this section, not Phases 2-8/10/11.
 
 ### Phase 2: Secrets Archaeology
@@ -7,13 +8,14 @@
 Scan git history for leaked credentials, check tracked `.env` files, find CI configs with inline secrets.
 
 **Canonical pattern catalog.** The HIGH-tier credential prefixes the archaeology
-greps below target (AKIA, ghp_, sk-ant-, sk_live_, xoxb-, `-----BEGIN ... PRIVATE
+greps below target (AKIA, ghp*, sk-ant-, sk_live*, xoxb-, `-----BEGIN ... PRIVATE
 KEY-----`, etc.) are the same set `/spec`'s in-flight redaction blocks on. The full
 3-tier taxonomy (HIGH credentials, MEDIUM PII/legal/internal, LOW) is generated from
 and lives in `lib/redact-patterns.ts` — the single source of truth shared by the
 `gstack-redact` engine, `/spec`, `/ship`, and the `/document-*` skills.
 
 **Git history — known secret prefixes:**
+
 ```bash
 git log -p --all -S "AKIA" --diff-filter=A -- "*.env" "*.yml" "*.yaml" "*.json" "*.toml" 2>/dev/null
 git log -p --all -S "sk-" --diff-filter=A -- "*.env" "*.yml" "*.json" "*.ts" "*.js" "*.py" 2>/dev/null
@@ -23,21 +25,23 @@ git log -p --all -G "password|secret|token|api_key" -- "*.env" "*.yml" "*.json" 
 ```
 
 **.env files tracked by git:**
+
 ```bash
 git ls-files '*.env' '.env.*' 2>/dev/null | grep -v '.example\|.sample\|.template'
 grep -q "^\.env$\|^\.env\.\*" .gitignore 2>/dev/null && echo ".env IS gitignored" || echo "WARNING: .env NOT in .gitignore"
 ```
 
 **CI configs with inline secrets (not using secret stores):**
+
 ```bash
 for f in $(find .github/workflows -maxdepth 1 \( -name '*.yml' -o -name '*.yaml' \) 2>/dev/null) .gitlab-ci.yml .circleci/config.yml; do
   [ -f "$f" ] && grep -n "password:\|token:\|secret:\|api_key:" "$f" | grep -v '\${{' | grep -v 'secrets\.'
 done 2>/dev/null
 ```
 
-**Severity:** CRITICAL for active secret patterns in git history (AKIA, sk_live_, ghp_, xoxb-). HIGH for .env tracked by git, CI configs with inline credentials. MEDIUM for suspicious .env.example values.
+**Severity:** CRITICAL for active secret patterns in git history (AKIA, sk*live*, ghp\_, xoxb-). HIGH for .env tracked by git, CI configs with inline credentials. MEDIUM for suspicious .env.example values.
 
-**FP rules:** Placeholders ("your_", "changeme", "TODO") excluded. Test fixtures excluded unless same value in non-test code. Rotated secrets still flagged (they were exposed). `.env.local` in `.gitignore` is expected.
+**FP rules:** Placeholders ("your\_", "changeme", "TODO") excluded. Test fixtures excluded unless same value in non-test code. Rotated secrets still flagged (they were exposed). `.env.local` in `.gitignore` is expected.
 
 **Diff mode:** Replace `git log -p --all` with `git log -p <base>..HEAD`.
 
@@ -46,6 +50,7 @@ done 2>/dev/null
 Goes beyond `npm audit`. Checks actual supply chain risk.
 
 **Package manager detection:**
+
 ```bash
 [ -f package.json ] && echo "DETECTED: npm/yarn/bun"
 [ -f Gemfile ] && echo "DETECTED: bundler"
@@ -69,6 +74,7 @@ Goes beyond `npm audit`. Checks actual supply chain risk.
 Check who can modify workflows and what secrets they can access.
 
 **GitHub Actions analysis:** For each workflow file, check for:
+
 - Unpinned third-party actions (not SHA-pinned) — use Grep for `uses:` lines missing `@[sha]`
 - `pull_request_target` (dangerous: fork PRs get write access)
 - Script injection via `${{ github.event.* }}` in `run:` steps
@@ -114,6 +120,7 @@ Find inbound endpoints that accept anything.
 Check for AI/LLM-specific vulnerabilities. This is a new attack class.
 
 Use Grep to search for these patterns:
+
 - **Prompt injection vectors:** User input flowing into system prompts or tool schemas — look for string interpolation near system prompt construction
 - **Unsanitized LLM output:** `dangerouslySetInnerHTML`, `v-html`, `innerHTML`, `.html()`, `raw()` rendering LLM responses
 - **Tool/function calling without validation:** `tool_choice`, `function_call`, `tools=`, `functions=`
@@ -121,6 +128,7 @@ Use Grep to search for these patterns:
 - **Eval/exec of LLM output:** `eval()`, `exec()`, `Function()`, `new Function` processing AI responses
 
 **Key checks (beyond grep):**
+
 - Trace user content flow — does it enter system prompts or tool schemas?
 - RAG poisoning: can external documents influence AI behavior via retrieval?
 - Tool calling permissions: are LLM tool calls validated before execution?
@@ -142,13 +150,14 @@ ls -la .claude/skills/ 2>/dev/null
 ```
 
 Use Grep to search all local skill SKILL.md files for suspicious patterns:
+
 - `curl`, `wget`, `fetch`, `http`, `exfiltrat` (network exfiltration)
 - `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `env.`, `process.env` (credential access)
 - `IGNORE PREVIOUS`, `system override`, `disregard`, `forget your instructions` (prompt injection)
 
 **Tier 2 — global skills (requires permission):** Before scanning globally installed skills or user settings, use AskUserQuestion:
 "Phase 8 can scan your globally installed AI coding agent skills and hooks for malicious patterns. This reads files outside the repo. Want to include this?"
-Options: A) Yes — scan global skills too  B) No — repo-local only
+Options: A) Yes — scan global skills too B) No — repo-local only
 
 If approved, run the same Grep patterns on globally installed skill files and check hooks in user settings.
 
@@ -161,53 +170,64 @@ If approved, run the same Grep patterns on globally installed skill files and ch
 For each OWASP category, perform targeted analysis. Use the Grep tool for all searches — scope file extensions to detected stacks from Phase 0.
 
 #### A01: Broken Access Control
+
 - Check for missing auth on controllers/routes (skip_before_action, skip_authorization, public, no_auth)
 - Check for direct object reference patterns (params[:id], req.params.id, request.args.get)
 - Can user A access user B's resources by changing IDs?
 - Is there horizontal/vertical privilege escalation?
 
 #### A02: Cryptographic Failures
+
 - Weak crypto (MD5, SHA1, DES, ECB) or hardcoded secrets
 - Is sensitive data encrypted at rest and in transit?
 - Are keys/secrets properly managed (env vars, not hardcoded)?
 
 #### A03: Injection
+
 - SQL injection: raw queries, string interpolation in SQL
 - Command injection: system(), exec(), spawn(), popen
 - Template injection: render with params, eval(), html_safe, raw()
 - LLM prompt injection: see Phase 7 for comprehensive coverage
 
 #### A04: Insecure Design
+
 - Rate limits on authentication endpoints?
 - Account lockout after failed attempts?
 - Business logic validated server-side?
 
 #### A05: Security Misconfiguration
+
 - CORS configuration (wildcard origins in production?)
 - CSP headers present?
 - Debug mode / verbose errors in production?
 
 #### A06: Vulnerable and Outdated Components
+
 See **Phase 3 (Dependency Supply Chain)** for comprehensive component analysis.
 
 #### A07: Identification and Authentication Failures
+
 - Session management: creation, storage, invalidation
 - Password policy: complexity, rotation, breach checking
 - MFA: available? enforced for admin?
 - Token management: JWT expiration, refresh rotation
 
 #### A08: Software and Data Integrity Failures
+
 See **Phase 4 (CI/CD Pipeline Security)** for pipeline protection analysis.
+
 - Deserialization inputs validated?
 - Integrity checking on external data?
 
 #### A09: Security Logging and Monitoring Failures
+
 - Authentication events logged?
 - Authorization failures logged?
 - Admin actions audit-trailed?
 - Logs protected from tampering?
 
 #### A10: Server-Side Request Forgery (SSRF)
+
 - URL construction from user input?
 - Internal service reachability from user-controlled URLs?
 - Allowlist/blocklist enforcement on outbound requests?
@@ -250,4 +270,3 @@ INTERNAL (breach = embarrassment):
 PUBLIC:
   - Marketing content, documentation, public APIs
 ```
-

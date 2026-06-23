@@ -7,18 +7,18 @@ happens after you say yes.
 
 ## What gets ingested
 
-| Source | Type | Where | Sensitivity |
-|---|---|---|---|
-| Claude Code session JSONL | `transcript` | `~/.claude/projects/*/` | High — full conversations including tool I/O |
-| Codex CLI session JSONL | `transcript` | `~/.codex/sessions/YYYY/MM/DD/` | High |
-| Cursor session SQLite (V1.0.1) | `transcript` | `~/Library/Application Support/Cursor/` | Same — deferred V1.0.1 |
-| Eureka log | `eureka` | `~/.gstack/analytics/eureka.jsonl` | Medium — your insights, often non-secret |
-| Project learnings | `learning` | `~/.gstack/projects/<slug>/learnings.jsonl` | Medium |
-| Project timeline | `timeline` | `~/.gstack/projects/<slug>/timeline.jsonl` | Low |
-| CEO plans | `ceo-plan` | `~/.gstack/projects/<slug>/ceo-plans/*.md` | Medium |
-| Design docs | `design-doc` | `~/.gstack/projects/<slug>/*-design-*.md` | Medium |
-| Retros | `retro` | `~/.gstack/projects/<slug>/retros/*.md` | Medium |
-| Builder profile | `builder-profile-entry` | `~/.gstack/builder-profile.jsonl` | Low |
+| Source                         | Type                    | Where                                       | Sensitivity                                  |
+| ------------------------------ | ----------------------- | ------------------------------------------- | -------------------------------------------- |
+| Claude Code session JSONL      | `transcript`            | `~/.claude/projects/*/`                     | High — full conversations including tool I/O |
+| Codex CLI session JSONL        | `transcript`            | `~/.codex/sessions/YYYY/MM/DD/`             | High                                         |
+| Cursor session SQLite (V1.0.1) | `transcript`            | `~/Library/Application Support/Cursor/`     | Same — deferred V1.0.1                       |
+| Eureka log                     | `eureka`                | `~/.gstack/analytics/eureka.jsonl`          | Medium — your insights, often non-secret     |
+| Project learnings              | `learning`              | `~/.gstack/projects/<slug>/learnings.jsonl` | Medium                                       |
+| Project timeline               | `timeline`              | `~/.gstack/projects/<slug>/timeline.jsonl`  | Low                                          |
+| CEO plans                      | `ceo-plan`              | `~/.gstack/projects/<slug>/ceo-plans/*.md`  | Medium                                       |
+| Design docs                    | `design-doc`            | `~/.gstack/projects/<slug>/*-design-*.md`   | Medium                                       |
+| Retros                         | `retro`                 | `~/.gstack/projects/<slug>/retros/*.md`     | Medium                                       |
+| Builder profile                | `builder-profile-entry` | `~/.gstack/builder-profile.jsonl`           | Low                                          |
 
 ## What stays local
 
@@ -86,26 +86,31 @@ replaceable from disk on each Mac.
 ## What you can do with it
 
 - **Query in natural language:**
+
   ```bash
   gbrain query "what was I doing on the auth migration"
   gbrain search "session_id:abc123"
   ```
 
 - **Browse by type:**
+
   ```bash
   gbrain list_pages --type transcript --limit 10
   gbrain list_pages --type ceo-plan
   ```
 
 - **Read a specific page:**
+
   ```bash
   gbrain get_page transcripts/claude-code/garrytan-gstack/2026-05-01-abc123
   ```
 
 - **Delete a page:**
+
   ```bash
   gbrain delete_page <slug>
   ```
+
   Caveat: with brain-sync enabled, the page is removed from gbrain's
   index but git history retains it. For hard-delete, run `git filter-repo`
   on the brain remote.
@@ -163,7 +168,7 @@ Common cases:
 - **PGLite engine corrupt (V1.5)** — V1.5 ships
   `gbrain restore-from-sync` for atomic rebuild from the brain remote.
   For V1.0, manual recovery: `cd ~/.gbrain && rm -rf db && gbrain init
-  --pglite && gbrain import <brain-remote-clone-dir>`.
+--pglite && gbrain import <brain-remote-clone-dir>`.
 
 - **A page has stale or wrong content** — `gbrain delete_page <slug>`,
   then re-run `gstack-gbrain-sync --incremental` to re-ingest from
@@ -181,6 +186,7 @@ Common cases:
 
 If you find a transcript page that contains a secret (either because
 per-file scanning was off, or gitleaks missed it), the recovery path is:
+
 1. `gbrain delete_page <slug>` — removes from index immediately
 2. Rotate the secret (rotate it anyway as a defensive measure)
 3. If brain-sync is on: `git filter-repo --invert-paths --path <relative-path>`
@@ -195,10 +201,12 @@ running `gbrain serve` over HTTP, accessible via Tailscale, ngrok, or
 internal LAN — `/setup-gbrain` Path 4 is the one-paste flow.
 
 You provide:
+
 - The MCP URL (e.g., `https://wintermute.tail554574.ts.net:3131/mcp`)
 - A bearer token (issued by the brain admin via `gbrain access-token issue`)
 
 What `/setup-gbrain` does:
+
 1. Verifies the URL + token via `gstack-gbrain-mcp-verify`. Three failure
    modes get classified with one-line remediation hints:
    **NETWORK** ("check Tailscale/DNS"), **AUTH** ("rotate token"),
@@ -225,6 +233,7 @@ process argv (~10ms) — visible to `ps` running concurrently. The window
 is small but it's not zero.
 
 Mitigations we've considered:
+
 - **Stdin or env-var input form for headers** — would close the argv
   window. As of Claude Code v1.0.x, the CLI doesn't expose either.
   When it does, `/setup-gbrain` Path 4 will switch automatically.
@@ -245,6 +254,7 @@ the source registration when scope was sufficient. The design review
 flagged that page-write doesn't actually prove source-management
 permission — those are different scopes in any sensible auth model.
 Until gbrain ships:
+
 - a `mcp__gbrain__whoami` capability tool that returns the bearer's
   scope set, AND
 - a `mcp__gbrain__sources_add` MCP tool with admin-scope gating
@@ -261,6 +271,7 @@ and the per-repo trust policy.
 
 ```markdown
 ## GBrain Configuration (configured by /setup-gbrain)
+
 - Mode: remote-http
 - MCP URL: https://wintermute.tail554574.ts.net:3131/mcp
 - Server version: gbrain v0.27.1
