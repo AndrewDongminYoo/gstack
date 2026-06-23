@@ -75,7 +75,10 @@ describe("parsePdfFromFile — invalid JSON regression (PR #1169 bug #7)", () =>
   });
 
   test("valid object: parses successfully (happy-path regression)", () => {
-    const p = writeFixture("valid.json", JSON.stringify({ format: "A4", pageNumbers: true }));
+    const p = writeFixture(
+      "valid.json",
+      JSON.stringify({ format: "A4", pageNumbers: true }),
+    );
     const result = parsePdfFromFile(p);
     expect(result.format).toBe("A4");
     expect(result.pageNumbers).toBe(true);

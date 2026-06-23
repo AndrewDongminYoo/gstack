@@ -1,6 +1,6 @@
-import { describe, test, expect } from 'bun:test';
-import { BrowserManager } from '../src/browser-manager';
-import { networkBuffer } from '../src/buffers';
+import { describe, test, expect } from "bun:test";
+import { BrowserManager } from "../src/browser-manager";
+import { networkBuffer } from "../src/buffers";
 
 // Reproducer for the body-materialization leak fixed in the D10
 // USE_CDP_EVENT_BATCHED commit. Pre-fix, the wirePageEvents
@@ -31,7 +31,11 @@ interface CallCounters {
   body: number;
 }
 
-function makeFakeReq(url: string, responseBodySize: number, counters: CallCounters) {
+function makeFakeReq(
+  url: string,
+  responseBodySize: number,
+  counters: CallCounters,
+) {
   return {
     url: () => url,
     sizes: async () => {
@@ -43,7 +47,7 @@ function makeFakeReq(url: string, responseBodySize: number, counters: CallCounte
         responseHeadersSize: 200,
       };
     },
-    method: () => 'GET',
+    method: () => "GET",
     response: async () => ({
       url: () => url,
       status: () => 200,
@@ -77,8 +81,8 @@ function makeFakePage() {
   };
 }
 
-describe('memory-leak reproducer: requestfinished does not materialize bodies', () => {
-  test('burst of 200 requestfinished events calls req.sizes() but never res.body()', async () => {
+describe("memory-leak reproducer: requestfinished does not materialize bodies", () => {
+  test("burst of 200 requestfinished events calls req.sizes() but never res.body()", async () => {
     const bm = new BrowserManager();
     const page = makeFakePage();
 
@@ -94,9 +98,9 @@ describe('memory-leak reproducer: requestfinished does not materialize bodies', 
     // has something to match against.
     const startLen = networkBuffer.length;
     for (let i = 0; i < 200; i++) {
-      page.emit('request', {
+      page.emit("request", {
         url: () => `https://example.invalid/asset/${i}`,
-        method: () => 'GET',
+        method: () => "GET",
       });
     }
 
@@ -107,7 +111,7 @@ describe('memory-leak reproducer: requestfinished does not materialize bodies', 
     const reqs = Array.from({ length: 200 }, (_, i) =>
       makeFakeReq(`https://example.invalid/asset/${i}`, 1024 * 1024, counters),
     );
-    for (const req of reqs) page.emit('requestfinished', req);
+    for (const req of reqs) page.emit("requestfinished", req);
 
     // Drain the async handler chain — wirePageEvents.requestfinished is
     // async; each emit kicks off a microtask that awaits req.sizes().
@@ -123,8 +127,8 @@ describe('memory-leak reproducer: requestfinished does not materialize bodies', 
     const populated = Array.from({ length: networkBuffer.length }, (_, i) =>
       networkBuffer.get(i),
     )
-      .filter((e) => e && e.url?.startsWith('https://example.invalid/asset/'))
-      .filter((e) => typeof e?.size === 'number' && e.size > 0).length;
+      .filter((e) => e && e.url?.startsWith("https://example.invalid/asset/"))
+      .filter((e) => typeof e?.size === "number" && e.size > 0).length;
     expect(populated).toBeGreaterThanOrEqual(200);
     // Sanity: the seed didn't double-count from a previous run.
     expect(networkBuffer.length).toBeGreaterThan(startLen);

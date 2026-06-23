@@ -37,7 +37,8 @@ describe("security-sidecar-client — payload cap", () => {
 
 describe("security-sidecar-client — availability probe", () => {
   test("isSidecarAvailable returns a shape regardless of platform", async () => {
-    const { isSidecarAvailable } = await import("../src/security-sidecar-client");
+    const { isSidecarAvailable } =
+      await import("../src/security-sidecar-client");
     const result = isSidecarAvailable();
     expect(typeof result.available).toBe("boolean");
     if (!result.available) {
@@ -58,7 +59,9 @@ describe("security-sidecar-client — circuit breaker after repeated failures", 
     const { scanWithSidecar } = await import("../src/security-sidecar-client");
     const oversized = "x".repeat(70 * 1024);
     for (let i = 0; i < 5; i += 1) {
-      await expect(scanWithSidecar(oversized)).rejects.toThrow(/payload-too-large/);
+      await expect(scanWithSidecar(oversized)).rejects.toThrow(
+        /payload-too-large/,
+      );
     }
     // Sentinel — if the loop above silently passed, fail fast.
     expect(true).toBe(true);

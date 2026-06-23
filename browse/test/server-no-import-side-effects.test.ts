@@ -1,7 +1,7 @@
-import { describe, test, expect } from 'bun:test';
-import * as path from 'path';
-import * as os from 'os';
-import * as fs from 'fs';
+import { describe, test, expect } from "bun:test";
+import * as path from "path";
+import * as os from "os";
+import * as fs from "fs";
 
 /**
  * Guard the core refactor invariant: importing browse/src/server.ts must NOT
@@ -17,11 +17,14 @@ import * as fs from 'fs';
  * were registered. The subprocess uses HOME=tmp + GSTACK_HOME=tmp so any
  * accidental state-dir write lands in a place we can verify is empty.
  */
-describe('server.ts module import has no auto-start side effects', () => {
-  test('importing server.ts does not bind Bun.serve, register signal handlers, or write state', async () => {
-    const tmpHome = path.join(os.tmpdir(), `browse-no-sfx-${Date.now()}-${process.pid}`);
+describe("server.ts module import has no auto-start side effects", () => {
+  test("importing server.ts does not bind Bun.serve, register signal handlers, or write state", async () => {
+    const tmpHome = path.join(
+      os.tmpdir(),
+      `browse-no-sfx-${Date.now()}-${process.pid}`,
+    );
     fs.mkdirSync(tmpHome, { recursive: true });
-    const tmpGstack = path.join(tmpHome, '.gstack');
+    const tmpGstack = path.join(tmpHome, ".gstack");
 
     const childScript = `
 const sigintBefore = process.listenerCount('SIGINT');
@@ -32,7 +35,7 @@ const uncaughtBefore = process.listenerCount('uncaughtException');
 const fs = require('fs');
 const path = require('path');
 
-await import(${JSON.stringify(path.resolve(import.meta.dir, '../src/server.ts'))});
+await import(${JSON.stringify(path.resolve(import.meta.dir, "../src/server.ts"))});
 
 // After import, sleep a tick so any setTimeout(0)-style init can run.
 await new Promise(r => setTimeout(r, 50));
@@ -62,19 +65,19 @@ console.log(JSON.stringify({
 process.exit(0);
 `;
 
-    const proc = Bun.spawn(['bun', '-e', childScript], {
+    const proc = Bun.spawn(["bun", "-e", childScript], {
       env: {
         ...process.env,
         HOME: tmpHome,
         GSTACK_HOME: tmpGstack,
         // Empty so the AUTH_TOKEN env path doesn't deterministically set a token.
-        AUTH_TOKEN: '',
+        AUTH_TOKEN: "",
         // Force a stub state file so resolveConfig() at module load (if it
         // happens) won't crawl the host's real .gstack/.
-        BROWSE_STATE_FILE: path.join(tmpGstack, 'browse.json'),
+        BROWSE_STATE_FILE: path.join(tmpGstack, "browse.json"),
       },
-      stdout: 'pipe',
-      stderr: 'pipe',
+      stdout: "pipe",
+      stderr: "pipe",
     });
 
     const stdout = await new Response(proc.stdout).text();
@@ -82,7 +85,11 @@ process.exit(0);
     await proc.exited;
 
     // The last JSON line in stdout is our snapshot.
-    const jsonLine = stdout.trim().split('\n').filter(l => l.startsWith('{')).pop();
+    const jsonLine = stdout
+      .trim()
+      .split("\n")
+      .filter((l) => l.startsWith("{"))
+      .pop();
     expect(jsonLine, `child stderr: ${stderr}`).toBeDefined();
 
     const snapshot = JSON.parse(jsonLine!);
@@ -101,6 +108,10 @@ process.exit(0);
     expect(snapshot.gstackPopulated).toBe(false);
 
     // Cleanup
-    try { fs.rmSync(tmpHome, { recursive: true, force: true }); } catch { /* best effort */ }
+    try {
+      fs.rmSync(tmpHome, { recursive: true, force: true });
+    } catch {
+      /* best effort */
+    }
   }, 30_000);
 });

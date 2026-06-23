@@ -58,7 +58,10 @@ describe("extractTabId", () => {
 
 describe("pdf --from-file payload shape", () => {
   test("writes a JSON payload file and reads it back", () => {
-    const tmpPath = path.join(os.tmpdir(), `browse-pdf-test-${Date.now()}.json`);
+    const tmpPath = path.join(
+      os.tmpdir(),
+      `browse-pdf-test-${Date.now()}.json`,
+    );
     const payload = {
       output: "/tmp/browse-out.pdf",
       format: "letter",

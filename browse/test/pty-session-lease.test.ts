@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeEach } from 'bun:test';
+import { describe, test, expect, beforeEach } from "bun:test";
 
 // pty-session-lease registers a sessionId space distinct from the pre-v1.44
 // attach-token space (browse/src/pty-session-cookie.ts). These tests pin
@@ -13,14 +13,14 @@ import {
   revokeLease,
   leaseCount,
   __resetLeases,
-} from '../src/pty-session-lease';
+} from "../src/pty-session-lease";
 
 beforeEach(() => {
   __resetLeases();
 });
 
-describe('pty-session-lease: mint/validate/revoke', () => {
-  test('mintLease returns a fresh non-secret sessionId + future expiresAt', () => {
+describe("pty-session-lease: mint/validate/revoke", () => {
+  test("mintLease returns a fresh non-secret sessionId + future expiresAt", () => {
     const a = mintLease();
     const b = mintLease();
     expect(a.sessionId).toBeTruthy();
@@ -32,17 +32,17 @@ describe('pty-session-lease: mint/validate/revoke', () => {
     expect(leaseCount()).toBe(2);
   });
 
-  test('validateLease ok for fresh lease, false for unknown', () => {
+  test("validateLease ok for fresh lease, false for unknown", () => {
     const { sessionId } = mintLease();
     const ok = validateLease(sessionId);
     expect(ok.ok).toBe(true);
     if (ok.ok) expect(ok.expiresAt).toBeGreaterThan(Date.now());
-    expect(validateLease('not-a-real-session-id').ok).toBe(false);
+    expect(validateLease("not-a-real-session-id").ok).toBe(false);
     expect(validateLease(null).ok).toBe(false);
     expect(validateLease(undefined).ok).toBe(false);
   });
 
-  test('revokeLease removes the lease; subsequent validate returns false', () => {
+  test("revokeLease removes the lease; subsequent validate returns false", () => {
     const { sessionId } = mintLease();
     expect(validateLease(sessionId).ok).toBe(true);
     revokeLease(sessionId);
@@ -50,14 +50,14 @@ describe('pty-session-lease: mint/validate/revoke', () => {
     expect(leaseCount()).toBe(0);
   });
 
-  test('revokeLease tolerates unknown sessionId without throwing', () => {
-    expect(() => revokeLease('phantom')).not.toThrow();
+  test("revokeLease tolerates unknown sessionId without throwing", () => {
+    expect(() => revokeLease("phantom")).not.toThrow();
     expect(() => revokeLease(null)).not.toThrow();
   });
 });
 
-describe('pty-session-lease: refresh contract (validate-first)', () => {
-  test('refreshLease extends expiresAt for a valid lease', () => {
+describe("pty-session-lease: refresh contract (validate-first)", () => {
+  test("refreshLease extends expiresAt for a valid lease", () => {
     const { sessionId, expiresAt: initial } = mintLease();
     // Sleep micro-tick — Date.now() is ms-grain so a synchronous extend
     // may not move the integer. Use a tight async wait instead.
@@ -71,12 +71,12 @@ describe('pty-session-lease: refresh contract (validate-first)', () => {
     });
   });
 
-  test('refreshLease rejects unknown sessionId (validate-first invariant)', () => {
-    const r = refreshLease('never-minted');
+  test("refreshLease rejects unknown sessionId (validate-first invariant)", () => {
+    const r = refreshLease("never-minted");
     expect(r.ok).toBe(false);
   });
 
-  test('refreshLease never resurrects an expired lease', async () => {
+  test("refreshLease never resurrects an expired lease", async () => {
     // Force TTL down to 5ms for this assertion by minting + waiting past expiry.
     // Lease internals use Date.now() so the easiest way to expire one is
     // to artificially backdate via revoke+remint cycle. Simpler: mint, then
@@ -91,7 +91,7 @@ describe('pty-session-lease: refresh contract (validate-first)', () => {
     expect(r.ok).toBe(false);
   });
 
-  test('refreshLease tolerates null / undefined sessionId', () => {
+  test("refreshLease tolerates null / undefined sessionId", () => {
     expect(refreshLease(null).ok).toBe(false);
     expect(refreshLease(undefined).ok).toBe(false);
   });

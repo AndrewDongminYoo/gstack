@@ -1,6 +1,6 @@
-import { describe, test, expect } from 'bun:test';
-import * as fs from 'fs';
-import * as path from 'path';
+import { describe, test, expect } from "bun:test";
+import * as fs from "fs";
+import * as path from "path";
 
 // Static-grep tripwire for the v1.44 internalHandler refactor.
 //
@@ -12,33 +12,47 @@ import * as path from 'path';
 // (token grant/revoke behavior) already live in
 // browse/test/terminal-agent-integration.test.ts.
 
-const AGENT_TS = path.resolve(new URL(import.meta.url).pathname, '..', '..', 'src', 'terminal-agent.ts');
+const AGENT_TS = path.resolve(
+  new URL(import.meta.url).pathname,
+  "..",
+  "..",
+  "src",
+  "terminal-agent.ts",
+);
 
-describe('terminal-agent internalHandler refactor (v1.44+)', () => {
-  test('1. internalHandler<T> exists with the documented signature', () => {
-    const src = fs.readFileSync(AGENT_TS, 'utf-8');
+describe("terminal-agent internalHandler refactor (v1.44+)", () => {
+  test("1. internalHandler<T> exists with the documented signature", () => {
+    const src = fs.readFileSync(AGENT_TS, "utf-8");
     expect(src).toMatch(/async function internalHandler<T>\s*\(/);
     // Body must include the auth gate, body parse, and result coercion.
-    expect(src).toContain('checkInternalAuth(req)');
-    expect(src).toContain('await req.json()');
-    expect(src).toContain('instanceof Response');
+    expect(src).toContain("checkInternalAuth(req)");
+    expect(src).toContain("await req.json()");
+    expect(src).toContain("instanceof Response");
   });
 
-  test('2. /internal/grant routes through internalHandler', () => {
-    const src = fs.readFileSync(AGENT_TS, 'utf-8');
+  test("2. /internal/grant routes through internalHandler", () => {
+    const src = fs.readFileSync(AGENT_TS, "utf-8");
     // Match the route handler block.
-    const block = sliceBetween(src, "url.pathname === '/internal/grant'", "url.pathname === '/internal/revoke'");
-    expect(block).toContain('internalHandler(req');
+    const block = sliceBetween(
+      src,
+      "url.pathname === '/internal/grant'",
+      "url.pathname === '/internal/revoke'",
+    );
+    expect(block).toContain("internalHandler(req");
     // Must NOT have the old inline pattern (would be a regression).
-    expect(block).not.toContain('req.headers.get(\'authorization\')');
-    expect(block).not.toContain('req.json().then(');
+    expect(block).not.toContain("req.headers.get('authorization')");
+    expect(block).not.toContain("req.json().then(");
   });
 
-  test('3. /internal/revoke routes through internalHandler', () => {
-    const src = fs.readFileSync(AGENT_TS, 'utf-8');
-    const block = sliceBetween(src, "url.pathname === '/internal/revoke'", "url.pathname === '/internal/healthz'");
-    expect(block).toContain('internalHandler(req');
-    expect(block).not.toContain('req.json().then(');
+  test("3. /internal/revoke routes through internalHandler", () => {
+    const src = fs.readFileSync(AGENT_TS, "utf-8");
+    const block = sliceBetween(
+      src,
+      "url.pathname === '/internal/revoke'",
+      "url.pathname === '/internal/healthz'",
+    );
+    expect(block).toContain("internalHandler(req");
+    expect(block).not.toContain("req.json().then(");
   });
 });
 

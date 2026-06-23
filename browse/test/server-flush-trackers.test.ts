@@ -26,33 +26,38 @@
  * read source as text, assert an invariant, no daemon required.
  */
 
-import { describe, test, expect } from 'bun:test';
-import { readFileSync } from 'fs';
-import * as path from 'path';
+import { describe, test, expect } from "bun:test";
+import { readFileSync } from "fs";
+import * as path from "path";
 
 const SERVER_TS = readFileSync(
-  path.resolve(import.meta.dir, '../src/server.ts'),
-  'utf-8',
+  path.resolve(import.meta.dir, "../src/server.ts"),
+  "utf-8",
 );
 
-describe('server.ts — flushBuffers tracker declarations', () => {
-  test('every `last*Flushed` tracker referenced inside flushBuffers is declared at module scope', () => {
+describe("server.ts — flushBuffers tracker declarations", () => {
+  test("every `last*Flushed` tracker referenced inside flushBuffers is declared at module scope", () => {
     // Locate the flushBuffers function body. The function is `async function
     // flushBuffers() { ... }` — match through the closing brace at the start
     // of a line (one-level-deep function in the file).
     const fnMatch = SERVER_TS.match(
       /async function flushBuffers\([^)]*\)[^{]*\{([\s\S]*?)\n\}/,
     );
-    expect(fnMatch, 'flushBuffers function not found in server.ts').not.toBeNull();
+    expect(
+      fnMatch,
+      "flushBuffers function not found in server.ts",
+    ).not.toBeNull();
     const body = fnMatch![1]!;
 
     // Pull every identifier matching the `lastXxxFlushed` cursor pattern.
     const trackerMatches = [...body.matchAll(/\blast([A-Z]\w+)Flushed\b/g)];
-    const trackers = Array.from(new Set(trackerMatches.map((m) => `last${m[1]}Flushed`)));
+    const trackers = Array.from(
+      new Set(trackerMatches.map((m) => `last${m[1]}Flushed`)),
+    );
 
     expect(
       trackers.length,
-      'flushBuffers should reference at least one last*Flushed tracker',
+      "flushBuffers should reference at least one last*Flushed tracker",
     ).toBeGreaterThan(0);
 
     for (const tracker of trackers) {

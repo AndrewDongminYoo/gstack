@@ -11,7 +11,15 @@
  * and the non-2xx-response path, and it must NOT assume the specific tmp
  * filename — only that no `<dest>.tmp.*` sibling remains.
  */
-import { describe, expect, test, beforeAll, afterAll, beforeEach, afterEach } from "bun:test";
+import {
+  describe,
+  expect,
+  test,
+  beforeAll,
+  afterAll,
+  beforeEach,
+  afterEach,
+} from "bun:test";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
@@ -19,9 +27,9 @@ import { downloadFile } from "../src/security-classifier";
 
 function tmpSiblings(destDir: string, destBase: string): string[] {
   if (!fs.existsSync(destDir)) return [];
-  return fs.readdirSync(destDir).filter((f) =>
-    f.startsWith(destBase + ".tmp.")
-  );
+  return fs
+    .readdirSync(destDir)
+    .filter((f) => f.startsWith(destBase + ".tmp."));
 }
 
 let FIXTURE_DIR = "";
@@ -66,9 +74,9 @@ describe("downloadFile error-path cleanup (PR #1169 bug #6)", () => {
     globalThis.fetch = async () =>
       new Response(body, { status: 200, statusText: "OK" });
 
-    await expect(downloadFile("https://example.com/model.bin", dest)).rejects.toThrow(
-      /simulated mid-stream read failure/
-    );
+    await expect(
+      downloadFile("https://example.com/model.bin", dest),
+    ).rejects.toThrow(/simulated mid-stream read failure/);
 
     expect(fs.existsSync(dest)).toBe(false);
     expect(tmpSiblings(destDir, destBase)).toEqual([]);
@@ -83,9 +91,9 @@ describe("downloadFile error-path cleanup (PR #1169 bug #6)", () => {
     globalThis.fetch = async () =>
       new Response("server boom", { status: 500, statusText: "Server Error" });
 
-    await expect(downloadFile("https://example.com/model.bin", dest)).rejects.toThrow(
-      /Failed to fetch.*500/
-    );
+    await expect(
+      downloadFile("https://example.com/model.bin", dest),
+    ).rejects.toThrow(/Failed to fetch.*500/);
 
     expect(fs.existsSync(dest)).toBe(false);
     expect(tmpSiblings(destDir, destBase)).toEqual([]);
@@ -101,9 +109,9 @@ describe("downloadFile error-path cleanup (PR #1169 bug #6)", () => {
     globalThis.fetch = async () =>
       new Response(null, { status: 200, statusText: "OK" });
 
-    await expect(downloadFile("https://example.com/model.bin", dest)).rejects.toThrow(
-      /Failed to fetch/
-    );
+    await expect(
+      downloadFile("https://example.com/model.bin", dest),
+    ).rejects.toThrow(/Failed to fetch/);
 
     expect(fs.existsSync(dest)).toBe(false);
     expect(tmpSiblings(destDir, destBase)).toEqual([]);
@@ -135,4 +143,3 @@ describe("downloadFile error-path cleanup (PR #1169 bug #6)", () => {
     fs.unlinkSync(dest);
   });
 });
-

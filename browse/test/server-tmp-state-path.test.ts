@@ -32,17 +32,17 @@
  * read source as text, assert invariant, no daemon required.
  */
 
-import { describe, test, expect } from 'bun:test';
-import { readFileSync } from 'fs';
-import * as path from 'path';
+import { describe, test, expect } from "bun:test";
+import { readFileSync } from "fs";
+import * as path from "path";
 
 const SERVER_TS = readFileSync(
-  path.resolve(import.meta.dir, '../src/server.ts'),
-  'utf-8',
+  path.resolve(import.meta.dir, "../src/server.ts"),
+  "utf-8",
 );
 
-describe('server.ts — state-file temp-path uniqueness', () => {
-  test('no remaining `stateFile + \'.tmp\'` literals (regression catch)', () => {
+describe("server.ts — state-file temp-path uniqueness", () => {
+  test("no remaining `stateFile + '.tmp'` literals (regression catch)", () => {
     // The shared-temp-filename pattern that caused the cold-start ENOENT
     // race. A future contributor that copy-pastes the old pattern (or a
     // revert) will fail this test.
@@ -58,7 +58,7 @@ describe('server.ts — state-file temp-path uniqueness', () => {
     ).toBe(0);
   });
 
-  test('every state-file writeFileSync call uses tmpStatePath()', () => {
+  test("every state-file writeFileSync call uses tmpStatePath()", () => {
     // Find every `writeFileSync(X, JSON.stringify(stateContent...` or
     // `…(state, …)` call and verify X is `tmpStatePath()` or a variable
     // assigned from `tmpStatePath()`.
@@ -69,7 +69,7 @@ describe('server.ts — state-file temp-path uniqueness', () => {
     ];
     expect(
       writeCalls.length,
-      'expected at least one state-file write site',
+      "expected at least one state-file write site",
     ).toBeGreaterThan(0);
 
     for (const m of writeCalls) {
@@ -88,23 +88,24 @@ describe('server.ts — state-file temp-path uniqueness', () => {
     }
   });
 
-  test('tmpStatePath() declaration includes a per-process unique suffix', () => {
+  test("tmpStatePath() declaration includes a per-process unique suffix", () => {
     // Lock the suffix shape so a future contributor doesn't accidentally
     // strip the uniqueness back out by simplifying the helper.
     const declMatch = SERVER_TS.match(
       /function tmpStatePath\(\)[^{]*\{([\s\S]*?)\n\}/,
     );
-    expect(declMatch, 'tmpStatePath() declaration not found').not.toBeNull();
+    expect(declMatch, "tmpStatePath() declaration not found").not.toBeNull();
     const body = declMatch![1]!;
 
     // Must reference both process.pid and crypto.randomBytes — two
     // independent sources of uniqueness.
-    expect(body, 'tmpStatePath() must include process.pid in the suffix').toContain(
-      'process.pid',
-    );
     expect(
       body,
-      'tmpStatePath() must include a random suffix via crypto.randomBytes',
-    ).toContain('crypto.randomBytes');
+      "tmpStatePath() must include process.pid in the suffix",
+    ).toContain("process.pid");
+    expect(
+      body,
+      "tmpStatePath() must include a random suffix via crypto.randomBytes",
+    ).toContain("crypto.randomBytes");
   });
 });

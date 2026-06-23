@@ -41,9 +41,9 @@
  * this restores the documented intent.
  */
 
-import { describe, test, expect, beforeEach } from 'bun:test';
-import { TabSession, type RefEntry } from '../src/tab-session';
-import type { Page, Frame, Locator } from 'playwright';
+import { describe, test, expect, beforeEach } from "bun:test";
+import { TabSession, type RefEntry } from "../src/tab-session";
+import type { Page, Frame, Locator } from "playwright";
 
 // Minimal type-cast mocks. Same pattern as tab-isolation.test.ts —
 // pure-logic tests don't launch a browser.
@@ -72,13 +72,13 @@ function mockRefEntry(role: string, name: string): RefEntry {
 // the test holds a reference to).
 function makeRefs(): Map<string, RefEntry> {
   const r = new Map<string, RefEntry>();
-  r.set('e1', mockRefEntry('button', 'Submit'));
-  r.set('e2', mockRefEntry('textbox', 'Email'));
-  r.set('e3', mockRefEntry('link', 'Forgot password'));
+  r.set("e1", mockRefEntry("button", "Submit"));
+  r.set("e2", mockRefEntry("textbox", "Email"));
+  r.set("e3", mockRefEntry("link", "Forgot password"));
   return r;
 }
 
-describe('TabSession — frame detach + ref staleness', () => {
+describe("TabSession — frame detach + ref staleness", () => {
   let session: TabSession;
 
   beforeEach(() => {
@@ -86,7 +86,7 @@ describe('TabSession — frame detach + ref staleness', () => {
     session.setRefMap(makeRefs());
   });
 
-  test('refs cleared when getActiveFrameOrPage detects detached iframe', () => {
+  test("refs cleared when getActiveFrameOrPage detects detached iframe", () => {
     // Pre-condition: refs captured inside an iframe context
     session.setFrame(mockDetachedFrame());
     expect(session.getRefCount()).toBe(3);
@@ -104,7 +104,7 @@ describe('TabSession — frame detach + ref staleness', () => {
     expect(session.getRefCount()).toBe(0);
   });
 
-  test('refs preserved when active frame is still attached', () => {
+  test("refs preserved when active frame is still attached", () => {
     // No regression on the happy path — attached frame should NOT
     // trigger the cleanup.
     session.setFrame(mockAttachedFrame());
@@ -117,7 +117,7 @@ describe('TabSession — frame detach + ref staleness', () => {
     expect(session.getRefCount()).toBe(3);
   });
 
-  test('refs preserved when no frame is set (page-level snapshot)', () => {
+  test("refs preserved when no frame is set (page-level snapshot)", () => {
     // No frame ever set → the if-branch never enters → refs untouched.
     expect(session.getFrame()).toBeNull();
     expect(session.getRefCount()).toBe(3);
@@ -127,7 +127,7 @@ describe('TabSession — frame detach + ref staleness', () => {
     expect(session.getRefCount()).toBe(3);
   });
 
-  test('matches onMainFrameNavigated symmetry (refs+frame both cleared)', () => {
+  test("matches onMainFrameNavigated symmetry (refs+frame both cleared)", () => {
     // Pin the design symmetry: both staleness paths (main-frame nav AND
     // iframe detach) must clear both pieces of state together. If a
     // future refactor splits these, the test fails before merge.

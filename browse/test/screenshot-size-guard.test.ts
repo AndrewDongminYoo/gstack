@@ -11,21 +11,21 @@
  * invariant test below pins that all three callsites import the guard.
  */
 
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
-import { tmpdir } from 'os';
-import { join } from 'path';
-import sharp from 'sharp';
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "fs";
+import { tmpdir } from "os";
+import { join } from "path";
+import sharp from "sharp";
 import {
   SCREENSHOT_MAX_DIMENSION_PX,
   guardScreenshotBuffer,
   guardScreenshotPath,
-} from '../src/screenshot-size-guard';
+} from "../src/screenshot-size-guard";
 
 let tmp: string;
 
 beforeEach(() => {
-  tmp = mkdtempSync(join(tmpdir(), 'screenshot-guard-'));
+  tmp = mkdtempSync(join(tmpdir(), "screenshot-guard-"));
 });
 
 afterEach(() => {
@@ -34,14 +34,19 @@ afterEach(() => {
 
 async function makePng(width: number, height: number): Promise<Buffer> {
   return sharp({
-    create: { width, height, channels: 3, background: { r: 200, g: 50, b: 50 } },
+    create: {
+      width,
+      height,
+      channels: 3,
+      background: { r: 200, g: 50, b: 50 },
+    },
   })
     .png()
     .toBuffer();
 }
 
-describe('guardScreenshotBuffer', () => {
-  test('passes through images already within the cap', async () => {
+describe("guardScreenshotBuffer", () => {
+  test("passes through images already within the cap", async () => {
     const input = await makePng(1500, 1800);
     const { buffer, result } = await guardScreenshotBuffer(input);
     expect(result.resized).toBe(false);
@@ -50,7 +55,7 @@ describe('guardScreenshotBuffer', () => {
     expect(buffer).toBe(input); // identity — no re-encode
   });
 
-  test('downscales a 5000px-tall image to fit the cap', async () => {
+  test("downscales a 5000px-tall image to fit the cap", async () => {
     const input = await makePng(1200, 5000);
     const { buffer, result } = await guardScreenshotBuffer(input);
     expect(result.resized).toBe(true);
@@ -64,7 +69,7 @@ describe('guardScreenshotBuffer', () => {
     expect(buffer.length).toBeLessThan(input.length);
   });
 
-  test('downscales a 6000px-wide image', async () => {
+  test("downscales a 6000px-wide image", async () => {
     const input = await makePng(6000, 1200);
     const { buffer, result } = await guardScreenshotBuffer(input);
     expect(result.resized).toBe(true);
@@ -75,16 +80,16 @@ describe('guardScreenshotBuffer', () => {
     expect(buffer.length).toBeGreaterThan(0);
   });
 
-  test('treats exactly-2000px images as in-bounds (no resize)', async () => {
+  test("treats exactly-2000px images as in-bounds (no resize)", async () => {
     const input = await makePng(2000, 1000);
     const { result } = await guardScreenshotBuffer(input);
     expect(result.resized).toBe(false);
   });
 });
 
-describe('guardScreenshotPath', () => {
-  test('rewrites the file in place when downscale is needed', async () => {
-    const filePath = join(tmp, 'tall.png');
+describe("guardScreenshotPath", () => {
+  test("rewrites the file in place when downscale is needed", async () => {
+    const filePath = join(tmp, "tall.png");
     writeFileSync(filePath, await makePng(1200, 5000));
     const result = await guardScreenshotPath(filePath);
     expect(result.resized).toBe(true);
@@ -95,8 +100,8 @@ describe('guardScreenshotPath', () => {
     );
   });
 
-  test('leaves the file untouched when already within cap', async () => {
-    const filePath = join(tmp, 'short.png');
+  test("leaves the file untouched when already within cap", async () => {
+    const filePath = join(tmp, "short.png");
     const original = await makePng(800, 600);
     writeFileSync(filePath, original);
     const result = await guardScreenshotPath(filePath);
@@ -106,13 +111,13 @@ describe('guardScreenshotPath', () => {
   });
 });
 
-describe('static invariant: all three full-page callsites import the guard', () => {
-  test('snapshot.ts, meta-commands.ts, and write-commands.ts wire the size guard', () => {
-    const browseSrc = join(import.meta.dir, '..', 'src');
-    const paths = ['snapshot.ts', 'meta-commands.ts', 'write-commands.ts'];
+describe("static invariant: all three full-page callsites import the guard", () => {
+  test("snapshot.ts, meta-commands.ts, and write-commands.ts wire the size guard", () => {
+    const browseSrc = join(import.meta.dir, "..", "src");
+    const paths = ["snapshot.ts", "meta-commands.ts", "write-commands.ts"];
     for (const rel of paths) {
-      const content = readFileSync(join(browseSrc, rel), 'utf-8');
-      expect(content).toContain('screenshot-size-guard');
+      const content = readFileSync(join(browseSrc, rel), "utf-8");
+      expect(content).toContain("screenshot-size-guard");
     }
   });
 });

@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
+import { describe, test, expect, beforeEach, afterEach } from "bun:test";
 
 /**
  * Regression test for the TDZ (Temporal Dead Zone) bug at the claude-CLI-missing
@@ -21,7 +21,7 @@ import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
  * proving the missing-CLI flow returns the expected degraded signal without
  * throwing.
  */
-describe('security-classifier: missing claude CLI degraded path', () => {
+describe("security-classifier: missing claude CLI degraded path", () => {
   let origPath: string | undefined;
   let origGstackClaudeBin: string | undefined;
   let origClaudeBin: string | undefined;
@@ -33,7 +33,7 @@ describe('security-classifier: missing claude CLI degraded path', () => {
     // Force resolveClaudeCommand() to fail: clear PATH AND override env vars
     // (resolveClaudeCommand in browse/src/claude-bin.ts honors GSTACK_CLAUDE_BIN
     // and CLAUDE_BIN before falling back to Bun.which(PATH)).
-    process.env.PATH = '/nonexistent';
+    process.env.PATH = "/nonexistent";
     delete process.env.GSTACK_CLAUDE_BIN;
     delete process.env.CLAUDE_BIN;
   });
@@ -41,17 +41,18 @@ describe('security-classifier: missing claude CLI degraded path', () => {
   afterEach(() => {
     if (origPath === undefined) delete process.env.PATH;
     else process.env.PATH = origPath;
-    if (origGstackClaudeBin !== undefined) process.env.GSTACK_CLAUDE_BIN = origGstackClaudeBin;
+    if (origGstackClaudeBin !== undefined)
+      process.env.GSTACK_CLAUDE_BIN = origGstackClaudeBin;
     if (origClaudeBin !== undefined) process.env.CLAUDE_BIN = origClaudeBin;
   });
 
-  test('checkTranscript returns degraded signal without throwing when claude CLI is unavailable', async () => {
+  test("checkTranscript returns degraded signal without throwing when claude CLI is unavailable", async () => {
     // Fresh import so haikuAvailableCache isn't already populated from a prior test.
     // Bun's module cache is per-test-file; this fresh import path stays clean.
-    const { checkTranscript } = await import('../src/security-classifier');
+    const { checkTranscript } = await import("../src/security-classifier");
 
     const result = await checkTranscript({
-      user_message: 'hello',
+      user_message: "hello",
       tool_calls: [],
     });
 
@@ -63,6 +64,8 @@ describe('security-classifier: missing claude CLI degraded path', () => {
     expect(serialized).toContain('"degraded":true');
     // Reason must indicate the CLI was missing or the spawn failed — proves the
     // early-return / spawn-path returned a structured signal without throwing.
-    expect(serialized).toMatch(/"reason":"(claude_cli_not_found|spawn_error|exit_)/);
+    expect(serialized).toMatch(
+      /"reason":"(claude_cli_not_found|spawn_error|exit_)/,
+    );
   });
 });

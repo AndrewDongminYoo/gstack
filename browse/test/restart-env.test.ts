@@ -5,11 +5,27 @@ import { buildRestartEnv } from "../src/cli";
 // NOT silently downgrade a headed session to headless. buildRestartEnv reapplies
 // headed/proxy/configHash from this invocation OR the persisted server state.
 describe("buildRestartEnv (#1781 headed persistence)", () => {
-  const headedState = { pid: 1, port: 9, token: "t", startedAt: "", serverPath: "", mode: "headed" as const };
-  const launchedState = { pid: 1, port: 9, token: "t", startedAt: "", serverPath: "", mode: "launched" as const };
+  const headedState = {
+    pid: 1,
+    port: 9,
+    token: "t",
+    startedAt: "",
+    serverPath: "",
+    mode: "headed" as const,
+  };
+  const launchedState = {
+    pid: 1,
+    port: 9,
+    token: "t",
+    startedAt: "",
+    serverPath: "",
+    mode: "launched" as const,
+  };
 
   test("headed flag on this invocation → BROWSE_HEADED=1", () => {
-    expect(buildRestartEnv({ headed: true } as any, null).BROWSE_HEADED).toBe("1");
+    expect(buildRestartEnv({ headed: true } as any, null).BROWSE_HEADED).toBe(
+      "1",
+    );
   });
 
   test("plain command + persisted headed state → still BROWSE_HEADED=1 (the regression)", () => {
@@ -27,13 +43,19 @@ describe("buildRestartEnv (#1781 headed persistence)", () => {
   });
 
   test("proxy + configHash reapplied from flags", () => {
-    const env = buildRestartEnv({ proxyUrl: "socks5://x", configHash: "abc" } as any, null);
+    const env = buildRestartEnv(
+      { proxyUrl: "socks5://x", configHash: "abc" } as any,
+      null,
+    );
     expect(env.BROWSE_PROXY_URL).toBe("socks5://x");
     expect(env.BROWSE_CONFIG_HASH).toBe("abc");
   });
 
   test("configHash falls back to persisted state", () => {
-    const env = buildRestartEnv({} as any, { ...launchedState, configHash: "fromstate" } as any);
+    const env = buildRestartEnv(
+      {} as any,
+      { ...launchedState, configHash: "fromstate" } as any,
+    );
     expect(env.BROWSE_CONFIG_HASH).toBe("fromstate");
   });
 });

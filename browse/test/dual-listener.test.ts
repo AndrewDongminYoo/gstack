@@ -12,11 +12,14 @@
  * added in a later wave commit).
  */
 
-import { describe, test, expect } from 'bun:test';
-import * as fs from 'fs';
-import * as path from 'path';
+import { describe, test, expect } from "bun:test";
+import * as fs from "fs";
+import * as path from "path";
 
-const SERVER_SRC = fs.readFileSync(path.join(import.meta.dir, '../src/server.ts'), 'utf-8');
+const SERVER_SRC = fs.readFileSync(
+  path.join(import.meta.dir, "../src/server.ts"),
+  "utf-8",
+);
 
 function sliceBetween(source: string, start: string, end: string): string {
   const s = source.indexOf(start);
@@ -29,39 +32,50 @@ function sliceBetween(source: string, start: string, end: string): string {
 function extractSetContents(source: string, constName: string): Set<string> {
   const start = source.indexOf(`const ${constName} = new Set<string>([`);
   if (start === -1) throw new Error(`Set not found: ${constName}`);
-  const end = source.indexOf(']);', start);
+  const end = source.indexOf("]);", start);
   const body = source.slice(start, end);
   const matches = body.matchAll(/'([^']+)'/g);
-  return new Set([...matches].map(m => m[1]));
+  return new Set([...matches].map((m) => m[1]));
 }
 
-describe('Dual-listener surface types', () => {
-  test('Surface type is a union of local and tunnel', () => {
+describe("Dual-listener surface types", () => {
+  test("Surface type is a union of local and tunnel", () => {
     expect(SERVER_SRC).toContain("export type Surface = 'local' | 'tunnel'");
   });
 
-  test('tunnelServer state variable exists alongside tunnelActive/tunnelUrl/tunnelListener', () => {
+  test("tunnelServer state variable exists alongside tunnelActive/tunnelUrl/tunnelListener", () => {
     // The boolean tunnelActive stays for external consumers (idle check, watchdog, SIGTERM).
     // tunnelServer is the new Bun.serve listener reference.
-    expect(SERVER_SRC).toMatch(/let\s+tunnelServer:\s*ReturnType<typeof\s+Bun\.serve>\s*\|\s*null\s*=\s*null/);
+    expect(SERVER_SRC).toMatch(
+      /let\s+tunnelServer:\s*ReturnType<typeof\s+Bun\.serve>\s*\|\s*null\s*=\s*null/,
+    );
   });
 });
 
-describe('Tunnel path allowlist', () => {
-  test('TUNNEL_PATHS is a closed set containing exactly /connect, /command, /sidebar-chat', () => {
-    const paths = extractSetContents(SERVER_SRC, 'TUNNEL_PATHS');
-    expect(paths).toEqual(new Set(['/connect', '/command', '/sidebar-chat']));
+describe("Tunnel path allowlist", () => {
+  test("TUNNEL_PATHS is a closed set containing exactly /connect, /command, /sidebar-chat", () => {
+    const paths = extractSetContents(SERVER_SRC, "TUNNEL_PATHS");
+    expect(paths).toEqual(new Set(["/connect", "/command", "/sidebar-chat"]));
   });
 
-  test('TUNNEL_PATHS does NOT contain bootstrap or admin paths', () => {
-    const paths = extractSetContents(SERVER_SRC, 'TUNNEL_PATHS');
+  test("TUNNEL_PATHS does NOT contain bootstrap or admin paths", () => {
+    const paths = extractSetContents(SERVER_SRC, "TUNNEL_PATHS");
     // These must never be on the tunnel surface
     const forbidden = [
-      '/health', '/welcome', '/cookie-picker',
-      '/inspector', '/inspector/pick', '/inspector/events', '/inspector/style',
-      '/tunnel/start', '/tunnel/stop',
-      '/pair', '/token', '/refs',
-      '/activity/stream', '/activity/history',
+      "/health",
+      "/welcome",
+      "/cookie-picker",
+      "/inspector",
+      "/inspector/pick",
+      "/inspector/events",
+      "/inspector/style",
+      "/tunnel/start",
+      "/tunnel/stop",
+      "/pair",
+      "/token",
+      "/refs",
+      "/activity/stream",
+      "/activity/history",
     ];
     for (const p of forbidden) {
       expect(paths.has(p)).toBe(false);
@@ -69,7 +83,7 @@ describe('Tunnel path allowlist', () => {
   });
 });
 
-describe('Tunnel command allowlist', () => {
+describe("Tunnel command allowlist", () => {
   // The full closed set of commands reachable over the tunnel surface. Adding
   // or removing a command here means changing the literal in server.ts AND
   // updating this list — that double-edit is the point. A single-source
@@ -78,18 +92,38 @@ describe('Tunnel command allowlist', () => {
   // review. The exact-set match catches it.
   const EXPECTED_TUNNEL_COMMANDS = new Set([
     // Original 17
-    'goto', 'click', 'text', 'screenshot',
-    'html', 'links', 'forms', 'accessibility',
-    'attrs', 'media', 'data',
-    'scroll', 'press', 'type', 'select', 'wait', 'eval',
+    "goto",
+    "click",
+    "text",
+    "screenshot",
+    "html",
+    "links",
+    "forms",
+    "accessibility",
+    "attrs",
+    "media",
+    "data",
+    "scroll",
+    "press",
+    "type",
+    "select",
+    "wait",
+    "eval",
     // Tab + navigation primitives operator docs and CLI hints already promised
-    'newtab', 'tabs', 'back', 'forward', 'reload',
+    "newtab",
+    "tabs",
+    "back",
+    "forward",
+    "reload",
     // Read/inspect/write operators paired agents need to be useful
-    'snapshot', 'fill', 'url', 'closetab',
+    "snapshot",
+    "fill",
+    "url",
+    "closetab",
   ]);
 
-  test('TUNNEL_COMMANDS literal matches the closed allowlist exactly (catches additions/removals without test update)', () => {
-    const cmds = extractSetContents(SERVER_SRC, 'TUNNEL_COMMANDS');
+  test("TUNNEL_COMMANDS literal matches the closed allowlist exactly (catches additions/removals without test update)", () => {
+    const cmds = extractSetContents(SERVER_SRC, "TUNNEL_COMMANDS");
     // Both directions: anything in the source must be expected, and anything
     // expected must be in the source. The intersection-only style of the old
     // must-include / must-exclude tests let new commands sneak into the source
@@ -103,20 +137,33 @@ describe('Tunnel command allowlist', () => {
     expect(cmds.size).toBe(EXPECTED_TUNNEL_COMMANDS.size);
   });
 
-  test('TUNNEL_COMMANDS does NOT include daemon-configuration or bootstrap commands', () => {
-    const cmds = extractSetContents(SERVER_SRC, 'TUNNEL_COMMANDS');
+  test("TUNNEL_COMMANDS does NOT include daemon-configuration or bootstrap commands", () => {
+    const cmds = extractSetContents(SERVER_SRC, "TUNNEL_COMMANDS");
     const forbidden = [
-      'launch', 'launch-browser', 'connect', 'disconnect',
-      'restart', 'stop', 'tunnel-start', 'tunnel-stop',
-      'token-mint', 'token-revoke', 'cookie-picker', 'cookie-import',
-      'inspector-pick', 'pair', 'unpair', 'cookies', 'setup',
+      "launch",
+      "launch-browser",
+      "connect",
+      "disconnect",
+      "restart",
+      "stop",
+      "tunnel-start",
+      "tunnel-stop",
+      "token-mint",
+      "token-revoke",
+      "cookie-picker",
+      "cookie-import",
+      "inspector-pick",
+      "pair",
+      "unpair",
+      "cookies",
+      "setup",
     ];
     for (const c of forbidden) {
       expect(cmds.has(c)).toBe(false);
     }
   });
 
-  test('newtab ownership exemption preserved (catches refactors that re-introduce the catch-22)', () => {
+  test("newtab ownership exemption preserved (catches refactors that re-introduce the catch-22)", () => {
     // The /command handler must skip the per-tab ownership check when the
     // command is `newtab`, otherwise paired agents have no way to create their
     // own tab — every other write command requires an owned tab, and you can't
@@ -126,17 +173,17 @@ describe('Tunnel command allowlist', () => {
   });
 });
 
-describe('Request handler factory', () => {
-  test('makeFetchHandler takes a Surface parameter and closes over it', () => {
-    expect(SERVER_SRC).toContain('makeFetchHandler = (surface: Surface)');
+describe("Request handler factory", () => {
+  test("makeFetchHandler takes a Surface parameter and closes over it", () => {
+    expect(SERVER_SRC).toContain("makeFetchHandler = (surface: Surface)");
   });
 
-  test('Bun.serve local listener uses handle.fetchLocal from buildFetchHandler', () => {
+  test("Bun.serve local listener uses handle.fetchLocal from buildFetchHandler", () => {
     // v1.35.0.0: factory returns handle.fetchLocal; start() binds Bun.serve with it.
     expect(SERVER_SRC).toContain("fetch: handle.fetchLocal");
   });
 
-  test('Tunnel listener bind uses handle.fetchTunnel from buildFetchHandler', () => {
+  test("Tunnel listener bind uses handle.fetchTunnel from buildFetchHandler", () => {
     // v1.35.0.0: factory returns handle.fetchTunnel; tunnel start sites use it
     // (BROWSE_TUNNEL=1 startup + BROWSE_TUNNEL_LOCAL_ONLY=1 test path).
     // The /tunnel/start handler INSIDE the factory still uses makeFetchHandler('tunnel')
@@ -146,185 +193,195 @@ describe('Request handler factory', () => {
     expect(tunnelOccurrences!.length).toBeGreaterThanOrEqual(2);
     // The factory's internal makeFetchHandler('tunnel') still appears at least
     // once for the /tunnel/start route's self-reference + the factory's return.
-    const internalOccurrences = SERVER_SRC.match(/makeFetchHandler\('tunnel'\)/g);
+    const internalOccurrences = SERVER_SRC.match(
+      /makeFetchHandler\('tunnel'\)/g,
+    );
     expect(internalOccurrences).not.toBeNull();
   });
 });
 
-describe('Tunnel surface filter', () => {
-  test('tunnel surface filter runs before route dispatch', () => {
+describe("Tunnel surface filter", () => {
+  test("tunnel surface filter runs before route dispatch", () => {
     // The filter must appear inside makeFetchHandler BEFORE the first route
     // handler (/cookie-picker is the earliest route).
     const fetchBody = sliceBetween(
       SERVER_SRC,
-      'makeFetchHandler = (surface: Surface)',
-      "url.pathname.startsWith('/cookie-picker')"
+      "makeFetchHandler = (surface: Surface)",
+      "url.pathname.startsWith('/cookie-picker')",
     );
     expect(fetchBody).toContain("surface === 'tunnel'");
-    expect(fetchBody).toContain('path_not_on_tunnel');
-    expect(fetchBody).toContain('root_token_on_tunnel');
-    expect(fetchBody).toContain('missing_scoped_token');
+    expect(fetchBody).toContain("path_not_on_tunnel");
+    expect(fetchBody).toContain("root_token_on_tunnel");
+    expect(fetchBody).toContain("missing_scoped_token");
   });
 
-  test('tunnel surface 404s paths not on allowlist', () => {
+  test("tunnel surface 404s paths not on allowlist", () => {
     const filterBlock = sliceBetween(
       SERVER_SRC,
       "surface === 'tunnel'",
-      "if (url.pathname === '/connect' && req.method === 'GET')"
+      "if (url.pathname === '/connect' && req.method === 'GET')",
     );
-    expect(filterBlock).toContain('TUNNEL_PATHS.has');
-    expect(filterBlock).toContain('status: 404');
+    expect(filterBlock).toContain("TUNNEL_PATHS.has");
+    expect(filterBlock).toContain("status: 404");
   });
 
-  test('tunnel surface 403s root token bearers with clear hint', () => {
+  test("tunnel surface 403s root token bearers with clear hint", () => {
     const filterBlock = sliceBetween(
       SERVER_SRC,
       "surface === 'tunnel'",
-      "if (url.pathname === '/connect' && req.method === 'GET')"
+      "if (url.pathname === '/connect' && req.method === 'GET')",
     );
-    expect(filterBlock).toContain('isRootRequest(req)');
-    expect(filterBlock).toContain('Root token rejected on tunnel surface');
-    expect(filterBlock).toContain('pair via /connect');
-    expect(filterBlock).toContain('status: 403');
+    expect(filterBlock).toContain("isRootRequest(req)");
+    expect(filterBlock).toContain("Root token rejected on tunnel surface");
+    expect(filterBlock).toContain("pair via /connect");
+    expect(filterBlock).toContain("status: 403");
   });
 
-  test('tunnel surface 401s when non-/connect request lacks scoped token', () => {
+  test("tunnel surface 401s when non-/connect request lacks scoped token", () => {
     const filterBlock = sliceBetween(
       SERVER_SRC,
       "surface === 'tunnel'",
-      "if (url.pathname === '/connect' && req.method === 'GET')"
+      "if (url.pathname === '/connect' && req.method === 'GET')",
     );
     expect(filterBlock).toContain("url.pathname !== '/connect'");
-    expect(filterBlock).toContain('getTokenInfo(req)');
-    expect(filterBlock).toContain('status: 401');
+    expect(filterBlock).toContain("getTokenInfo(req)");
+    expect(filterBlock).toContain("status: 401");
   });
 });
 
-describe('GET /connect alive probe', () => {
-  test('GET /connect returns {alive: true} unauth on both surfaces', () => {
+describe("GET /connect alive probe", () => {
+  test("GET /connect returns {alive: true} unauth on both surfaces", () => {
     const getConnect = sliceBetween(
       SERVER_SRC,
       "if (url.pathname === '/connect' && req.method === 'GET')",
-      "// Cookie picker routes"
+      "// Cookie picker routes",
     );
-    expect(getConnect).toContain('alive: true');
-    expect(getConnect).toContain('status: 200');
+    expect(getConnect).toContain("alive: true");
+    expect(getConnect).toContain("status: 200");
   });
 });
 
-describe('/command tunnel command allowlist', () => {
-  test('/command handler delegates to canDispatchOverTunnel when surface is tunnel', () => {
+describe("/command tunnel command allowlist", () => {
+  test("/command handler delegates to canDispatchOverTunnel when surface is tunnel", () => {
     const commandBlock = sliceBetween(
       SERVER_SRC,
       "url.pathname === '/command' && req.method === 'POST'",
-      'return handleCommand(body, tokenInfo)'
+      "return handleCommand(body, tokenInfo)",
     );
     expect(commandBlock).toContain("surface === 'tunnel'");
-    expect(commandBlock).toContain('canDispatchOverTunnel(body?.command)');
-    expect(commandBlock).toContain('disallowed_command');
-    expect(commandBlock).toContain('is not allowed over the tunnel surface');
-    expect(commandBlock).toContain('status: 403');
+    expect(commandBlock).toContain("canDispatchOverTunnel(body?.command)");
+    expect(commandBlock).toContain("disallowed_command");
+    expect(commandBlock).toContain("is not allowed over the tunnel surface");
+    expect(commandBlock).toContain("status: 403");
   });
 });
 
-describe('Tunnel listener lifecycle', () => {
-  test('closeTunnel() helper tears down both ngrok and the tunnel Bun.serve listener', () => {
+describe("Tunnel listener lifecycle", () => {
+  test("closeTunnel() helper tears down both ngrok and the tunnel Bun.serve listener", () => {
     const helperBlock = sliceBetween(
       SERVER_SRC,
-      'async function closeTunnel()',
-      'tunnelActive = false;'
+      "async function closeTunnel()",
+      "tunnelActive = false;",
     );
-    expect(helperBlock).toContain('tunnelListener.close()');
-    expect(helperBlock).toContain('tunnelServer.stop');
+    expect(helperBlock).toContain("tunnelListener.close()");
+    expect(helperBlock).toContain("tunnelServer.stop");
   });
 
-  test('/tunnel/start binds the tunnel listener on an ephemeral port', () => {
+  test("/tunnel/start binds the tunnel listener on an ephemeral port", () => {
     const startBlock = sliceBetween(
       SERVER_SRC,
       "url.pathname === '/tunnel/start' && req.method === 'POST'",
-      "url.pathname === '/refs'"
+      "url.pathname === '/refs'",
     );
-    expect(startBlock).toContain('Bun.serve');
-    expect(startBlock).toContain('port: 0');
+    expect(startBlock).toContain("Bun.serve");
+    expect(startBlock).toContain("port: 0");
     expect(startBlock).toContain("makeFetchHandler('tunnel')");
     expect(startBlock).toContain("addr: tunnelPort");
   });
 
-  test('/tunnel/start hard-fails on tunnel listener bind error (no local fallback)', () => {
+  test("/tunnel/start hard-fails on tunnel listener bind error (no local fallback)", () => {
     const startBlock = sliceBetween(
       SERVER_SRC,
       "url.pathname === '/tunnel/start' && req.method === 'POST'",
-      "url.pathname === '/refs'"
+      "url.pathname === '/refs'",
     );
     // Must return 500 on bind failure, not silently continue
-    expect(startBlock).toContain('Failed to bind tunnel listener');
-    expect(startBlock).toContain('status: 500');
+    expect(startBlock).toContain("Failed to bind tunnel listener");
+    expect(startBlock).toContain("status: 500");
   });
 
-  test('/tunnel/start probes the cached tunnel via GET /connect, not /health', () => {
+  test("/tunnel/start probes the cached tunnel via GET /connect, not /health", () => {
     const startBlock = sliceBetween(
       SERVER_SRC,
       "url.pathname === '/tunnel/start' && req.method === 'POST'",
-      "url.pathname === '/refs'"
+      "url.pathname === '/refs'",
     );
-    expect(startBlock).toContain('${tunnelUrl}/connect');
+    expect(startBlock).toContain("${tunnelUrl}/connect");
     expect(startBlock).toContain("method: 'GET'");
     // The old /health probe must NOT reappear
-    expect(startBlock).not.toContain('${tunnelUrl}/health');
+    expect(startBlock).not.toContain("${tunnelUrl}/health");
   });
 
-  test('/tunnel/start tears down tunnel listener when ngrok.forward fails', () => {
+  test("/tunnel/start tears down tunnel listener when ngrok.forward fails", () => {
     const startBlock = sliceBetween(
       SERVER_SRC,
       "url.pathname === '/tunnel/start' && req.method === 'POST'",
-      "url.pathname === '/refs'"
+      "url.pathname === '/refs'",
     );
     // boundTunnel.stop(true) must be called on ngrok error
-    expect(startBlock).toContain('boundTunnel.stop(true)');
-    expect(startBlock).toContain('Failed to open ngrok tunnel');
+    expect(startBlock).toContain("boundTunnel.stop(true)");
+    expect(startBlock).toContain("Failed to open ngrok tunnel");
   });
 
-  test('BROWSE_TUNNEL=1 startup uses dual-listener pattern', () => {
+  test("BROWSE_TUNNEL=1 startup uses dual-listener pattern", () => {
     const startupBlock = sliceBetween(
       SERVER_SRC,
       "process.env.BROWSE_TUNNEL === '1'",
-      'start().catch'
+      "start().catch",
     );
-    expect(startupBlock).toContain('Bun.serve');
-    expect(startupBlock).toContain('port: 0');
+    expect(startupBlock).toContain("Bun.serve");
+    expect(startupBlock).toContain("port: 0");
     // v1.35.0.0: start() refactored to use handle.fetchTunnel from the factory.
-    expect(startupBlock).toContain('handle.fetchTunnel');
-    expect(startupBlock).toContain('addr: tunnelPort');
+    expect(startupBlock).toContain("handle.fetchTunnel");
+    expect(startupBlock).toContain("addr: tunnelPort");
     // Must NOT forward ngrok at the local port
-    expect(startupBlock).not.toContain('addr: port,');
+    expect(startupBlock).not.toContain("addr: port,");
   });
 });
 
-describe('Rate limit + denial log wiring', () => {
-  test('logTunnelDenial is imported and invoked on every denial path', () => {
-    expect(SERVER_SRC).toContain("import { logTunnelDenial } from './tunnel-denial-log'");
+describe("Rate limit + denial log wiring", () => {
+  test("logTunnelDenial is imported and invoked on every denial path", () => {
+    expect(SERVER_SRC).toContain(
+      "import { logTunnelDenial } from './tunnel-denial-log'",
+    );
     // Must be called on each of the three denial reasons
-    expect(SERVER_SRC).toContain("logTunnelDenial(req, url, 'path_not_on_tunnel')");
-    expect(SERVER_SRC).toContain("logTunnelDenial(req, url, 'root_token_on_tunnel')");
-    expect(SERVER_SRC).toContain("logTunnelDenial(req, url, 'missing_scoped_token')");
+    expect(SERVER_SRC).toContain(
+      "logTunnelDenial(req, url, 'path_not_on_tunnel')",
+    );
+    expect(SERVER_SRC).toContain(
+      "logTunnelDenial(req, url, 'root_token_on_tunnel')",
+    );
+    expect(SERVER_SRC).toContain(
+      "logTunnelDenial(req, url, 'missing_scoped_token')",
+    );
   });
 
-  test('/connect rate limit was loosened from 3/min to 300/min', () => {
+  test("/connect rate limit was loosened from 3/min to 300/min", () => {
     const registrySrc = fs.readFileSync(
-      path.join(import.meta.dir, '../src/token-registry.ts'),
-      'utf-8'
+      path.join(import.meta.dir, "../src/token-registry.ts"),
+      "utf-8",
     );
     expect(registrySrc).toMatch(/CONNECT_RATE_LIMIT\s*=\s*300/);
     expect(registrySrc).not.toMatch(/CONNECT_RATE_LIMIT\s*=\s*3\s*;/);
   });
 });
 
-describe('E3: /welcome GSTACK_SLUG path traversal gate', () => {
-  test('/welcome validates GSTACK_SLUG against ^[a-z0-9_-]+$ before interpolating into path', () => {
+describe("E3: /welcome GSTACK_SLUG path traversal gate", () => {
+  test("/welcome validates GSTACK_SLUG against ^[a-z0-9_-]+$ before interpolating into path", () => {
     const welcomeBlock = sliceBetween(
       SERVER_SRC,
       "url.pathname === '/welcome'",
-      'if (fs.existsSync(projectWelcome)) return projectWelcome;'
+      "if (fs.existsSync(projectWelcome)) return projectWelcome;",
     );
     // Must validate the slug before using it in a path
     expect(welcomeBlock).toMatch(/\/\^\[a-z0-9_-\]\+\$\/\.test\(rawSlug\)/);
