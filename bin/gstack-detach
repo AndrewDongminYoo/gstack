@@ -27,6 +27,7 @@ on `### gstack-detach EXIT=` (both success and failure are marked).
 
 Secrets are inherited from the environment ONLY — never pass an API key in argv.
 """
+
 import argparse
 import os
 import shutil
@@ -43,7 +44,9 @@ def _now():
 
 def _git(*args):
     try:
-        return subprocess.check_output(["git", *args], stderr=subprocess.DEVNULL, text=True).strip()
+        return subprocess.check_output(
+            ["git", *args], stderr=subprocess.DEVNULL, text=True
+        ).strip()
     except Exception:
         return ""
 
@@ -75,7 +78,10 @@ def acquire_lock(name, log):
     try:
         fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
     except OSError:
-        log_line(log, f"### gstack-detach WAITING for lock '{name}' (another run holds it) ### {_now()}")
+        log_line(
+            log,
+            f"### gstack-detach WAITING for lock '{name}' (another run holds it) ### {_now()}",
+        )
         fcntl.flock(fd, fcntl.LOCK_EX)  # block until released
     fd.write(f"{os.getpid()} {_now()}\n")
     fd.flush()
@@ -88,19 +94,29 @@ def child_run(args, log):
     cmd = args.cmd
     if shutil.which("caffeinate"):  # macOS: block idle-sleep for the run
         cmd = ["caffeinate", "-i", *cmd]
-    log_line(log, f"### gstack-detach START label={args.label} pgid={os.getpgid(0)} ### {_now()}")
+    log_line(
+        log,
+        f"### gstack-detach START label={args.label} pgid={os.getpgid(0)} ### {_now()}",
+    )
     with open(log, "ab", buffering=0) as f:
         # start_new_session: the command runs in its OWN process group so the
         # watchdog can killpg() it without also killing this supervisor (which
         # must survive to write the EXIT sentinel).
         proc = subprocess.Popen(
-            cmd, stdout=f, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL, start_new_session=True
+            cmd,
+            stdout=f,
+            stderr=subprocess.STDOUT,
+            stdin=subprocess.DEVNULL,
+            start_new_session=True,
         )
         if args.timeout and args.timeout > 0:
             try:
                 code = proc.wait(timeout=args.timeout)
             except subprocess.TimeoutExpired:
-                log_line(log, f"### gstack-detach WATCHDOG fired after {args.timeout}s — killing ### {_now()}")
+                log_line(
+                    log,
+                    f"### gstack-detach WATCHDOG fired after {args.timeout}s — killing ### {_now()}",
+                )
                 try:
                     os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
                 except Exception:
@@ -134,7 +150,10 @@ def main():
     if cmd and cmd[0] == "--":
         cmd = cmd[1:]
     if not cmd:
-        print("gstack-detach: no command given (usage: gstack-detach [opts] -- CMD...)", file=sys.stderr)
+        print(
+            "gstack-detach: no command given (usage: gstack-detach [opts] -- CMD...)",
+            file=sys.stderr,
+        )
         sys.exit(2)
     args.cmd = cmd
 

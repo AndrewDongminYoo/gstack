@@ -39,7 +39,12 @@ import { join, dirname, basename, resolve } from "path";
 import { execFileSync, spawnSync } from "child_process";
 import { homedir } from "os";
 
-import { parseSkillManifest, type GbrainManifest, type GbrainManifestQuery, withErrorContext } from "../lib/gstack-memory-helpers";
+import {
+  parseSkillManifest,
+  type GbrainManifest,
+  type GbrainManifestQuery,
+  withErrorContext,
+} from "../lib/gstack-memory-helpers";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -107,12 +112,24 @@ function parseArgs(): CliArgs {
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
     switch (a) {
-      case "--skill": skill = args[++i]; break;
-      case "--skill-file": skillFile = args[++i]; break;
-      case "--repo": repo = args[++i]; break;
-      case "--user": user = args[++i]; break;
-      case "--branch": branch = args[++i]; break;
-      case "--window": window = args[++i] || "14d"; break;
+      case "--skill":
+        skill = args[++i];
+        break;
+      case "--skill-file":
+        skillFile = args[++i];
+        break;
+      case "--repo":
+        repo = args[++i];
+        break;
+      case "--user":
+        user = args[++i];
+        break;
+      case "--branch":
+        branch = args[++i];
+        break;
+      case "--window":
+        window = args[++i] || "14d";
+        break;
       case "--limit":
         limit = parseInt(args[++i] || "10", 10);
         if (!Number.isFinite(limit) || limit <= 0) {
@@ -120,8 +137,12 @@ function parseArgs(): CliArgs {
           process.exit(1);
         }
         break;
-      case "--explain": explain = true; break;
-      case "--quiet": quiet = true; break;
+      case "--explain":
+        explain = true;
+        break;
+      case "--quiet":
+        quiet = true;
+        break;
       case "--help":
       case "-h":
         printUsage();
@@ -133,12 +154,25 @@ function parseArgs(): CliArgs {
     }
   }
 
-  return { skill, skillFile, repo, user, branch, window, limit, explain, quiet };
+  return {
+    skill,
+    skillFile,
+    repo,
+    user,
+    branch,
+    window,
+    limit,
+    explain,
+    quiet,
+  };
 }
 
 // ── Template var substitution ──────────────────────────────────────────────
 
-function substituteTemplateVars(s: string, args: CliArgs): { resolved: string; unresolved: string[] } {
+function substituteTemplateVars(
+  s: string,
+  args: CliArgs,
+): { resolved: string; unresolved: string[] } {
   const unresolved: string[] = [];
   const resolved = s.replace(/\{(\w+)\}/g, (full, name) => {
     switch (name) {
@@ -204,7 +238,10 @@ function gbrainAvailable(): boolean {
 
 function dispatchVector(q: GbrainManifestQuery, args: CliArgs): QueryResult {
   const t0 = Date.now();
-  const { resolved: query, unresolved } = substituteTemplateVars(q.query || "", args);
+  const { resolved: query, unresolved } = substituteTemplateVars(
+    q.query || "",
+    args,
+  );
   if (unresolved.length > 0) {
     return {
       query: q,
@@ -216,14 +253,25 @@ function dispatchVector(q: GbrainManifestQuery, args: CliArgs): QueryResult {
     };
   }
   if (!gbrainAvailable()) {
-    return { query: q, ok: false, rendered: "", bytes: 0, duration_ms: Date.now() - t0, reason: "gbrain CLI missing" };
+    return {
+      query: q,
+      ok: false,
+      rendered: "",
+      bytes: 0,
+      duration_ms: Date.now() - t0,
+      reason: "gbrain CLI missing",
+    };
   }
 
   const limit = q.limit ?? args.limit;
-  const result = spawnSync("gbrain", ["query", query, "--limit", String(limit), "--format", "compact"], {
-    encoding: "utf-8",
-    timeout: MCP_TIMEOUT_MS,
-  });
+  const result = spawnSync(
+    "gbrain",
+    ["query", query, "--limit", String(limit), "--format", "compact"],
+    {
+      encoding: "utf-8",
+      timeout: MCP_TIMEOUT_MS,
+    },
+  );
 
   if (result.status !== 0 || !result.stdout) {
     return {
@@ -237,13 +285,26 @@ function dispatchVector(q: GbrainManifestQuery, args: CliArgs): QueryResult {
   }
 
   const rendered = wrapDatamarked(q.render_as, capBody(result.stdout));
-  return { query: q, ok: true, rendered, bytes: rendered.length, duration_ms: Date.now() - t0 };
+  return {
+    query: q,
+    ok: true,
+    rendered,
+    bytes: rendered.length,
+    duration_ms: Date.now() - t0,
+  };
 }
 
 function dispatchList(q: GbrainManifestQuery, args: CliArgs): QueryResult {
   const t0 = Date.now();
   if (!gbrainAvailable()) {
-    return { query: q, ok: false, rendered: "", bytes: 0, duration_ms: Date.now() - t0, reason: "gbrain CLI missing" };
+    return {
+      query: q,
+      ok: false,
+      rendered: "",
+      bytes: 0,
+      duration_ms: Date.now() - t0,
+      reason: "gbrain CLI missing",
+    };
   }
   const limit = q.limit ?? args.limit;
   const cliArgs: string[] = ["list_pages", "--limit", String(limit)];
@@ -254,7 +315,10 @@ function dispatchList(q: GbrainManifestQuery, args: CliArgs): QueryResult {
       cliArgs.push("--filter", `${k}=${rv}`);
     }
   }
-  const result = spawnSync("gbrain", cliArgs, { encoding: "utf-8", timeout: MCP_TIMEOUT_MS });
+  const result = spawnSync("gbrain", cliArgs, {
+    encoding: "utf-8",
+    timeout: MCP_TIMEOUT_MS,
+  });
   if (result.status !== 0 || !result.stdout) {
     return {
       query: q,
@@ -262,17 +326,34 @@ function dispatchList(q: GbrainManifestQuery, args: CliArgs): QueryResult {
       rendered: "",
       bytes: 0,
       duration_ms: Date.now() - t0,
-      reason: result.error?.message || `gbrain list_pages exited ${result.status}`,
+      reason:
+        result.error?.message || `gbrain list_pages exited ${result.status}`,
     };
   }
   const rendered = wrapDatamarked(q.render_as, capBody(result.stdout));
-  return { query: q, ok: true, rendered, bytes: rendered.length, duration_ms: Date.now() - t0 };
+  return {
+    query: q,
+    ok: true,
+    rendered,
+    bytes: rendered.length,
+    duration_ms: Date.now() - t0,
+  };
 }
 
-function dispatchFilesystem(q: GbrainManifestQuery, args: CliArgs): QueryResult {
+function dispatchFilesystem(
+  q: GbrainManifestQuery,
+  args: CliArgs,
+): QueryResult {
   const t0 = Date.now();
   if (!q.glob) {
-    return { query: q, ok: false, rendered: "", bytes: 0, duration_ms: Date.now() - t0, reason: "filesystem kind missing glob" };
+    return {
+      query: q,
+      ok: false,
+      rendered: "",
+      bytes: 0,
+      duration_ms: Date.now() - t0,
+      reason: "filesystem kind missing glob",
+    };
   }
   const { resolved: glob, unresolved } = substituteTemplateVars(q.glob, args);
   if (unresolved.length > 0) {
@@ -291,7 +372,14 @@ function dispatchFilesystem(q: GbrainManifestQuery, args: CliArgs): QueryResult 
   // Simple glob: match against filesystem
   const matches = simpleGlob(expanded);
   if (matches.length === 0) {
-    return { query: q, ok: false, rendered: "", bytes: 0, duration_ms: Date.now() - t0, reason: "no matches" };
+    return {
+      query: q,
+      ok: false,
+      rendered: "",
+      bytes: 0,
+      duration_ms: Date.now() - t0,
+      reason: "no matches",
+    };
   }
 
   // Sort + limit
@@ -303,14 +391,21 @@ function dispatchFilesystem(q: GbrainManifestQuery, args: CliArgs): QueryResult 
       .map((x) => x.p);
   }
   const limit = q.limit ?? args.limit;
-  const limited = q.tail !== undefined ? sorted.slice(-q.tail) : sorted.slice(0, limit);
+  const limited =
+    q.tail !== undefined ? sorted.slice(-q.tail) : sorted.slice(0, limit);
 
   const lines = limited.map((p) => {
     const mt = new Date(tryStatMtime(p)).toISOString().slice(0, 10);
     return `- ${mt} — ${basename(p)}`;
   });
   const rendered = wrapDatamarked(q.render_as, capBody(lines.join("\n")));
-  return { query: q, ok: true, rendered, bytes: rendered.length, duration_ms: Date.now() - t0 };
+  return {
+    query: q,
+    ok: true,
+    rendered,
+    bytes: rendered.length,
+    duration_ms: Date.now() - t0,
+  };
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -333,7 +428,14 @@ function simpleGlob(pattern: string): string[] {
   } catch {
     return [];
   }
-  const re = new RegExp("^" + fileGlob.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*").replace(/\?/g, ".") + "$");
+  const re = new RegExp(
+    "^" +
+      fileGlob
+        .replace(/[.+^${}()|[\]\\]/g, "\\$&")
+        .replace(/\*/g, ".*")
+        .replace(/\?/g, ".") +
+      "$",
+  );
   return entries.filter((e) => re.test(e)).map((e) => join(dir, e));
 }
 
@@ -347,7 +449,10 @@ function tryStatMtime(p: string): number {
 
 function capBody(s: string): string {
   if (s.length <= PAGE_SIZE_CAP) return s;
-  return s.slice(0, PAGE_SIZE_CAP) + `\n\n_(truncated; ${s.length - PAGE_SIZE_CAP} more bytes — query gbrain directly for full results)_\n`;
+  return (
+    s.slice(0, PAGE_SIZE_CAP) +
+    `\n\n_(truncated; ${s.length - PAGE_SIZE_CAP} more bytes — query gbrain directly for full results)_\n`
+  );
 }
 
 function wrapDatamarked(renderAs: string, body: string): string {
@@ -375,7 +480,7 @@ function defaultManifest(args: CliArgs): GbrainManifest {
       {
         id: "recent-transcripts",
         kind: "list",
-        filter: { type: "transcript", "tags_contains": "repo:{repo_slug}" },
+        filter: { type: "transcript", tags_contains: "repo:{repo_slug}" },
         sort: "updated_at_desc",
         limit: 5,
         render_as: "## Recent transcripts in this repo",
@@ -383,7 +488,7 @@ function defaultManifest(args: CliArgs): GbrainManifest {
       {
         id: "recent-curated",
         kind: "list",
-        filter: { "tags_contains": "repo:{repo_slug}", updated_after: "now-7d" },
+        filter: { tags_contains: "repo:{repo_slug}", updated_after: "now-7d" },
         sort: "updated_at_desc",
         limit: 10,
         render_as: "## Recent curated memory",
@@ -401,7 +506,11 @@ function defaultManifest(args: CliArgs): GbrainManifest {
 
 // ── Main pipeline ──────────────────────────────────────────────────────────
 
-async function loadContext(args: CliArgs): Promise<{ rendered: string; results: QueryResult[]; mode: "manifest" | "default" }> {
+async function loadContext(args: CliArgs): Promise<{
+  rendered: string;
+  results: QueryResult[];
+  mode: "manifest" | "default";
+}> {
   const skillFile = resolveSkillFile(args);
   let manifest: GbrainManifest | null = null;
   let mode: "manifest" | "default" = "default";
@@ -418,13 +527,20 @@ async function loadContext(args: CliArgs): Promise<{ rendered: string; results: 
 
   const results: QueryResult[] = [];
   for (const q of manifest.context_queries) {
-    const r = await withErrorContext(`context-load:${q.id}`, () => {
-      switch (q.kind) {
-        case "vector": return dispatchVector(q, args);
-        case "list": return dispatchList(q, args);
-        case "filesystem": return dispatchFilesystem(q, args);
-      }
-    }, "gstack-brain-context-load");
+    const r = await withErrorContext(
+      `context-load:${q.id}`,
+      () => {
+        switch (q.kind) {
+          case "vector":
+            return dispatchVector(q, args);
+          case "list":
+            return dispatchList(q, args);
+          case "filesystem":
+            return dispatchFilesystem(q, args);
+        }
+      },
+      "gstack-brain-context-load",
+    );
     results.push(r);
   }
 
@@ -451,18 +567,26 @@ async function main(): Promise<void> {
   }
 
   if (args.explain) {
-    console.error(`[brain-context-load] mode=${mode} queries=${results.length}`);
+    console.error(
+      `[brain-context-load] mode=${mode} queries=${results.length}`,
+    );
     for (const r of results) {
       const status = r.ok ? "OK" : "SKIP";
-      console.error(`  ${status.padEnd(5)} ${r.query.id.padEnd(28)} kind=${r.query.kind.padEnd(10)} bytes=${r.bytes.toString().padStart(6)} dur=${r.duration_ms}ms${r.reason ? ` (${r.reason})` : ""}`);
+      console.error(
+        `  ${status.padEnd(5)} ${r.query.id.padEnd(28)} kind=${r.query.kind.padEnd(10)} bytes=${r.bytes.toString().padStart(6)} dur=${r.duration_ms}ms${r.reason ? ` (${r.reason})` : ""}`,
+      );
     }
     const totalBytes = results.reduce((s, r) => s + r.bytes, 0);
     const totalDur = results.reduce((s, r) => s + r.duration_ms, 0);
-    console.error(`[brain-context-load] total bytes=${totalBytes} dur=${totalDur}ms`);
+    console.error(
+      `[brain-context-load] total bytes=${totalBytes} dur=${totalDur}ms`,
+    );
   }
 }
 
 main().catch((err) => {
-  console.error(`gstack-brain-context-load fatal: ${err instanceof Error ? err.message : String(err)}`);
+  console.error(
+    `gstack-brain-context-load fatal: ${err instanceof Error ? err.message : String(err)}`,
+  );
   process.exit(1);
 });

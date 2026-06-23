@@ -54,7 +54,12 @@ import {
   rmSync,
 } from "fs";
 import { join, basename, dirname } from "path";
-import { execFileSync, spawnSync, spawn, type ChildProcess } from "child_process";
+import {
+  execFileSync,
+  spawnSync,
+  spawn,
+  type ChildProcess,
+} from "child_process";
 import { homedir } from "os";
 import { createHash } from "crypto";
 
@@ -219,15 +224,33 @@ function parseArgs(): CliArgs {
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
     switch (a) {
-      case "--probe": mode = "probe"; break;
-      case "--incremental": mode = "incremental"; break;
-      case "--bulk": mode = "bulk"; break;
-      case "--quiet": quiet = true; break;
-      case "--benchmark": benchmark = true; break;
-      case "--include-unattributed": includeUnattributed = true; break;
-      case "--all-history": allHistory = true; break;
-      case "--no-write": noWrite = true; break;
-      case "--scan-secrets": scanSecrets = true; break;
+      case "--probe":
+        mode = "probe";
+        break;
+      case "--incremental":
+        mode = "incremental";
+        break;
+      case "--bulk":
+        mode = "bulk";
+        break;
+      case "--quiet":
+        quiet = true;
+        break;
+      case "--benchmark":
+        benchmark = true;
+        break;
+      case "--include-unattributed":
+        includeUnattributed = true;
+        break;
+      case "--all-history":
+        allHistory = true;
+        break;
+      case "--no-write":
+        noWrite = true;
+        break;
+      case "--scan-secrets":
+        scanSecrets = true;
+        break;
       case "--limit":
         limit = parseInt(args[++i] || "0", 10);
         if (!Number.isFinite(limit) || limit <= 0) {
@@ -236,10 +259,14 @@ function parseArgs(): CliArgs {
         }
         break;
       case "--sources": {
-        const list = (args[++i] || "").split(",").map((s) => s.trim() as MemoryType);
+        const list = (args[++i] || "")
+          .split(",")
+          .map((s) => s.trim() as MemoryType);
         sources = new Set(list.filter((t) => ALL_TYPES.includes(t)));
         if (sources.size === 0) {
-          console.error(`--sources must include at least one of: ${ALL_TYPES.join(",")}`);
+          console.error(
+            `--sources must include at least one of: ${ALL_TYPES.join(",")}`,
+          );
           process.exit(1);
         }
         break;
@@ -255,7 +282,17 @@ function parseArgs(): CliArgs {
     }
   }
 
-  return { mode, quiet, benchmark, includeUnattributed, allHistory, sources, limit, noWrite, scanSecrets };
+  return {
+    mode,
+    quiet,
+    benchmark,
+    includeUnattributed,
+    allHistory,
+    sources,
+    limit,
+    noWrite,
+    scanSecrets,
+  };
 }
 
 // ── State file ─────────────────────────────────────────────────────────────
@@ -272,24 +309,36 @@ function loadState(): IngestState {
     const raw = readFileSync(STATE_PATH, "utf-8");
     const parsed = JSON.parse(raw) as IngestState;
     if (parsed.schema_version !== 1) {
-      console.error(`State file at ${STATE_PATH} has unknown schema_version ${parsed.schema_version}; backing up + resetting.`);
+      console.error(
+        `State file at ${STATE_PATH} has unknown schema_version ${parsed.schema_version}; backing up + resetting.`,
+      );
       try {
         writeFileSync(STATE_PATH + ".bak", raw, "utf-8");
       } catch {
         // backup failure is non-fatal
       }
-      return { schema_version: 1, last_writer: "gstack-memory-ingest", sessions: {} };
+      return {
+        schema_version: 1,
+        last_writer: "gstack-memory-ingest",
+        sessions: {},
+      };
     }
     return parsed;
   } catch (err) {
-    console.error(`State file at ${STATE_PATH} corrupt; backing up + resetting.`);
+    console.error(
+      `State file at ${STATE_PATH} corrupt; backing up + resetting.`,
+    );
     try {
       const raw = readFileSync(STATE_PATH, "utf-8");
       writeFileSync(STATE_PATH + ".bak", raw, "utf-8");
     } catch {
       // best-effort
     }
-    return { schema_version: 1, last_writer: "gstack-memory-ingest", sessions: {} };
+    return {
+      schema_version: 1,
+      last_writer: "gstack-memory-ingest",
+      sessions: {},
+    };
   }
 }
 
@@ -359,7 +408,9 @@ function makeWalkContext(args: CliArgs, state: IngestState): WalkContext {
   };
 }
 
-function* walkClaudeCodeProjects(ctx: WalkContext): Generator<{ path: string; type: MemoryType }> {
+function* walkClaudeCodeProjects(
+  ctx: WalkContext,
+): Generator<{ path: string; type: MemoryType }> {
   const root = join(HOME, ".claude", "projects");
   if (!existsSync(root)) return;
   let projectDirs: string[];
@@ -390,7 +441,9 @@ function* walkClaudeCodeProjects(ctx: WalkContext): Generator<{ path: string; ty
   }
 }
 
-function* walkCodexSessions(ctx: WalkContext): Generator<{ path: string; type: MemoryType }> {
+function* walkCodexSessions(
+  ctx: WalkContext,
+): Generator<{ path: string; type: MemoryType }> {
   const root = join(HOME, ".codex", "sessions");
   if (!existsSync(root)) return;
   // Date-bucketed: YYYY/MM/DD/rollout-*.jsonl. Walk up to 4 levels deep.
@@ -422,7 +475,9 @@ function* walkCodexSessions(ctx: WalkContext): Generator<{ path: string; type: M
   }
 }
 
-function* walkGstackArtifacts(ctx: WalkContext): Generator<{ path: string; type: MemoryType }> {
+function* walkGstackArtifacts(
+  ctx: WalkContext,
+): Generator<{ path: string; type: MemoryType }> {
   const projectsRoot = join(GSTACK_HOME, "projects");
 
   // Eureka log: ~/.gstack/analytics/eureka.jsonl
@@ -433,7 +488,10 @@ function* walkGstackArtifacts(ctx: WalkContext): Generator<{ path: string; type:
 
   // Builder profile: ~/.gstack/builder-profile.jsonl
   const builderProfile = join(GSTACK_HOME, "builder-profile.jsonl");
-  if (existsSync(builderProfile) && ctx.args.sources.has("builder-profile-entry")) {
+  if (
+    existsSync(builderProfile) &&
+    ctx.args.sources.has("builder-profile-entry")
+  ) {
     yield { path: builderProfile, type: "builder-profile-entry" };
   }
 
@@ -519,7 +577,9 @@ function* walkGstackArtifacts(ctx: WalkContext): Generator<{ path: string; type:
   }
 }
 
-function* walkAllSources(ctx: WalkContext): Generator<{ path: string; type: MemoryType }> {
+function* walkAllSources(
+  ctx: WalkContext,
+): Generator<{ path: string; type: MemoryType }> {
   if (ctx.args.sources.has("transcript")) {
     yield* walkClaudeCodeProjects(ctx);
     yield* walkCodexSessions(ctx);
@@ -605,7 +665,10 @@ function parseTranscriptJsonl(path: string): ParsedSession | null {
         bodyParts.push(`## User\n\n${content}`);
         messageCount++;
       }
-    } else if (rec?.type === "assistant" || rec?.message?.role === "assistant") {
+    } else if (
+      rec?.type === "assistant" ||
+      rec?.message?.role === "assistant"
+    ) {
       const content = extractContentText(rec);
       if (content) {
         bodyParts.push(`## Assistant\n\n${content}`);
@@ -622,7 +685,9 @@ function parseTranscriptJsonl(path: string): ParsedSession | null {
       const role = msg.role || "user";
       const content = extractContentText(msg);
       if (content) {
-        bodyParts.push(`## ${role.charAt(0).toUpperCase() + role.slice(1)}\n\n${content}`);
+        bodyParts.push(
+          `## ${role.charAt(0).toUpperCase() + role.slice(1)}\n\n${content}`,
+        );
         messageCount++;
       }
     }
@@ -672,11 +737,15 @@ function resolveGitRemote(cwd: string): string {
     // into a `/bin/sh -c` context, since JSON quoting does not escape `$`
     // or backticks). Mirrors the execFileSync pattern this module already
     // uses for `gbrainAvailable()` (line 762) and `gbrainPutPage()` (line 816).
-    const out = execFileSync("git", ["-C", cwd, "remote", "get-url", "origin"], {
-      encoding: "utf-8",
-      timeout: 2000,
-      stdio: ["ignore", "pipe", "ignore"],
-    });
+    const out = execFileSync(
+      "git",
+      ["-C", cwd, "remote", "get-url", "origin"],
+      {
+        encoding: "utf-8",
+        timeout: 2000,
+        stdio: ["ignore", "pipe", "ignore"],
+      },
+    );
     return canonicalizeRemote(out.trim());
   } catch {
     return "";
@@ -687,7 +756,8 @@ function repoSlug(remote: string): string {
   if (!remote) return "_unattributed";
   // github.com/foo/bar → foo-bar
   const parts = remote.split("/");
-  if (parts.length >= 3) return `${parts[parts.length - 2]}-${parts[parts.length - 1]}`;
+  if (parts.length >= 3)
+    return `${parts[parts.length - 2]}-${parts[parts.length - 1]}`;
   return remote.replace(/\//g, "-");
 }
 
@@ -732,7 +802,9 @@ function buildTranscriptPage(path: string, session: ParsedSession): PageRecord {
     session.partial ? "partial: true" : "",
     "---",
     "",
-  ].filter((l) => l !== "").join("\n");
+  ]
+    .filter((l) => l !== "")
+    .join("\n");
 
   return {
     slug,
@@ -918,7 +990,10 @@ export function stagedRelPath(slug: string): string {
   return `${slug}.md`;
 }
 
-function writeStaged(prepared: PreparedPage[], stagingDir: string): StagingResult {
+function writeStaged(
+  prepared: PreparedPage[],
+  stagingDir: string,
+): StagingResult {
   mkdirSync(stagingDir, { recursive: true });
   const stagedPathToSource = new Map<string, string>();
   const errors: Array<{ slug: string; error: string }> = [];
@@ -958,7 +1033,10 @@ interface ImportJsonResult {
  * which silently masked gbrain crashes as "0 imported, 0 failed = OK".
  */
 function parseImportJson(stdout: string): ImportJsonResult | null {
-  const lines = stdout.split("\n").map((s) => s.trim()).filter(Boolean);
+  const lines = stdout
+    .split("\n")
+    .map((s) => s.trim())
+    .filter(Boolean);
   for (let i = lines.length - 1; i >= 0; i--) {
     const line = lines[i];
     if (line.startsWith("{") && line.endsWith("}")) {
@@ -1073,7 +1151,10 @@ async function probeMode(args: CliArgs): Promise<ProbeReport> {
 
   // Per ED2: ~25-35 min for ~11.7K transcripts = ~150ms/page synchronous
   // (gitleaks + render + put + embedding). Scale linearly.
-  const estimateMinutes = Math.max(1, Math.round((newCount + updatedCount) * 0.15 / 60));
+  const estimateMinutes = Math.max(
+    1,
+    Math.round(((newCount + updatedCount) * 0.15) / 60),
+  );
 
   return {
     total_files: totalFiles,
@@ -1215,9 +1296,17 @@ function makeStagingDir(): string {
   // be refused by the guard forever (leaked, never cleaned). Tear down the
   // partial dir and rethrow so the caller fails loudly instead of leaking.
   try {
-    writeFileSync(join(dir, STAGING_MARKER), `${process.pid}\n${Date.now()}\n`, "utf-8");
+    writeFileSync(
+      join(dir, STAGING_MARKER),
+      `${process.pid}\n${Date.now()}\n`,
+      "utf-8",
+    );
   } catch (err) {
-    try { rmSync(dir, { recursive: true, force: true }); } catch { /* best-effort */ }
+    try {
+      rmSync(dir, { recursive: true, force: true });
+    } catch {
+      /* best-effort */
+    }
     throw err;
   }
   return dir;
@@ -1344,7 +1433,11 @@ function installSignalForwarder(): void {
   if (_signalHandlersInstalled) return;
   _signalHandlersInstalled = true;
   const forward = (signal: NodeJS.Signals) => () => {
-    if (_activeImportChild && _activeImportChild.pid && !_activeImportChild.killed) {
+    if (
+      _activeImportChild &&
+      _activeImportChild.pid &&
+      !_activeImportChild.killed
+    ) {
       try {
         process.kill(_activeImportChild.pid, signal);
       } catch {
@@ -1409,14 +1502,24 @@ export function resolveImportTimeoutMs(
 function runGbrainImport(
   stagingDir: string,
   timeoutMs: number,
-): Promise<{ status: number | null; stdout: string; stderr: string; timedOut: boolean }> {
+): Promise<{
+  status: number | null;
+  stdout: string;
+  stderr: string;
+  timedOut: boolean;
+}> {
   installSignalForwarder();
   return new Promise((resolve) => {
     // Seed DATABASE_URL from gbrain's own config so this stage works
     // inside Next.js / Prisma / Rails projects with their own
     // .env.local (codex review #7 — defense in depth on top of the
     // parent gstack-gbrain-sync seeding the bun grandchild's env).
-    const child = spawnGbrainAsync(["import", stagingDir, "--no-embed", "--json"]);
+    const child = spawnGbrainAsync([
+      "import",
+      stagingDir,
+      "--no-embed",
+      "--json",
+    ]);
     _activeImportChild = child;
     let stdout = "";
     let stderr = "";
@@ -1554,11 +1657,12 @@ async function ingestPass(args: CliArgs): Promise<BulkResult> {
   // trust GSTACK_INGEST_RESUME_DIR just because it exists — a stale/poisoned env
   // could make us `gbrain import` (and later clean up) an arbitrary directory.
   // Prove ownership here too, independently of the orchestrator's decideResume.
-  const resuming = !remoteHttpMode
-    && typeof resumeDir === "string"
-    && resumeDir.length > 0
-    && existsSync(resumeDir)
-    && checkOwnedStagingDir(resumeDir, GSTACK_HOME).ok;
+  const resuming =
+    !remoteHttpMode &&
+    typeof resumeDir === "string" &&
+    resumeDir.length > 0 &&
+    existsSync(resumeDir) &&
+    checkOwnedStagingDir(resumeDir, GSTACK_HOME).ok;
   if (!remoteHttpMode && resumeDir && resumeDir.length > 0 && !resuming) {
     console.error(
       `[memory-ingest] ignoring GSTACK_INGEST_RESUME_DIR="${resumeDir}" — not a proven staging dir (#1802); staging fresh.`,
@@ -1601,7 +1705,12 @@ async function ingestPass(args: CliArgs): Promise<BulkResult> {
       for (const p of prep.prepared) {
         stagedPathToSource.set(stagedRelPath(p.slug), p.source_path);
       }
-      staging = { staging_dir: stagingDir, written: prep.prepared.length, errors: [], stagedPathToSource };
+      staging = {
+        staging_dir: stagingDir,
+        written: prep.prepared.length,
+        errors: [],
+        stagedPathToSource,
+      };
     } else {
       staging = writeStaged(prep.prepared, stagingDir);
     }
@@ -1690,7 +1799,10 @@ async function ingestPass(args: CliArgs): Promise<BulkResult> {
     // spawn, parent termination orphans the gbrain process (observed
     // during 2026-05-10 cold-run testing — gbrain kept running 15 min
     // after the orchestrator timed out).
-    const importResult = await runGbrainImport(stagingDir, resolveImportTimeoutMs());
+    const importResult = await runGbrainImport(
+      stagingDir,
+      resolveImportTimeoutMs(),
+    );
 
     const stdout = importResult.stdout || "";
     const stderr = importResult.stderr || "";
@@ -1872,7 +1984,9 @@ function printProbeReport(r: ProbeReport, json: boolean): void {
   console.log("By type:");
   for (const [t, v] of Object.entries(r.by_type)) {
     if (v.count > 0) {
-      console.log(`  ${t.padEnd(24)} ${String(v.count).padStart(6)} files  ${formatBytes(v.bytes).padStart(8)}`);
+      console.log(
+        `  ${t.padEnd(24)} ${String(v.count).padStart(6)} files  ${formatBytes(v.bytes).padStart(8)}`,
+      );
     }
   }
   console.log(`\nEstimate: ~${r.estimate_minutes} min for full --bulk pass.`);
@@ -1881,7 +1995,9 @@ function printProbeReport(r: ProbeReport, json: boolean): void {
 function printBulkResult(r: BulkResult, args: CliArgs): void {
   console.log(`\nIngest pass complete (${args.mode}):`);
   console.log(`  written:               ${r.written}`);
-  console.log(`  partial_pages:         ${r.partial_pages}  (will overwrite on next pass)`);
+  console.log(
+    `  partial_pages:         ${r.partial_pages}  (will overwrite on next pass)`,
+  );
   console.log(`  skipped (dedup):       ${r.skipped_dedup}`);
   console.log(`  skipped (secret-scan): ${r.skipped_secret}`);
   console.log(`  skipped (unattrib):    ${r.skipped_unattributed}`);
@@ -1901,7 +2017,9 @@ async function main(): Promise<void> {
   // Engine tier detection — informational; routing happens in gbrain server-side.
   const engine = detectEngineTier();
   if (!args.quiet) {
-    console.error(`[engine] ${engine.engine}${engine.engine === "supabase" ? ` (${engine.supabase_url || "configured"})` : ""}`);
+    console.error(
+      `[engine] ${engine.engine}${engine.engine === "supabase" ? ` (${engine.supabase_url || "configured"})` : ""}`,
+    );
   }
 
   if (args.mode === "probe") {
@@ -1916,7 +2034,9 @@ async function main(): Promise<void> {
     const result = await ingestPass(args);
     const dt = Date.now() - t0;
     if (result.written > 0 || result.failed > 0) {
-      console.error(`[memory-ingest] ${result.written} written, ${result.failed} failed in ${dt}ms`);
+      console.error(
+        `[memory-ingest] ${result.written} written, ${result.failed} failed in ${dt}ms`,
+      );
     }
     // D6: system_error → process-level failure; orchestrator sees ERR.
     // Per-file errors do NOT exit non-zero.
@@ -1934,7 +2054,9 @@ async function main(): Promise<void> {
 // import.meta.main is true, so the CLI path is unaffected.
 if (import.meta.main) {
   main().catch((err) => {
-    console.error(`gstack-memory-ingest fatal: ${err instanceof Error ? err.message : String(err)}`);
+    console.error(
+      `gstack-memory-ingest fatal: ${err instanceof Error ? err.message : String(err)}`,
+    );
     process.exit(1);
   });
 }

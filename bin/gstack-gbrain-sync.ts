@@ -29,18 +29,48 @@
  * than building a gstack-side daemon.
  */
 
-import { existsSync, statSync, mkdirSync, writeFileSync, readFileSync, unlinkSync, renameSync } from "fs";
+import {
+  existsSync,
+  statSync,
+  mkdirSync,
+  writeFileSync,
+  readFileSync,
+  unlinkSync,
+  renameSync,
+} from "fs";
 import { join, dirname } from "path";
 import { execSync, spawnSync } from "child_process";
 import { homedir, hostname } from "os";
 import { createHash } from "crypto";
 
 import "../lib/conductor-env-shim";
-import { detectEngineTier, withErrorContext, canonicalizeRemote } from "../lib/gstack-memory-helpers";
-import { ensureSourceRegistered, sourcePageCount, parseSourcesList, cycleCompleted, type CycleStatus } from "../lib/gbrain-sources";
-import { detectAutopilot, decideSourceRemove, decideCodeSync } from "../lib/gbrain-guards";
-import { localEngineStatus, type LocalEngineStatus } from "../lib/gbrain-local-status";
-import { buildGbrainEnv, spawnGbrain, execGbrainJson, NEEDS_SHELL_ON_WINDOWS } from "../lib/gbrain-exec";
+import {
+  detectEngineTier,
+  withErrorContext,
+  canonicalizeRemote,
+} from "../lib/gstack-memory-helpers";
+import {
+  ensureSourceRegistered,
+  sourcePageCount,
+  parseSourcesList,
+  cycleCompleted,
+  type CycleStatus,
+} from "../lib/gbrain-sources";
+import {
+  detectAutopilot,
+  decideSourceRemove,
+  decideCodeSync,
+} from "../lib/gbrain-guards";
+import {
+  localEngineStatus,
+  type LocalEngineStatus,
+} from "../lib/gbrain-local-status";
+import {
+  buildGbrainEnv,
+  spawnGbrain,
+  execGbrainJson,
+  NEEDS_SHELL_ON_WINDOWS,
+} from "../lib/gbrain-exec";
 import { checkOwnedStagingDir } from "../lib/staging-guard";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -67,7 +97,12 @@ interface CodeStageDetail {
   source_path?: string;
   page_count?: number | null;
   last_imported?: string;
-  status?: "ok" | "skipped" | "failed" | "refused-autopilot" | "refused-reclone";
+  status?:
+    | "ok"
+    | "skipped"
+    | "failed"
+    | "refused-autopilot"
+    | "refused-reclone";
 }
 
 interface StageResult {
@@ -110,7 +145,10 @@ const DREAM_MARKER_STALE_MS = DEFAULT_DREAM_TIMEOUT_MS;
  * module-load-time const captures the real ~/.gstack before a test can redirect.
  */
 export function dreamMarkerPath(): string {
-  return join(process.env.GSTACK_HOME || join(homedir(), ".gstack"), ".dream-in-progress");
+  return join(
+    process.env.GSTACK_HOME || join(homedir(), ".gstack"),
+    ".dream-in-progress",
+  );
 }
 
 // Default 35-minute timeout for code-walk + memory-ingest stages. Override via
@@ -118,8 +156,8 @@ export function dreamMarkerPath(): string {
 // in resolveStageTimeoutMs below so wildly-low values don't make resume
 // useless and wildly-high values don't mask config typos. See #1611.
 const DEFAULT_STAGE_TIMEOUT_MS = 35 * 60 * 1000; // 2_100_000ms = 35min
-const MIN_STAGE_TIMEOUT_MS = 60_000;             // 1 minute floor
-const MAX_STAGE_TIMEOUT_MS = 86_400_000;         // 24 hour ceiling
+const MIN_STAGE_TIMEOUT_MS = 60_000; // 1 minute floor
+const MAX_STAGE_TIMEOUT_MS = 86_400_000; // 24 hour ceiling
 
 /**
  * Parse a stage-timeout env value with bounds validation. Returns the bounded
@@ -190,7 +228,12 @@ export function readGbrainCheckpoint(): GbrainCheckpoint | null {
 
 export type ResumeVerdict =
   | { kind: "no-checkpoint" }
-  | { kind: "resume"; stagingDir: string; processedIndex: number; totalFiles: number }
+  | {
+      kind: "resume";
+      stagingDir: string;
+      processedIndex: number;
+      totalFiles: number;
+    }
   | { kind: "stale-staging-missing"; stagingDir: string; reason?: string };
 
 /**
@@ -213,7 +256,11 @@ export function decideResume(gstackHome: string = GSTACK_HOME): ResumeVerdict {
   // so we don't double-log the same event from here and the call site.
   const verdict = checkOwnedStagingDir(stagingDir, gstackHome);
   if (!verdict.ok) {
-    return { kind: "stale-staging-missing", stagingDir, reason: verdict.reason };
+    return {
+      kind: "stale-staging-missing",
+      stagingDir,
+      reason: verdict.reason,
+    };
   }
   return {
     kind: "resume",
@@ -270,14 +317,30 @@ function parseArgs(): CliArgs {
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
     switch (a) {
-      case "--incremental": mode = "incremental"; break;
-      case "--full": mode = "full"; break;
-      case "--dry-run": mode = "dry-run"; break;
-      case "--quiet": quiet = true; break;
-      case "--no-code": noCode = true; break;
-      case "--no-memory": noMemory = true; break;
-      case "--no-brain-sync": noBrainSync = true; break;
-      case "--allow-reclone": allowReclone = true; break;
+      case "--incremental":
+        mode = "incremental";
+        break;
+      case "--full":
+        mode = "full";
+        break;
+      case "--dry-run":
+        mode = "dry-run";
+        break;
+      case "--quiet":
+        quiet = true;
+        break;
+      case "--no-code":
+        noCode = true;
+        break;
+      case "--no-memory":
+        noMemory = true;
+        break;
+      case "--no-brain-sync":
+        noBrainSync = true;
+        break;
+      case "--allow-reclone":
+        allowReclone = true;
+        break;
       case "--code-only":
         codeOnly = true;
         noMemory = true;
@@ -285,8 +348,12 @@ function parseArgs(): CliArgs {
         break;
       // --dream forces the cycle; --full only chains it at the call site (so
       // --no-dream can override) — do NOT set dream from --full here.
-      case "--dream": dream = true; break;
-      case "--no-dream": noDream = true; break;
+      case "--dream":
+        dream = true;
+        break;
+      case "--no-dream":
+        noDream = true;
+        break;
       case "--help":
       case "-h":
         printUsage();
@@ -298,14 +365,27 @@ function parseArgs(): CliArgs {
     }
   }
 
-  return { mode, quiet, noCode, noMemory, noBrainSync, codeOnly, dream, noDream, allowReclone };
+  return {
+    mode,
+    quiet,
+    noCode,
+    noMemory,
+    noBrainSync,
+    codeOnly,
+    dream,
+    noDream,
+    allowReclone,
+  };
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 function repoRoot(): string | null {
   try {
-    const out = execSync("git rev-parse --show-toplevel", { encoding: "utf-8", timeout: 2000 });
+    const out = execSync("git rev-parse --show-toplevel", {
+      encoding: "utf-8",
+      timeout: 2000,
+    });
     return out.trim();
   } catch {
     return null;
@@ -314,7 +394,10 @@ function repoRoot(): string | null {
 
 function originUrl(): string | null {
   try {
-    const out = execSync("git remote get-url origin", { encoding: "utf-8", timeout: 2000 });
+    const out = execSync("git remote get-url origin", {
+      encoding: "utf-8",
+      timeout: 2000,
+    });
     return out.trim();
   } catch {
     return null;
@@ -342,12 +425,18 @@ function originUrl(): string | null {
  */
 function deriveCodeSourceId(repoPath: string): string {
   const host = process.env.GSTACK_HOSTNAME || hostname();
-  const hostPathHash = createHash("sha1").update(`${host}::${repoPath}`).digest("hex").slice(0, 8);
+  const hostPathHash = createHash("sha1")
+    .update(`${host}::${repoPath}`)
+    .digest("hex")
+    .slice(0, 8);
   const remote = canonicalizeRemote(originUrl());
   if (remote) {
     const segs = remote.split("/").filter(Boolean);
     const slugSource = segs.slice(-2).join("-");
-    const fullId = constrainSourceId("gstack-code", `${slugSource}-${hostPathHash}`);
+    const fullId = constrainSourceId(
+      "gstack-code",
+      `${slugSource}-${hostPathHash}`,
+    );
     // If the org+repo+hostpathhash fits cleanly (suffix preserved), use it.
     if (fullId.endsWith(`-${hostPathHash}`)) return fullId;
     // Otherwise drop the org prefix and retry with just repo+hostpathhash so
@@ -394,7 +483,10 @@ function deriveLegacyCodeSourceId(repoPath: string): string {
  * both probes run.
  */
 export function derivePathOnlyHashLegacyId(repoPath: string): string {
-  const pathHash = createHash("sha1").update(repoPath).digest("hex").slice(0, 8);
+  const pathHash = createHash("sha1")
+    .update(repoPath)
+    .digest("hex")
+    .slice(0, 8);
   const remote = canonicalizeRemote(originUrl());
   if (remote) {
     const segs = remote.split("/").filter(Boolean);
@@ -430,9 +522,10 @@ function gbrainSupportsSourcesRename(env?: NodeJS.ProcessEnv): boolean {
     const out = `${r.stdout || ""}\n${r.stderr || ""}`;
     // Match the exact argument shape: `rename <old> <new>` (with literal
     // angle brackets in usage strings) or `rename OLD NEW`.
-    const exact = /sources\s+rename\s+<old>\s+<new>/i.test(out)
-      || /sources\s+rename\s+OLD\s+NEW/.test(out)
-      || /sources\s+rename\s+<oldId>\s+<newId>/i.test(out);
+    const exact =
+      /sources\s+rename\s+<old>\s+<new>/i.test(out) ||
+      /sources\s+rename\s+OLD\s+NEW/.test(out) ||
+      /sources\s+rename\s+<oldId>\s+<newId>/i.test(out);
     _gbrainSupportsRenameCache = exact && r.status === 0;
   } catch {
     _gbrainSupportsRenameCache = false;
@@ -452,11 +545,13 @@ function gbrainSupportsSourcesRename(env?: NodeJS.ProcessEnv): boolean {
  * older versions returned a flat array. Accept both for forward/backward compat
  * (mirrors `probeSource`/`sourcePageCount` in lib/gbrain-sources.ts).
  */
-export function sourceLocalPath(sourceId: string, env?: NodeJS.ProcessEnv): string | null {
-  const raw = execGbrainJson<unknown>(
-    ["sources", "list", "--json"],
-    { baseEnv: env },
-  );
+export function sourceLocalPath(
+  sourceId: string,
+  env?: NodeJS.ProcessEnv,
+): string | null {
+  const raw = execGbrainJson<unknown>(["sources", "list", "--json"], {
+    baseEnv: env,
+  });
   if (!raw) return null;
   const found = parseSourcesList(raw).find((s) => s.id === sourceId);
   return found?.local_path ?? null;
@@ -465,7 +560,12 @@ export function sourceLocalPath(sourceId: string, env?: NodeJS.ProcessEnv): stri
 /** Result of `planHostnameFoldMigration` — informs `runCodeImport` of next steps. */
 export type HostnameFoldMigration =
   | { kind: "none"; reason: "ids-match" | "no-legacy-source" }
-  | { kind: "skipped-path-drift"; oldId: string; oldPath: string; currentPath: string }
+  | {
+      kind: "skipped-path-drift";
+      oldId: string;
+      oldPath: string;
+      currentPath: string;
+    }
   | { kind: "renamed"; oldId: string; newId: string }
   | { kind: "pending-cleanup"; oldId: string };
 
@@ -508,7 +608,10 @@ export function planHostnameFoldMigration(
     };
   }
   if (gbrainSupportsSourcesRename(env)) {
-    const r = spawnGbrain(["sources", "rename", legacyPathHashId, newSourceId], { baseEnv: env });
+    const r = spawnGbrain(
+      ["sources", "rename", legacyPathHashId, newSourceId],
+      { baseEnv: env },
+    );
     if (r.status === 0) {
       return { kind: "renamed", oldId: legacyPathHashId, newId: newSourceId };
     }
@@ -533,13 +636,17 @@ export interface GuardedRemoveResult {
  * caller decides whether a skip is fatal (it never is today — removes are
  * best-effort cleanup).
  */
-export function safeSourcesRemove(sourceId: string, env?: NodeJS.ProcessEnv): GuardedRemoveResult {
+export function safeSourcesRemove(
+  sourceId: string,
+  env?: NodeJS.ProcessEnv,
+): GuardedRemoveResult {
   const ap = detectAutopilot(env);
   if (ap.active) {
     return {
       removed: false,
       skipped: true,
-      reason: `autopilot active (${ap.signal}); refusing destructive remove of ${sourceId}. ` +
+      reason:
+        `autopilot active (${ap.signal}); refusing destructive remove of ${sourceId}. ` +
         `Stop autopilot, then re-run /sync-gbrain.`,
     };
   }
@@ -548,7 +655,13 @@ export function safeSourcesRemove(sourceId: string, env?: NodeJS.ProcessEnv): Gu
     return { removed: false, skipped: true, reason: decision.reason };
   }
   const r = spawnGbrain(
-    ["sources", "remove", sourceId, "--confirm-destructive", ...decision.extraArgs],
+    [
+      "sources",
+      "remove",
+      sourceId,
+      "--confirm-destructive",
+      ...decision.extraArgs,
+    ],
     { baseEnv: env },
   );
   return { removed: r.status === 0, skipped: false, reason: decision.reason };
@@ -559,7 +672,10 @@ export function safeSourcesRemove(sourceId: string, env?: NodeJS.ProcessEnv): Gu
  * exist, so the old source is provably redundant before deletion. Routed through
  * safeSourcesRemove for the #1734 guards.
  */
-export function removeOrphanedSource(oldId: string, env?: NodeJS.ProcessEnv): boolean {
+export function removeOrphanedSource(
+  oldId: string,
+  env?: NodeJS.ProcessEnv,
+): boolean {
   return safeSourcesRemove(oldId, env).removed;
 }
 
@@ -574,13 +690,19 @@ export function removeOrphanedSource(oldId: string, env?: NodeJS.ProcessEnv): bo
  */
 function constrainSourceId(prefix: string, raw: string): string {
   const MAX = 32;
-  const slug = raw.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  const slug = raw
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
   // Empty slug after sanitize (e.g. raw was all non-alnum like "___") would
   // produce "${prefix}-" which fails gbrain's validator on the trailing
   // hyphen. Fall back to a deterministic hash of the original input so the
   // result is stable across runs of the same repo.
   if (!slug) {
-    const hash = createHash("sha1").update(raw || "_empty").digest("hex").slice(0, 6);
+    const hash = createHash("sha1")
+      .update(raw || "_empty")
+      .digest("hex")
+      .slice(0, 6);
     return `${prefix}-${hash}`;
   }
   const full = `${prefix}-${slug}`;
@@ -631,9 +753,15 @@ function acquireLock(): boolean {
       return false;
     }
   }
-  const info: LockInfo = { pid: process.pid, started_at: new Date().toISOString() };
+  const info: LockInfo = {
+    pid: process.pid,
+    started_at: new Date().toISOString(),
+  };
   try {
-    writeFileSync(LOCK_PATH, JSON.stringify(info), { encoding: "utf-8", flag: "wx" });
+    writeFileSync(LOCK_PATH, JSON.stringify(info), {
+      encoding: "utf-8",
+      flag: "wx",
+    });
     return true;
   } catch {
     return false;
@@ -675,9 +803,15 @@ export function acquireDreamMarker(): boolean {
       return false;
     }
   }
-  const info: LockInfo = { pid: process.pid, started_at: new Date().toISOString() };
+  const info: LockInfo = {
+    pid: process.pid,
+    started_at: new Date().toISOString(),
+  };
   try {
-    writeFileSync(path, JSON.stringify(info), { encoding: "utf-8", flag: "wx" });
+    writeFileSync(path, JSON.stringify(info), {
+      encoding: "utf-8",
+      flag: "wx",
+    });
     return true;
   } catch {
     return false;
@@ -698,7 +832,9 @@ export function releaseDreamMarker(): void {
 /** Read the pid recorded in a fresh dream marker, for the "already running" message. */
 function dreamMarkerPid(): number | null {
   try {
-    const info = JSON.parse(readFileSync(dreamMarkerPath(), "utf-8")) as LockInfo;
+    const info = JSON.parse(
+      readFileSync(dreamMarkerPath(), "utf-8"),
+    ) as LockInfo;
     return typeof info.pid === "number" ? info.pid : null;
   } catch {
     return null;
@@ -731,9 +867,8 @@ function skipStageForLocalStatus(
       "no local engine; run /setup-gbrain to add local PGLite for code search",
     "broken-config":
       "config at ~/.gbrain/config.json is malformed; see /setup-gbrain Step 1.5",
-    "broken-db":
-      "config points at unreachable DB; see /setup-gbrain Step 1.5",
-    "timeout":
+    "broken-db": "config points at unreachable DB; see /setup-gbrain Step 1.5",
+    timeout:
       "engine probe timed out; raise GSTACK_GBRAIN_PROBE_TIMEOUT_MS if your pooler is slow",
   };
   const reason = reasons[status as Exclude<LocalEngineStatus, "ok">];
@@ -760,12 +895,17 @@ function warnProbeTimeout(stage: "code" | "memory" | "dream"): void {
   );
 }
 
-
 async function runCodeImport(args: CliArgs): Promise<StageResult> {
   const t0 = Date.now();
   const root = repoRoot();
   if (!root) {
-    return { name: "code", ran: false, ok: true, duration_ms: 0, summary: "skipped (not in git repo)" };
+    return {
+      name: "code",
+      ran: false,
+      ok: true,
+      duration_ms: 0,
+      summary: "skipped (not in git repo)",
+    };
   }
 
   const sourceId = deriveCodeSourceId(root);
@@ -826,22 +966,32 @@ async function runCodeImport(args: CliArgs): Promise<StageResult> {
   // pages); fall back to register-new → sync-OK → remove-old. Path-drift
   // (user moved the repo, etc.) skips migration with a warning.
   const pathOnlyHashLegacyId = derivePathOnlyHashLegacyId(root);
-  const migration = planHostnameFoldMigration(root, sourceId, pathOnlyHashLegacyId, gbrainEnv);
+  const migration = planHostnameFoldMigration(
+    root,
+    sourceId,
+    pathOnlyHashLegacyId,
+    gbrainEnv,
+  );
   if (migration.kind === "skipped-path-drift" && !args.quiet) {
     console.error(
-      `[sync:code] hostname-fold migration skipped: legacy source ${migration.oldId} `
-      + `points at ${migration.oldPath}, current repo is ${migration.currentPath}. `
-      + `Clean up manually with: gbrain sources remove ${migration.oldId} --confirm-destructive`,
+      `[sync:code] hostname-fold migration skipped: legacy source ${migration.oldId} ` +
+        `points at ${migration.oldPath}, current repo is ${migration.currentPath}. ` +
+        `Clean up manually with: gbrain sources remove ${migration.oldId} --confirm-destructive`,
     );
   } else if (migration.kind === "renamed" && !args.quiet) {
-    console.error(`[sync:code] hostname-fold migration: renamed ${migration.oldId} → ${migration.newId} (pages preserved)`);
+    console.error(
+      `[sync:code] hostname-fold migration: renamed ${migration.oldId} → ${migration.newId} (pages preserved)`,
+    );
   }
 
   // Step 1: Ensure source registered (idempotent). Single source of truth in lib —
   // no synchronous duplicate here (per /codex review #12).
   let registered = false;
   try {
-    const result = await ensureSourceRegistered(sourceId, root, { federated: true, env: gbrainEnv });
+    const result = await ensureSourceRegistered(sourceId, root, {
+      federated: true,
+      env: gbrainEnv,
+    });
     registered = result.changed;
   } catch (err) {
     return {
@@ -878,25 +1028,44 @@ async function runCodeImport(args: CliArgs): Promise<StageResult> {
   const apBeforeWalk = detectAutopilot(gbrainEnv);
   if (apBeforeWalk.active) {
     return {
-      name: "code", ran: true, ok: false, duration_ms: Date.now() - t0,
+      name: "code",
+      ran: true,
+      ok: false,
+      duration_ms: Date.now() - t0,
       summary: `refused: gbrain autopilot active (${apBeforeWalk.signal}). Stop autopilot, then re-run /sync-gbrain.`,
-      detail: { source_id: sourceId, source_path: root, status: "refused-autopilot" },
+      detail: {
+        source_id: sourceId,
+        source_path: root,
+        status: "refused-autopilot",
+      },
     };
   }
   const reclone = decideCodeSync(sourceId, gbrainEnv, args.allowReclone);
   if (!reclone.allow) {
     return {
-      name: "code", ran: true, ok: false, duration_ms: Date.now() - t0,
+      name: "code",
+      ran: true,
+      ok: false,
+      duration_ms: Date.now() - t0,
       summary: `refused: ${reclone.reason}`,
-      detail: { source_id: sourceId, source_path: root, status: "refused-reclone" },
+      detail: {
+        source_id: sourceId,
+        source_path: root,
+        status: "refused-reclone",
+      },
     };
   }
 
-  const walkResult = spawnGbrain(["sync", "--strategy", "code", "--source", sourceId], {
-    stdio: args.quiet ? ["ignore", "ignore", "ignore"] : ["ignore", "inherit", "inherit"],
-    timeout: codeTimeoutMs,
-    baseEnv: gbrainEnv,
-  });
+  const walkResult = spawnGbrain(
+    ["sync", "--strategy", "code", "--source", sourceId],
+    {
+      stdio: args.quiet
+        ? ["ignore", "ignore", "ignore"]
+        : ["ignore", "inherit", "inherit"],
+      timeout: codeTimeoutMs,
+      baseEnv: gbrainEnv,
+    },
+  );
 
   if (walkResult.status !== 0) {
     return {
@@ -910,11 +1079,16 @@ async function runCodeImport(args: CliArgs): Promise<StageResult> {
   }
 
   if (args.mode === "full") {
-    const reindexResult = spawnGbrain(["reindex-code", "--source", sourceId, "--yes"], {
-      stdio: args.quiet ? ["ignore", "ignore", "ignore"] : ["ignore", "inherit", "inherit"],
-      timeout: codeTimeoutMs,
-      baseEnv: gbrainEnv,
-    });
+    const reindexResult = spawnGbrain(
+      ["reindex-code", "--source", sourceId, "--yes"],
+      {
+        stdio: args.quiet
+          ? ["ignore", "ignore", "ignore"]
+          : ["ignore", "inherit", "inherit"],
+        timeout: codeTimeoutMs,
+        baseEnv: gbrainEnv,
+      },
+    );
 
     if (reindexResult.status !== 0) {
       return {
@@ -951,22 +1125,35 @@ async function runCodeImport(args: CliArgs): Promise<StageResult> {
   // wipe pages when sync silently no-op'd. This is the codex-review-flagged
   // safety: register → sync → verify → THEN delete.
   let hostnameLegacyRemoved = false;
-  if (migration.kind === "pending-cleanup" && pageCount !== null && pageCount > 0) {
+  if (
+    migration.kind === "pending-cleanup" &&
+    pageCount !== null &&
+    pageCount > 0
+  ) {
     hostnameLegacyRemoved = removeOrphanedSource(migration.oldId, gbrainEnv);
     if (hostnameLegacyRemoved && !args.quiet) {
-      console.error(`[sync:code] hostname-fold migration: removed legacy ${migration.oldId} after new source sync verified (page_count=${pageCount})`);
+      console.error(
+        `[sync:code] hostname-fold migration: removed legacy ${migration.oldId} after new source sync verified (page_count=${pageCount})`,
+      );
     }
   }
 
   const legacyParts: string[] = [];
   if (legacyRemoved) legacyParts.push(`removed legacy ${legacyId}`);
-  if (migration.kind === "renamed") legacyParts.push(`renamed ${migration.oldId}→${migration.newId}`);
-  if (hostnameLegacyRemoved) legacyParts.push(`removed pre-hostname-fold ${migration.kind === "pending-cleanup" ? migration.oldId : ""}`);
-  const legacyNote = legacyParts.length > 0 ? `, ${legacyParts.join(", ")}` : "";
+  if (migration.kind === "renamed")
+    legacyParts.push(`renamed ${migration.oldId}→${migration.newId}`);
+  if (hostnameLegacyRemoved)
+    legacyParts.push(
+      `removed pre-hostname-fold ${migration.kind === "pending-cleanup" ? migration.oldId : ""}`,
+    );
+  const legacyNote =
+    legacyParts.length > 0 ? `, ${legacyParts.join(", ")}` : "";
   const baseSummary = `${registered ? "registered + " : ""}synced ${sourceId} (page_count=${pageCount ?? "unknown"}${legacyNote})`;
 
   if (attach.status !== 0) {
-    const reason = (attach.stderr || attach.stdout || "").trim().split("\n").pop() || `exit ${attach.status}`;
+    const reason =
+      (attach.stderr || attach.stdout || "").trim().split("\n").pop() ||
+      `exit ${attach.status}`;
     return {
       name: "code",
       ran: true,
@@ -1043,7 +1230,13 @@ function runMemoryIngest(args: CliArgs): StageResult {
   const t0 = Date.now();
 
   if (args.mode === "dry-run") {
-    return { name: "memory", ran: false, ok: true, duration_ms: 0, summary: "would: gstack-memory-ingest --probe" };
+    return {
+      name: "memory",
+      ran: false,
+      ok: true,
+      duration_ms: 0,
+      summary: "would: gstack-memory-ingest --probe",
+    };
   }
 
   // Split-engine pre-flight (per plan D12). gstack-memory-ingest shells out
@@ -1134,23 +1327,39 @@ function runBrainSyncPush(args: CliArgs): StageResult {
   const t0 = Date.now();
 
   if (args.mode === "dry-run") {
-    return { name: "brain-sync", ran: false, ok: true, duration_ms: 0, summary: "would: gstack-brain-sync --discover-new --once" };
+    return {
+      name: "brain-sync",
+      ran: false,
+      ok: true,
+      duration_ms: 0,
+      summary: "would: gstack-brain-sync --discover-new --once",
+    };
   }
 
   const brainSyncPath = join(import.meta.dir, "gstack-brain-sync");
   if (!existsSync(brainSyncPath)) {
-    return { name: "brain-sync", ran: false, ok: true, duration_ms: 0, summary: "skipped (gstack-brain-sync not installed)" };
+    return {
+      name: "brain-sync",
+      ran: false,
+      ok: true,
+      duration_ms: 0,
+      summary: "skipped (gstack-brain-sync not installed)",
+    };
   }
 
   // #1731: gstack-brain-sync is a bash shebang script; Windows can't spawn it
   // without a shell, which surfaced as "brain-sync exited undefined".
   spawnSync(brainSyncPath, ["--discover-new"], {
-    stdio: args.quiet ? ["ignore", "ignore", "ignore"] : ["ignore", "inherit", "inherit"],
+    stdio: args.quiet
+      ? ["ignore", "ignore", "ignore"]
+      : ["ignore", "inherit", "inherit"],
     timeout: 60 * 1000,
     shell: NEEDS_SHELL_ON_WINDOWS,
   });
   const result = spawnSync(brainSyncPath, ["--once"], {
-    stdio: args.quiet ? ["ignore", "ignore", "ignore"] : ["ignore", "inherit", "inherit"],
+    stdio: args.quiet
+      ? ["ignore", "ignore", "ignore"]
+      : ["ignore", "inherit", "inherit"],
     timeout: 60 * 1000,
     shell: NEEDS_SHELL_ON_WINDOWS,
   });
@@ -1160,7 +1369,10 @@ function runBrainSyncPush(args: CliArgs): StageResult {
     ran: true,
     ok: result.status === 0,
     duration_ms: Date.now() - t0,
-    summary: result.status === 0 ? "curated artifacts pushed" : `gstack-brain-sync exited ${result.status}`,
+    summary:
+      result.status === 0
+        ? "curated artifacts pushed"
+        : `gstack-brain-sync exited ${result.status}`,
   };
 }
 
@@ -1177,7 +1389,10 @@ function runBrainSyncPush(args: CliArgs): StageResult {
  *
  * `cycle` is only consulted on the --full auto path; pass null when forcing.
  */
-export function shouldRunDream(args: CliArgs, cycle: CycleStatus | null): boolean {
+export function shouldRunDream(
+  args: CliArgs,
+  cycle: CycleStatus | null,
+): boolean {
   if (args.dream) return true;
   if (args.mode === "full" && !args.noDream && !args.noCode) {
     return cycle === "never";
@@ -1261,7 +1476,9 @@ export async function runDream(args: CliArgs): Promise<StageResult> {
     // alone would falsely report "call graph built". Trade-off: no live streaming
     // for a long cycle; we echo the captured output afterward instead.
     if (!args.quiet) {
-      process.stderr.write("[dream] running gbrain cycle (call-graph build; this can take a few minutes)...\n");
+      process.stderr.write(
+        "[dream] running gbrain cycle (call-graph build; this can take a few minutes)...\n",
+      );
     }
     let result: ReturnType<typeof spawnGbrain>;
     try {
@@ -1318,7 +1535,8 @@ export async function runDream(args: CliArgs): Promise<StageResult> {
         ran: false,
         ok: true,
         duration_ms: Date.now() - t0,
-        summary: "skipped — a gbrain cycle is already running (e.g. autopilot); the call graph builds on that cycle",
+        summary:
+          "skipped — a gbrain cycle is already running (e.g. autopilot); the call graph builds on that cycle",
       };
     }
 
@@ -1460,7 +1678,8 @@ function mergeDreamIntoState(dream: StageResult): void {
 
 export function formatStage(s: StageResult): string {
   const status = !s.ran ? "SKIP" : !s.ok ? "ERR" : s.warn ? "WARN" : "OK";
-  const dur = s.duration_ms > 0 ? ` (${(s.duration_ms / 1000).toFixed(1)}s)` : "";
+  const dur =
+    s.duration_ms > 0 ? ` (${(s.duration_ms / 1000).toFixed(1)}s)` : "";
   return `  ${status.padEnd(5)} ${s.name.padEnd(12)} ${s.summary}${dur}`;
 }
 
@@ -1482,7 +1701,7 @@ async function main(): Promise<void> {
     if (!haveLock) {
       console.error(
         `[gbrain-sync] another /sync-gbrain is running (lock at ${LOCK_PATH}). ` +
-        `If that process died, the lock auto-clears after 5 min, or remove it manually.`
+          `If that process died, the lock auto-clears after 5 min, or remove it manually.`,
       );
       process.exit(2);
     }
@@ -1491,8 +1710,14 @@ async function main(): Promise<void> {
   const cleanup = () => {
     if (haveLock) releaseLock();
   };
-  process.on("SIGINT", () => { cleanup(); process.exit(130); });
-  process.on("SIGTERM", () => { cleanup(); process.exit(143); });
+  process.on("SIGINT", () => {
+    cleanup();
+    process.exit(130);
+  });
+  process.on("SIGTERM", () => {
+    cleanup();
+    process.exit(143);
+  });
 
   let exitCode = 0;
   const stages: StageResult[] = [];
@@ -1500,13 +1725,31 @@ async function main(): Promise<void> {
     const state = loadSyncState();
 
     if (!args.noCode) {
-      stages.push(await withErrorContext("sync:code", () => runCodeImport(args), "gstack-gbrain-sync"));
+      stages.push(
+        await withErrorContext(
+          "sync:code",
+          () => runCodeImport(args),
+          "gstack-gbrain-sync",
+        ),
+      );
     }
     if (!args.noMemory) {
-      stages.push(await withErrorContext("sync:memory", () => runMemoryIngest(args), "gstack-gbrain-sync"));
+      stages.push(
+        await withErrorContext(
+          "sync:memory",
+          () => runMemoryIngest(args),
+          "gstack-gbrain-sync",
+        ),
+      );
     }
     if (!args.noBrainSync) {
-      stages.push(await withErrorContext("sync:brain-sync", () => runBrainSyncPush(args), "gstack-gbrain-sync"));
+      stages.push(
+        await withErrorContext(
+          "sync:brain-sync",
+          () => runBrainSyncPush(args),
+          "gstack-gbrain-sync",
+        ),
+      );
     }
 
     if (args.mode !== "dry-run") {
@@ -1541,7 +1784,9 @@ async function main(): Promise<void> {
     let cycle: CycleStatus | null = null;
     if (!args.dream && args.mode === "full" && !args.noDream && !args.noCode) {
       const root = repoRoot();
-      cycle = root ? cycleCompleted(deriveCodeSourceId(root), process.env) : "unknown";
+      cycle = root
+        ? cycleCompleted(deriveCodeSourceId(root), process.env)
+        : "unknown";
     }
     if (shouldRunDream(args, cycle)) {
       dreamStage = await runDream(args);
@@ -1557,7 +1802,8 @@ async function main(): Promise<void> {
         ran: false,
         ok: true,
         duration_ms: 0,
-        summary: "call-graph state unknown (doctor unavailable) — run /sync-gbrain --dream if code-callers returns 0",
+        summary:
+          "call-graph state unknown (doctor unavailable) — run /sync-gbrain --dream if code-callers returns 0",
       };
     }
   }
@@ -1568,7 +1814,9 @@ async function main(): Promise<void> {
     for (const s of allStages) console.log(formatStage(s));
     const okCount = allStages.filter((s) => s.ok).length;
     const errCount = allStages.filter((s) => !s.ok && s.ran).length;
-    console.log(`\n  ${okCount} ok, ${errCount} error, ${allStages.length - okCount - errCount} skipped`);
+    console.log(
+      `\n  ${okCount} ok, ${errCount} error, ${allStages.length - okCount - errCount} skipped`,
+    );
   }
 
   process.exit(exitCode);
@@ -1576,7 +1824,9 @@ async function main(): Promise<void> {
 
 if (import.meta.main) {
   main().catch((err) => {
-    console.error(`gstack-gbrain-sync fatal: ${err instanceof Error ? err.message : String(err)}`);
+    console.error(
+      `gstack-gbrain-sync fatal: ${err instanceof Error ? err.message : String(err)}`,
+    );
     releaseLock();
     process.exit(1);
   });
