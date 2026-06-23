@@ -3,16 +3,16 @@ on:
   pull_request:
     branches: [main]
     paths:
-      - 'make-pdf/**'
-      - 'lib/diagram-render/**'
-      - 'test/diagram-render-drift.test.ts'
-      - 'browse/src/meta-commands.ts'
-      - 'browse/src/write-commands.ts'
-      - 'browse/src/commands.ts'
-      - 'browse/src/cli.ts'
-      - 'scripts/resolvers/make-pdf.ts'
-      - 'package.json'
-      - '.github/workflows/make-pdf-gate.yml'
+      - "make-pdf/**"
+      - "lib/diagram-render/**"
+      - "test/diagram-render-drift.test.ts"
+      - "browse/src/meta-commands.ts"
+      - "browse/src/write-commands.ts"
+      - "browse/src/commands.ts"
+      - "browse/src/cli.ts"
+      - "scripts/resolvers/make-pdf.ts"
+      - "package.json"
+      - ".github/workflows/make-pdf-gate.yml"
   workflow_dispatch:
 
 concurrency:

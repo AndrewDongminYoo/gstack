@@ -3,9 +3,9 @@ name: Version Gate
 on:
   pull_request:
     paths:
-      - 'VERSION'
-      - 'CHANGELOG.md'
-      - 'package.json'
+      - "VERSION"
+      - "CHANGELOG.md"
+      - "package.json"
 
 concurrency:
   group: version-gate-${{ github.event.pull_request.number }}

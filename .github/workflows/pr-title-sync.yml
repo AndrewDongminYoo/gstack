@@ -22,7 +22,7 @@ on:
   pull_request_target:
     types: [opened, synchronize, edited]
     paths:
-      - 'VERSION'
+      - "VERSION"
 
 concurrency:
   group: pr-title-sync-${{ github.event.pull_request.number }}
