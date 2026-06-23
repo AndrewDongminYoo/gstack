@@ -25,4 +25,10 @@ describe("setup: per-project skill_install_mode", () => {
     expect(guardIdx).toBeGreaterThan(0);
     expect(linkIdx).toBeGreaterThan(guardIdx);
   });
+
+  test("both global-linking blocks are gated (two opt-in branches)", () => {
+    const count =
+      SETUP_SRC.split("gstack ready (per-project / opt-in).").length - 1;
+    expect(count).toBe(2);
+  });
 });
