@@ -115,19 +115,19 @@ If `GSTACK_IOS_TARGET_UDID` is unset, the daemon picks the first paired connecte
 
 Once the daemon is running, you have an HTTP surface at `http://127.0.0.1:9099` (or `[::1]:9099`). The skill flow does this for you, but the raw endpoints are:
 
-| Endpoint | What it does | Auth |
-|---|---|---|
-| `GET /healthz` | Version probe. | none (loopback) |
-| `POST /auth/rotate` | Daemon-only; rotates the boot token to an in-memory-only value. | boot token |
-| `POST /session/acquire` | Acquire the per-device session lock. Returns `{session_id, ttl_seconds}`. | bearer |
-| `POST /session/release` | Release the lock. | bearer + session |
-| `GET /screenshot` | Capture a PNG of the active window. Returns `{png_base64: "..."}`. | bearer |
-| `GET /elements` | Accessibility-tree snapshot. | bearer |
-| `GET /state/snapshot` | Dump every `@Snapshotable` field as JSON. | bearer |
-| `POST /state/restore` | Atomically restore a full snapshot. | bearer + session, mutate tier |
-| `POST /tap` `{x,y}` | Synthesize a real UITouch at window coordinates. SwiftUI Buttons fire. | bearer + session, interact tier |
-| `POST /swipe` `{from_x,from_y,to_x,to_y}` | Scroll the nearest enclosing UIScrollView. | bearer + session, interact tier |
-| `POST /type` `{text}` | Set text on the current first responder. | bearer + session, interact tier |
+| Endpoint                                  | What it does                                                              | Auth                            |
+| ----------------------------------------- | ------------------------------------------------------------------------- | ------------------------------- |
+| `GET /healthz`                            | Version probe.                                                            | none (loopback)                 |
+| `POST /auth/rotate`                       | Daemon-only; rotates the boot token to an in-memory-only value.           | boot token                      |
+| `POST /session/acquire`                   | Acquire the per-device session lock. Returns `{session_id, ttl_seconds}`. | bearer                          |
+| `POST /session/release`                   | Release the lock.                                                         | bearer + session                |
+| `GET /screenshot`                         | Capture a PNG of the active window. Returns `{png_base64: "..."}`.        | bearer                          |
+| `GET /elements`                           | Accessibility-tree snapshot.                                              | bearer                          |
+| `GET /state/snapshot`                     | Dump every `@Snapshotable` field as JSON.                                 | bearer                          |
+| `POST /state/restore`                     | Atomically restore a full snapshot.                                       | bearer + session, mutate tier   |
+| `POST /tap` `{x,y}`                       | Synthesize a real UITouch at window coordinates. SwiftUI Buttons fire.    | bearer + session, interact tier |
+| `POST /swipe` `{from_x,from_y,to_x,to_y}` | Scroll the nearest enclosing UIScrollView.                                | bearer + session, interact tier |
+| `POST /type` `{text}`                     | Set text on the current first responder.                                  | bearer + session, interact tier |
 
 Mutating requests require both an `Authorization: Bearer <token>` header AND an `X-Session-Id` header. Read endpoints (`/screenshot`, `/elements`, `GET /state/*`) only need the bearer.
 
@@ -161,17 +161,17 @@ Before you ship to TestFlight or the App Store, run `/ios-clean`. It removes the
 
 ## Common failures
 
-| Symptom | What broke |
-|---|---|
-| `xcodebuild` fails with `Could not locate device support files for iOS X.Y` | Run `xcodebuild -downloadPlatform iOS` to fetch the device support package for your iPhone's iOS version (~8GB). |
-| Install succeeds, `process launch` fails with `Locked` | The phone is locked. Unlock and retry. |
-| First install on a paired device fails with no clear error | The phone needs to Trust the Mac. Open Settings → General → VPN & Device Management on the phone and confirm. |
-| `Developer Mode` toggle missing from Settings → Privacy | Connect the device to Xcode → Window → Devices and Simulators once, or try any `devicectl device install` against it. iOS will surface the toggle after the first attempt. |
-| `xcrun devicectl device copy from` returns ERROR 7000 | The source path is wrong — boot token lives at `tmp/gstack-ios-qa.token` inside the app's data container (NSTemporaryDirectory), not at the path's root. |
-| `/healthz` returns 200 but `/tap` returns ok:true with no UI change | The phone is paired but the StateServer port may have changed across launches. Re-resolve the CoreDevice IPv6 (`dscacheutil -q host -a name '<DeviceName>.coredevice.local'`). |
-| `403 identity_not_allowed` from `/auth/mint` | The remote caller's identity isn't on the Mac's allowlist. Run `gstack-ios-qa-mint grant --remote <identity> --capability interact` on the Mac. |
-| Daemon won't open the tailnet listener | Tailscale isn't installed, or `/var/run/tailscale.sock` is unreadable. Fix Tailscale, then restart the daemon. Loopback still runs in the meantime. |
-| SwiftUI Button tap returns `ok:true` but the action never fires | You're on iOS 17 or older where `_UIHitTestContext` doesn't exist. The DebugBridgeTouch implementation falls back to plain `hitTest:` which doesn't resolve into SwiftUI's gesture container. Update to iOS 18+ on the device, or tap a UIKit control instead. |
+| Symptom                                                                     | What broke                                                                                                                                                                                                                                                     |
+| --------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `xcodebuild` fails with `Could not locate device support files for iOS X.Y` | Run `xcodebuild -downloadPlatform iOS` to fetch the device support package for your iPhone's iOS version (~8GB).                                                                                                                                               |
+| Install succeeds, `process launch` fails with `Locked`                      | The phone is locked. Unlock and retry.                                                                                                                                                                                                                         |
+| First install on a paired device fails with no clear error                  | The phone needs to Trust the Mac. Open Settings → General → VPN & Device Management on the phone and confirm.                                                                                                                                                  |
+| `Developer Mode` toggle missing from Settings → Privacy                     | Connect the device to Xcode → Window → Devices and Simulators once, or try any `devicectl device install` against it. iOS will surface the toggle after the first attempt.                                                                                     |
+| `xcrun devicectl device copy from` returns ERROR 7000                       | The source path is wrong — boot token lives at `tmp/gstack-ios-qa.token` inside the app's data container (NSTemporaryDirectory), not at the path's root.                                                                                                       |
+| `/healthz` returns 200 but `/tap` returns ok:true with no UI change         | The phone is paired but the StateServer port may have changed across launches. Re-resolve the CoreDevice IPv6 (`dscacheutil -q host -a name '<DeviceName>.coredevice.local'`).                                                                                 |
+| `403 identity_not_allowed` from `/auth/mint`                                | The remote caller's identity isn't on the Mac's allowlist. Run `gstack-ios-qa-mint grant --remote <identity> --capability interact` on the Mac.                                                                                                                |
+| Daemon won't open the tailnet listener                                      | Tailscale isn't installed, or `/var/run/tailscale.sock` is unreadable. Fix Tailscale, then restart the daemon. Loopback still runs in the meantime.                                                                                                            |
+| SwiftUI Button tap returns `ok:true` but the action never fires             | You're on iOS 17 or older where `_UIHitTestContext` doesn't exist. The DebugBridgeTouch implementation falls back to plain `hitTest:` which doesn't resolve into SwiftUI's gesture container. Update to iOS 18+ on the device, or tap a UIKit control instead. |
 
 ## What this gets you
 

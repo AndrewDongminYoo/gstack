@@ -31,12 +31,12 @@ fences (inside lists, for example) stay plain code blocks by design.
 
 **Fence options** (space-separated in the info string):
 
-| Option | Effect |
-|---|---|
-| `title="..."` | caption below the diagram + `aria-label` |
-| `render=false` | keep the fence as a plain code block |
+| Option           | Effect                                         |
+| ---------------- | ---------------------------------------------- |
+| `title="..."`    | caption below the diagram + `aria-label`       |
+| `render=false`   | keep the fence as a plain code block           |
 | `page=landscape` | force this diagram onto its own landscape page |
-| `page=portrait` | veto auto-landscape for this diagram |
+| `page=portrait`  | veto auto-landscape for this diagram           |
 
 A fence that fails to parse renders as a loud red diagnostic block with the
 parse error and source excerpt — your document still builds, and the error
@@ -105,11 +105,11 @@ Heads-up: `--to` is the output format. `--format` is an old alias for
 
 The skill authors mermaid and emits a **triplet**:
 
-| File | Use it for |
-|---|---|
-| `<slug>.mmd` | the source of truth — edit and re-render |
-| `<slug>.excalidraw` | open at excalidraw.com (File → Open), move boxes, hand back |
-| `<slug>.svg` / `<slug>.png` | docs, issues, READMEs, chat |
+| File                        | Use it for                                                  |
+| --------------------------- | ----------------------------------------------------------- |
+| `<slug>.mmd`                | the source of truth — edit and re-render                    |
+| `<slug>.excalidraw`         | open at excalidraw.com (File → Open), move boxes, hand back |
+| `<slug>.svg` / `<slug>.png` | docs, issues, READMEs, chat                                 |
 
 Flowcharts convert to fully editable excalidraw scenes. Other mermaid types
 (sequence, state, gantt) render to SVG/PNG fine but skip the `.excalidraw`
@@ -138,7 +138,7 @@ break the build.
   with `page=landscape` on the fence.
 - **A two-row "racetrack" loop instead of one long line:** mermaid subgraph
   trick — top-level `flowchart TB`, two subgraphs with `direction LR` and
-  `direction RL`, connect the *subgraphs* (node-level edges across subgraph
+  `direction RL`, connect the _subgraphs_ (node-level edges across subgraph
   boundaries silently disable `direction`).
 - **"[remote image blocked]" placeholder** → remote images are never fetched
   by default (offline posture); the tag is replaced with a visible

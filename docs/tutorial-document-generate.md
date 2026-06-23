@@ -74,7 +74,7 @@ GENERATED: docs/reference-widget-service.md
 
 Open that file. It has a strict structure: one-paragraph intro, complete API listing with types and defaults, 2-3 runnable examples, and a Related section linking to the how-to and tutorial that will land next.
 
-This is what reference docs look like in Diataxis: factual, exhaustive, no narrative. If you find yourself wanting to explain *why* an option exists, that belongs in the explanation doc the skill will write next.
+This is what reference docs look like in Diataxis: factual, exhaustive, no narrative. If you find yourself wanting to explain _why_ an option exists, that belongs in the explanation doc the skill will write next.
 
 ## Step 5: See the explanation, how-to, and tutorial appear
 

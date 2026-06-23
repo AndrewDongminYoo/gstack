@@ -58,7 +58,7 @@ A coverage map written in Diataxis terms gives you a deterministic answer to "di
 
 **Four files instead of one.** A small skill might have one `docs/SKILL.md` file that mixes all four modes. Diataxis splits that into four. The mitigation: AI generation makes the four-file structure cheap, the cross-linking between quadrants is mechanical (every reference doc links to its how-to, every how-to links to its reference, etc.), and the gains in audit-ability are substantial — `/document-release` can score coverage automatically.
 
-**Diataxis is not the only good framework.** "Every page is page one" (Mark Baker), the four kinds of docs in the *Write the Docs* community, the Google developer documentation style guide — all have different cuts. gstack picked Diataxis because it has the strongest external adoption (CPython, Django, NumPy, FastAPI, etc.), which means downstream users have the highest chance of having seen the vocabulary before, and the quadrant labels translate cleanly to coverage-map signals.
+**Diataxis is not the only good framework.** "Every page is page one" (Mark Baker), the four kinds of docs in the _Write the Docs_ community, the Google developer documentation style guide — all have different cuts. gstack picked Diataxis because it has the strongest external adoption (CPython, Django, NumPy, FastAPI, etc.), which means downstream users have the highest chance of having seen the vocabulary before, and the quadrant labels translate cleanly to coverage-map signals.
 
 ## Alternatives considered
 

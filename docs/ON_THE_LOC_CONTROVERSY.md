@@ -4,7 +4,7 @@ Or: what happened when I mentioned how many lines of code I've been shipping, an
 
 ## The critique is right. And it doesn't matter.
 
-LOC is a garbage metric. Every senior engineer knows it. Dijkstra wrote in 1988 that lines of code shouldn't be counted as "lines produced" but as "lines spent" ([*On the cruelty of really teaching computing science*, EWD1036](https://www.cs.utexas.edu/~EWD/transcriptions/EWD10xx/EWD1036.html)). The old line (widely attributed to Bill Gates, sourcing murky) puts it more memorably: measuring programming progress by LOC is like measuring aircraft building progress by weight. If you measure programmer productivity in lines of code, you're measuring the wrong thing. This has been true for 40 years and it's still true.
+LOC is a garbage metric. Every senior engineer knows it. Dijkstra wrote in 1988 that lines of code shouldn't be counted as "lines produced" but as "lines spent" ([_On the cruelty of really teaching computing science_, EWD1036](https://www.cs.utexas.edu/~EWD/transcriptions/EWD10xx/EWD1036.html)). The old line (widely attributed to Bill Gates, sourcing murky) puts it more memorably: measuring programming progress by LOC is like measuring aircraft building progress by weight. If you measure programmer productivity in lines of code, you're measuring the wrong thing. This has been true for 40 years and it's still true.
 
 I posted that in the last 60 days I'd shipped 600,000 lines of production code. The replies came in fast:
 
@@ -41,18 +41,18 @@ One repo excluded from 2026: `tax-app` (demo for a YC video, not production work
 2013 was a full year. 2026 is day 108 as of this writing (April 18).
 
 |                  | 2013 (full year) | 2026 (108 days) | Multiple |
-|------------------|----------------:|----------------:|---------:|
-| Logical SLOC     |           5,143 |       1,233,062 |     240x |
-| Logical SLOC/day |              14 |          11,417 |     810x |
-| Commits          |              71 |             351 |     4.9x |
-| Files touched    |             290 |          13,629 |      47x |
-| Active repos     |               4 |              15 |    3.75x |
+| ---------------- | ---------------: | --------------: | -------: |
+| Logical SLOC     |            5,143 |       1,233,062 |     240x |
+| Logical SLOC/day |               14 |          11,417 |     810x |
+| Commits          |               71 |             351 |     4.9x |
+| Files touched    |              290 |          13,629 |      47x |
+| Active repos     |                4 |              15 |    3.75x |
 
 ### "14 lines per day? That's pathetic."
 
 It was. That's the point.
 
-In 2013 I was a YC partner, then a cofounder at Posterous shipping code nights and weekends. 14 logical lines per day was my actual part-time output while holding down a real job. Historical research puts professional full-time programmer output in a wide band depending on project size and study: Fred Brooks cited ~10 lines/day for systems programming in *The Mythical Man-Month* (OS/360 observations), Capers Jones measured roughly 16-38 LOC/day across thousands of projects, and Steve McConnell's *Code Complete* reports 20-125 LOC/day for small projects (10K LOC) down to 1.5-25 for large projects (10M LOC) — it's size-dependent, not a single number.
+In 2013 I was a YC partner, then a cofounder at Posterous shipping code nights and weekends. 14 logical lines per day was my actual part-time output while holding down a real job. Historical research puts professional full-time programmer output in a wide band depending on project size and study: Fred Brooks cited ~10 lines/day for systems programming in _The Mythical Man-Month_ (OS/360 observations), Capers Jones measured roughly 16-38 LOC/day across thousands of projects, and Steve McConnell's _Code Complete_ reports 20-125 LOC/day for small projects (10K LOC) down to 1.5-25 for large projects (10M LOC) — it's size-dependent, not a single number.
 
 My 2013 baseline isn't cherry-picked. It's normal for a part-time coder with a day job. If you think the right baseline is 50 (3.5x higher), the 2026 multiple drops from 810x to 228x. Still high.
 

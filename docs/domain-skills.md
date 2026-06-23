@@ -81,12 +81,12 @@ Skills are agent-authored content loaded into future prompt context. That makes
 them a classic agent-to-agent prompt-injection vector. The plan explicitly
 addresses this with multiple layers:
 
-| Layer | What | Where |
-|-------|------|-------|
-| L1-L3 | Datamarking, hidden-element strip, ARIA regex, URL blocklist | `content-security.ts` (compiled binary) |
-| L4 | TestSavantAI ONNX classifier | `security-classifier.ts` (sidebar-agent, non-compiled) |
-| L4b | Claude Haiku transcript classifier | `security-classifier.ts` (sidebar-agent) |
-| L5 | Canary token leak detection | `security.ts` |
+| Layer | What                                                         | Where                                                  |
+| ----- | ------------------------------------------------------------ | ------------------------------------------------------ |
+| L1-L3 | Datamarking, hidden-element strip, ARIA regex, URL blocklist | `content-security.ts` (compiled binary)                |
+| L4    | TestSavantAI ONNX classifier                                 | `security-classifier.ts` (sidebar-agent, non-compiled) |
+| L4b   | Claude Haiku transcript classifier                           | `security-classifier.ts` (sidebar-agent)               |
+| L5    | Canary token leak detection                                  | `security.ts`                                          |
 
 L1-L3 checks run at **save time** (in the daemon). The L4 ML classifier runs at
 **load time** (in sidebar-agent), so each session that loads a skill into its
@@ -100,14 +100,14 @@ poisoning a different domain.
 
 ## Error reference
 
-| Error | Cause | Action |
-|-------|-------|--------|
-| `Save blocked: classifier flagged content as potential injection` | L4 score ≥ 0.85 at save | Rewrite the skill removing instruction-like prose; retry. |
-| `Save blocked: <L1-L3 message>` | URL blocklist match or ARIA injection at save | Review skill body for suspicious patterns. |
-| `Save failed: empty body` | No content via stdin or `--from-file` | Pipe markdown into `$B domain-skill save`, or pass `--from-file <path>`. |
-| `Cannot save domain-skill: no top-level URL on active tab` | Tab is `about:blank` or `chrome://...` | `$B goto <target-site>` first, then save. |
-| `Cannot promote: skill is in state "quarantined"` | Skill hasn't auto-promoted yet | Use it in this project until 3 successful runs without classifier flags. |
-| `Cannot rollback: <host> has fewer than 2 versions` | Only one version exists | Use `$B domain-skill rm` to delete instead. |
+| Error                                                             | Cause                                         | Action                                                                   |
+| ----------------------------------------------------------------- | --------------------------------------------- | ------------------------------------------------------------------------ |
+| `Save blocked: classifier flagged content as potential injection` | L4 score ≥ 0.85 at save                       | Rewrite the skill removing instruction-like prose; retry.                |
+| `Save blocked: <L1-L3 message>`                                   | URL blocklist match or ARIA injection at save | Review skill body for suspicious patterns.                               |
+| `Save failed: empty body`                                         | No content via stdin or `--from-file`         | Pipe markdown into `$B domain-skill save`, or pass `--from-file <path>`. |
+| `Cannot save domain-skill: no top-level URL on active tab`        | Tab is `about:blank` or `chrome://...`        | `$B goto <target-site>` first, then save.                                |
+| `Cannot promote: skill is in state "quarantined"`                 | Skill hasn't auto-promoted yet                | Use it in this project until 3 successful runs without classifier flags. |
+| `Cannot rollback: <host> has fewer than 2 versions`               | Only one version exists                       | Use `$B domain-skill rm` to delete instead.                              |
 
 ## Telemetry
 

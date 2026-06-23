@@ -28,33 +28,33 @@ embedded in the `session_meta` event. CLI version recorded.
 
 ## Session JSONL event types (measured on Garry's machine, 2026-05-27)
 
-| type           | count | meaning |
-|----------------|------:|---------|
-| `response_item`|   382 | model's response stream (~76%) |
-| `event_msg`    |    97 | high-level session events (~19%) |
-| `turn_context` |     6 | per-turn context snapshot |
-| `session_meta` |     6 | session header (one per session) |
+| type            | count | meaning                          |
+| --------------- | ----: | -------------------------------- |
+| `response_item` |   382 | model's response stream (~76%)   |
+| `event_msg`     |    97 | high-level session events (~19%) |
+| `turn_context`  |     6 | per-turn context snapshot        |
+| `session_meta`  |     6 | session header (one per session) |
 
 ### response_item subtypes
 
-| subtype                  | count | meaning |
-|--------------------------|------:|---------|
-| `function_call`          | 148   | model invoked a tool |
-| `function_call_output`   | 148   | tool result returned to model |
-| `reasoning`              |  44   | reasoning summary |
-| `message`                |  40   | text message (input_text or output_text) |
-| `web_search_call`        |   2   | web search tool call |
+| subtype                | count | meaning                                  |
+| ---------------------- | ----: | ---------------------------------------- |
+| `function_call`        |   148 | model invoked a tool                     |
+| `function_call_output` |   148 | tool result returned to model            |
+| `reasoning`            |    44 | reasoning summary                        |
+| `message`              |    40 | text message (input_text or output_text) |
+| `web_search_call`      |     2 | web search tool call                     |
 
 ### event_msg subtypes
 
-| subtype           | count | meaning |
-|-------------------|------:|---------|
-| `token_count`     | 55    | per-step token accounting |
-| `agent_message`   | 22    | agent's prose output |
-| `user_message`    |  6    | user's prose input |
-| `task_started`    |  6    | task start (one per top-level task) |
-| `task_complete`   |  6    | task complete |
-| `web_search_end`  |  2    | web search completion |
+| subtype          | count | meaning                             |
+| ---------------- | ----: | ----------------------------------- |
+| `token_count`    |    55 | per-step token accounting           |
+| `agent_message`  |    22 | agent's prose output                |
+| `user_message`   |     6 | user's prose input                  |
+| `task_started`   |     6 | task start (one per top-level task) |
+| `task_complete`  |     6 | task complete                       |
+| `web_search_end` |     2 | web search completion               |
 
 ## Critical finding: Codex has no `AskUserQuestion` tool
 
@@ -98,6 +98,7 @@ tool calls):
 ## Schema we'll write to question-log.jsonl from Codex import
 
 Per existing `bin/gstack-question-log` schema, augmented with:
+
 - `source: "codex-import-marker"` (when qid marker found)
 - `source: "codex-import-pattern"` (when fallback regex used)
 - `codex_session_id` (UUID from session_meta)

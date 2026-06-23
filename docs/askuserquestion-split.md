@@ -131,7 +131,7 @@ to update just that option. Do **not** re-run the whole chain.
 
   > "About to ask N per-option questions. Options:
   > A) Proceed with the full split (recommended only if every option is
-  >    independent)
+  > independent)
   > B) Narrow scope first — I'll propose a smaller set
   > C) Batch into groups of 4 instead"
 
@@ -146,6 +146,7 @@ form `<skill>-split-<option-slug>` where `<option-slug>` is the option's
 key kebab-cased (lowercase, hyphens, ASCII only).
 
 Examples:
+
 - `plan-ceo-review-split-e4-detect-mappings`
 - `ship-split-rspec`
 - `plan-eng-review-split-add-coverage-test`

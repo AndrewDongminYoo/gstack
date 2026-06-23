@@ -3,7 +3,7 @@
 This doc serves two audiences:
 
 1. **Agents**: when a planning skill renders the compact `## Brain Context
-   Load` or `## Save Results to Brain` blocks, those blocks reference this
+Load` or `## Save Results to Brain` blocks, those blocks reference this
    doc. Read §Context Load or §Save Template here on-demand when you're
    actually using gbrain. Skip entirely if `gbrain` is not on PATH.
 2. **Humans**: after running a planning skill against a real brain, use
@@ -11,11 +11,11 @@ This doc serves two audiences:
 
 ## What lands where
 
-| Host + detection state | What renders in the planning-skill SKILL.md |
-|---|---|
+| Host + detection state                                                        | What renders in the planning-skill SKILL.md                                                                                          |
+| ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | Any host + `gstack-config gbrain-refresh` reports `gbrain_local_status: "ok"` | Compressed brain-aware blocks render. Agent reads this doc on-demand when it actually saves. ~250 token overhead per planning skill. |
-| Any host + gbrain not detected | Blocks suppressed at gen-time. Zero token overhead. Calibration takes still render (separate resolver, host-agnostic). |
-| GBrain or Hermes host | Blocks always render regardless of detection — these hosts ship gbrain integration as a first-class concern. |
+| Any host + gbrain not detected                                                | Blocks suppressed at gen-time. Zero token overhead. Calibration takes still render (separate resolver, host-agnostic).               |
+| GBrain or Hermes host                                                         | Blocks always render regardless of detection — these hosts ship gbrain integration as a first-class concern.                         |
 
 `.gbrain-source` pins **reads** only — writes go to the default engine
 configured in `~/.gbrain/config.json`. Documented at
@@ -110,7 +110,7 @@ companies/teams.
 ### Error handling
 
 - **Throttle**: exit code 1 with stderr containing `throttle`, `rate
-  limit`, `capacity`, or `busy`. Defer the save and move on — the brain
+limit`, `capacity`, or `busy`. Defer the save and move on — the brain
   is busy; the content isn't lost, just not persisted this run.
 - **Any other non-zero exit**: treat as transient failure. Do not retry
   inline — the user can re-run the skill or run

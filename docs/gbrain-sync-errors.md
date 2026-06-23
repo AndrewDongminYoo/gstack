@@ -16,12 +16,15 @@ from another machine) but no local git repo at `~/.gstack/.git`.
 restored on this machine yet.
 
 **Fix.**
+
 ```bash
 gstack-brain-restore
 ```
+
 This pulls the repo into `~/.gstack/` and re-registers merge drivers.
 
 If you don't want to restore here, dismiss the hint with:
+
 ```bash
 gstack-config set artifacts_sync_mode_prompted true
 ```
@@ -43,10 +46,12 @@ embedded in JSON.
    then re-run any skill to retry sync.
 
 2. **If the pattern is a false positive** (e.g., your learning contains a
-   GitHub token pattern in an example string that you *want* to publish):
+   GitHub token pattern in an example string that you _want_ to publish):
+
    ```bash
    gstack-brain-sync --skip-file <path>
    ```
+
    This permanently excludes the path from future syncs.
 
 3. **If you want to abandon this sync batch entirely** (start fresh):
@@ -84,9 +89,11 @@ git's error appears after the colon.
 or repo access revoked.
 
 **Fix.** Look at `~/.gstack/.brain-sync-status.json` for more detail, or run:
+
 ```bash
 cd ~/.gstack && git status && git push origin HEAD
 ```
+
 to see git's full error. The queue is cleared after any push attempt, but
 your local commit still exists — the next skill run will retry the push.
 
@@ -115,10 +122,13 @@ existing one.
 **Cause.** Wrong URL, missing auth, network issue.
 
 **Fix.** Test manually:
+
 ```bash
 git ls-remote <url>
 ```
+
 If that fails, check:
+
 - URL spelling
 - GitHub: `gh auth status`
 - GitLab: `glab auth status`
@@ -135,11 +145,14 @@ isn't discoverable via `gh repo view` either.
 owned by someone else, or your GitHub account hit a quota.
 
 **Fix.**
+
 ```bash
 gh auth status
 ```
+
 If unauth'd, run `gh auth login`. If the repo name collides, pass a different
 name:
+
 ```bash
 gstack-brain-init --remote git@github.com:YOURUSER/custom-name.git
 ```
@@ -207,8 +220,10 @@ canonical config files from the brain repo.
    (timelines, developer-profile) are intentionally skipped.
 
 If all those look right, run:
+
 ```bash
 gstack-brain-sync --discover-new
 gstack-brain-sync --once
 ```
+
 to force a drain.

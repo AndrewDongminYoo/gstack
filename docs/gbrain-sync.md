@@ -38,7 +38,7 @@ The command:
 
 1. Turns `~/.gstack/` into a git repo.
 2. Asks for a remote URL (default: `gh repo create --private
-   gstack-brain-$USER`). Any git remote works — GitHub, GitLab, Gitea,
+gstack-brain-$USER`). Any git remote works — GitHub, GitLab, Gitea,
    self-hosted.
 3. Pushes an initial commit with just the config.
 4. Writes `~/.gstack-brain-remote.txt` (URL-only, no secrets —
@@ -99,13 +99,14 @@ output. Scan it for problems.
 
 ## Privacy modes in detail
 
-| Mode | What syncs |
-|------|------------|
-| `off` | Nothing (default). |
+| Mode             | What syncs                                                                       |
+| ---------------- | -------------------------------------------------------------------------------- |
+| `off`            | Nothing (default).                                                               |
 | `artifacts-only` | Plans, designs, retros, learnings, reviews. Skips timelines + developer-profile. |
-| `full` | Everything in the allowlist, including behavioral state. |
+| `full`           | Everything in the allowlist, including behavioral state.                         |
 
 Change anytime with:
+
 ```bash
 gstack-config set artifacts_sync_mode full
 gstack-config set artifacts_sync_mode off

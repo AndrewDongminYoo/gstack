@@ -32,14 +32,8 @@
     "tn": 185,
     "detection_rate": 0.562,
     "fp_rate": 0.229,
-    "detection_ci_95": [
-      0.501,
-      0.621
-    ],
-    "fp_ci_95": [
-      0.181,
-      0.286
-    ]
+    "detection_ci_95": [0.501, 0.621],
+    "fp_ci_95": [0.181, 0.286]
   },
   "v1_baseline_comparison": {
     "v1_detection": 0.673,

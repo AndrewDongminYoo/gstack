@@ -25,7 +25,9 @@ https://code.claude.com/docs/en/hooks (confirmed 2026-04 reference).
   "effort": { "level": "medium" },
   "hook_event_name": "PreToolUse",
   "tool_name": "AskUserQuestion",
-  "tool_input": { /* tool-specific */ },
+  "tool_input": {
+    /* tool-specific */
+  },
   "tool_use_id": "unique-id-12345"
 }
 ```
@@ -40,13 +42,16 @@ Optional in subagent context: `agent_id`, `agent_type`.
     "hookEventName": "PreToolUse",
     "permissionDecision": "allow",
     "permissionDecisionReason": "auto-decided by plan-tune preference",
-    "updatedInput": { /* shallow-merged into original tool_input */ },
+    "updatedInput": {
+      /* shallow-merged into original tool_input */
+    },
     "additionalContext": "optional context for Claude"
   }
 }
 ```
 
 **permissionDecision values:**
+
 - `"allow"` — proceed, optionally with `updatedInput`
 - `"deny"` — block (feedback to Claude, NOT a synthetic answer per Codex
   correction in D-prefixed decisions)
@@ -65,6 +70,7 @@ The `matcher` field in `~/.claude/settings.json` supports JS-regex syntax
 underscores is an exact match.
 
 To cover both native + MCP `AskUserQuestion`:
+
 ```json
 "matcher": "(AskUserQuestion|mcp__.*__AskUserQuestion)"
 ```
@@ -79,6 +85,7 @@ required for our hook to fire there.
 > deduplicated automatically.
 
 **For our use case:**
+
 - gstack registers exactly one PreToolUse hook and one PostToolUse hook on
   AUQ-shaped tool names.
 - If a user has THEIR own hook that also returns `updatedInput` on
@@ -93,6 +100,7 @@ required for our hook to fire there.
 ## Implementation hookSpecificOutput examples
 
 **Auto-decide (PreToolUse, `never-ask` preference + non-one-way):**
+
 ```json
 {
   "hookSpecificOutput": {
@@ -100,13 +108,18 @@ required for our hook to fire there.
     "permissionDecision": "allow",
     "permissionDecisionReason": "plan-tune: never-ask preference on ship-test-failure-triage",
     "updatedInput": {
-      "questions": [{ /* same as input, but with auto-selected answer */ }]
+      "questions": [
+        {
+          /* same as input, but with auto-selected answer */
+        }
+      ]
     }
   }
 }
 ```
 
 **Pass-through (no preference, or one-way safety override):**
+
 ```json
 {
   "hookSpecificOutput": {
@@ -117,6 +130,7 @@ required for our hook to fire there.
 ```
 
 **PostToolUse capture (always):**
+
 ```json
 {
   "hookSpecificOutput": {
@@ -124,6 +138,7 @@ required for our hook to fire there.
   }
 }
 ```
+
 (PostToolUse hooks can also set `additionalContext` to append to the tool
 result; we don't need this for v1 capture.)
 
@@ -138,18 +153,19 @@ model to run the prose fallback per `SESSION_KIND`. It uses the same
 **Open question we could NOT settle in a harness:** does Claude Code invoke
 PostToolUse hooks when an MCP tool call returns a transport/missing-result error
 (the Conductor bug surfaces `[Tool result missing due to internal error]`)? The
-docs above cover PostToolUse on *success*. We could not force the Conductor
+docs above cover PostToolUse on _success_. We could not force the Conductor
 internal MCP failure on demand to observe it.
 
 **Decision (OV3:B = A):** build the hook defensively anyway.
+
 - It is **inert on success** (only fires when `isErrorResponse(tool_response)` is
   true) and **inert if the platform never invokes it** on the error path.
 - The prompt-level fallback in `generate-ask-user-format.ts` covers the case
-  regardless — the hook is a reliability *layer*, not the mechanism.
+  regardless — the hook is a reliability _layer_, not the mechanism.
 - Its decision logic is unit-tested deterministically
   (`test/auq-error-fallback-hook.test.ts`): given a synthetic error `tool_response`
-  + each `SESSION_KIND`, it emits the correct directive; given a real answer it
-  defers.
+  - each `SESSION_KIND`, it emits the correct directive; given a real answer it
+    defers.
 
 **Recommended manual / partial spike (to close the gap later):** register a
 throwaway PostToolUse hook that logs on fire, then (a) trigger a normal tool
@@ -202,9 +218,9 @@ shells into bun.
 1. **Recommended-option parsing scope.** D2 says parse `(recommended)`
    label first. The label is on the option's `label` field per
    AskUserQuestion Format. Implementation will need to walk `tool_input.
-   questions[*].options[*]` looking for the label suffix. Worked
+questions[*].options[*]` looking for the label suffix. Worked
    examples: ship/SKILL.md.tmpl emits options like `"A) Fix now"
-   (recommended)`.
+(recommended)`.
 
 2. **Auto-decided event tagging.** When hook returns `updatedInput`, the
    PostToolUse hook will see the resolved input and log a normal event.
