@@ -44,6 +44,9 @@ CONFIG_HEADER='# gstack configuration — edit freely, changes take effect on ne
 # skill_prefix: false       # true = namespace skills as /gstack-qa, /gstack-ship
 #                           # false = short names /qa, /ship
 #
+# skill_install_mode: global   # global = link all skills into ~/.claude/skills (default)
+#                              # per-project = opt-in; use gstack-profile per repo
+#
 # ─── Checkpoint ──────────────────────────────────────────────────────
 # checkpoint_mode: explicit # explicit | continuous
 #                           #   explicit   — commit only when you run /ship or /checkpoint
@@ -119,6 +122,7 @@ lookup_default() {
 	auto_upgrade) echo "false" ;;
 	update_check) echo "true" ;;
 	skill_prefix) echo "false" ;;
+	skill_install_mode) echo "global" ;; # global | per-project — per-project = opt-in skills via gstack-profile
 	checkpoint_mode) echo "explicit" ;;
 	checkpoint_push) echo "false" ;;
 	explain_level) echo "default" ;;
