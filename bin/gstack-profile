@@ -6,6 +6,7 @@
  */
 import { spawnSync } from "child_process";
 import * as fs from "fs";
+import * as os from "os";
 import * as path from "path";
 
 const IS_WINDOWS = process.platform === "win32";
@@ -58,12 +59,19 @@ export function linkName(name: string, prefix: boolean): string {
 }
 
 export function findProjectRoot(start: string): string {
+  // Resolve symlinks so /tmp vs /private/tmp (macOS) compare correctly.
+  let home: string;
+  try {
+    home = fs.realpathSync(os.homedir());
+  } catch {
+    home = os.homedir();
+  }
   let dir = path.resolve(start);
   while (true) {
-    if (
-      fs.existsSync(path.join(dir, ".git")) ||
-      fs.existsSync(path.join(dir, ".gstack"))
-    ) {
+    // Never treat $HOME as a project root: ~/.gstack (state dir) and sometimes
+    // ~/.git (dotfiles) live there, and materializing into $HOME writes skills
+    // into the global ~/.claude/skills — the exact leak opt-in must prevent.
+    if (dir !== home && (fs.existsSync(path.join(dir, ".git")) || fs.existsSync(path.join(dir, ".gstack")))) {
       return dir;
     }
     const parent = path.dirname(dir);

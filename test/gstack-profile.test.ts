@@ -258,3 +258,57 @@ describe("gstack-profile doctor", () => {
     }
   });
 });
+
+describe("findProjectRoot — $HOME leak guard", () => {
+  // Regression: without the home-guard, walking up from a non-git subdirectory
+  // would resolve to $HOME when ~/.gstack (the state dir) exists there. That
+  // caused 'init' to write profile.yaml into ~/.gstack and materialize skills
+  // into ~/.claude/skills — the exact global leak opt-in must prevent.
+  //
+  // RED reasoning (no code revert needed): without the `dir !== home` guard,
+  // the walk from <tmpHome>/work/proj would match <tmpHome> because
+  // <tmpHome>/.gstack exists, returning <tmpHome> as projectRoot. The test
+  // asserts profile is at proj, not tmpHome — which fails. GREEN: the guard
+  // skips <tmpHome>, walk reaches filesystem root, falls back to start.
+  //
+  // Note: Bun honors HOME env override via os.homedir() (verified: `HOME=/tmp/x
+  // bun -e 'console.log(require("os").homedir())'` → /tmp/x), so the HOME
+  // override in spawnSync env correctly redirects findProjectRoot's homedir call.
+  test("does not resolve project root to $HOME even when ~/.gstack exists", () => {
+    const src = makeSource();
+    // Build a fake home tree outside the gstack repo (never under a real .git)
+    const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), "gsk-home-"));
+    const proj = path.join(tmpHome, "work", "proj");
+    fs.mkdirSync(proj, { recursive: true });
+    // Mimic the ~/.gstack state dir that always exists on a configured machine
+    fs.mkdirSync(path.join(tmpHome, ".gstack"), { recursive: true });
+    try {
+      const r = spawnSync(BIN, ["init"], {
+        encoding: "utf-8",
+        cwd: proj,
+        env: {
+          ...process.env,
+          HOME: tmpHome,
+          GSTACK_PROFILE_SOURCE_DIR: src,
+        },
+      });
+      // init must succeed (falls back to start dir when no .git/.gstack marker
+      // below $HOME, so proj itself becomes the root)
+      expect(r.status).toBe(0);
+      // Profile created at the project level — not leaked to tmpHome/.gstack
+      expect(fs.existsSync(path.join(proj, ".gstack", "profile.yaml"))).toBe(
+        true,
+      );
+      expect(fs.existsSync(path.join(tmpHome, ".gstack", "profile.yaml"))).toBe(
+        false,
+      );
+      // No skills materialized into tmpHome/.claude/skills
+      expect(fs.existsSync(path.join(tmpHome, ".claude", "skills"))).toBe(
+        false,
+      );
+    } finally {
+      fs.rmSync(src, { recursive: true, force: true });
+      fs.rmSync(tmpHome, { recursive: true, force: true });
+    }
+  });
+});
