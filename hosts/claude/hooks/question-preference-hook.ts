@@ -36,11 +36,11 @@
  * Always exits 0. Hook errors land in ~/.gstack/hook-errors.log.
  * See docs/spikes/claude-code-hook-mutation.md for the protocol contract.
  */
-import * as fs from 'fs';
-import * as path from 'path';
-import * as os from 'os';
-import { spawnSync } from 'child_process';
-import { isConductor } from '../../../lib/is-conductor';
+import * as fs from "fs";
+import * as path from "path";
+import * as os from "os";
+import { spawnSync } from "child_process";
+import { isConductor } from "../../../lib/is-conductor";
 
 interface HookStdin {
   session_id?: string;
@@ -64,7 +64,7 @@ function stateRoot(): string {
   return (
     process.env.GSTACK_STATE_ROOT ||
     process.env.GSTACK_HOME ||
-    path.join(os.homedir(), '.gstack')
+    path.join(os.homedir(), ".gstack")
   );
 }
 
@@ -73,7 +73,7 @@ function logHookError(msg: string): void {
     const sr = stateRoot();
     fs.mkdirSync(sr, { recursive: true });
     fs.appendFileSync(
-      path.join(sr, 'hook-errors.log'),
+      path.join(sr, "hook-errors.log"),
       `${new Date().toISOString()} question-preference-hook: ${msg}\n`,
     );
   } catch {
@@ -83,19 +83,19 @@ function logHookError(msg: string): void {
 
 function readStdin(): Promise<string> {
   return new Promise((resolve) => {
-    let buf = '';
-    process.stdin.setEncoding('utf-8');
-    process.stdin.on('data', (chunk) => (buf += chunk));
-    process.stdin.on('end', () => resolve(buf));
-    process.stdin.on('error', () => resolve(buf));
+    let buf = "";
+    process.stdin.setEncoding("utf-8");
+    process.stdin.on("data", (chunk) => (buf += chunk));
+    process.stdin.on("end", () => resolve(buf));
+    process.stdin.on("error", () => resolve(buf));
     setTimeout(() => resolve(buf), 2000);
   });
 }
 
 function defer(additionalContext?: string): void {
   const out: Record<string, unknown> = {
-    hookEventName: 'PreToolUse',
-    permissionDecision: 'defer',
+    hookEventName: "PreToolUse",
+    permissionDecision: "defer",
   };
   if (additionalContext) out.additionalContext = additionalContext;
   process.stdout.write(JSON.stringify({ hookSpecificOutput: out }));
@@ -106,8 +106,8 @@ function deny(reason: string): void {
   process.stdout.write(
     JSON.stringify({
       hookSpecificOutput: {
-        hookEventName: 'PreToolUse',
-        permissionDecision: 'deny',
+        hookEventName: "PreToolUse",
+        permissionDecision: "deny",
         permissionDecisionReason: reason,
       },
     }),
@@ -117,7 +117,7 @@ function deny(reason: string): void {
 
 function readJsonSafe(filePath: string): Record<string, unknown> | null {
   try {
-    return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+    return JSON.parse(fs.readFileSync(filePath, "utf-8"));
   } catch {
     return null;
   }
@@ -125,28 +125,33 @@ function readJsonSafe(filePath: string): Record<string, unknown> | null {
 
 interface PreferenceLookup {
   preference: string | undefined;
-  source: 'project' | 'global' | 'none';
+  source: "project" | "global" | "none";
 }
 
 function lookupPreference(slug: string, questionId: string): PreferenceLookup {
   const sr = stateRoot();
-  const projectFile = path.join(sr, 'projects', slug, 'question-preferences.json');
-  const globalFile = path.join(sr, 'global-question-preferences.json');
+  const projectFile = path.join(
+    sr,
+    "projects",
+    slug,
+    "question-preferences.json",
+  );
+  const globalFile = path.join(sr, "global-question-preferences.json");
 
   const project = readJsonSafe(projectFile);
-  if (project && typeof project[questionId] === 'string') {
-    return { preference: project[questionId] as string, source: 'project' };
+  if (project && typeof project[questionId] === "string") {
+    return { preference: project[questionId] as string, source: "project" };
   }
   const global = readJsonSafe(globalFile);
-  if (global && typeof global[questionId] === 'string') {
-    return { preference: global[questionId] as string, source: 'global' };
+  if (global && typeof global[questionId] === "string") {
+    return { preference: global[questionId] as string, source: "global" };
   }
-  return { preference: undefined, source: 'none' };
+  return { preference: undefined, source: "none" };
 }
 
 interface RegistryEntry {
   id: string;
-  door_type?: 'one-way' | 'two-way';
+  door_type?: "one-way" | "two-way";
   signal_key?: string;
 }
 
@@ -164,13 +169,13 @@ interface MemoryNugget {
  */
 function loadMemoryNuggets(sessionId: string | undefined): MemoryNugget[] {
   const sr = stateRoot();
-  const canonical = path.join(sr, 'free-text-memory.json');
+  const canonical = path.join(sr, "free-text-memory.json");
   let nuggets: MemoryNugget[] | null = null;
 
   if (sessionId) {
-    const cachePath = path.join(sr, 'sessions', sessionId, 'memory-cache.json');
+    const cachePath = path.join(sr, "sessions", sessionId, "memory-cache.json");
     try {
-      const cached = JSON.parse(fs.readFileSync(cachePath, 'utf-8'));
+      const cached = JSON.parse(fs.readFileSync(cachePath, "utf-8"));
       if (Array.isArray(cached.nuggets)) {
         return cached.nuggets;
       }
@@ -180,7 +185,7 @@ function loadMemoryNuggets(sessionId: string | undefined): MemoryNugget[] {
   }
 
   try {
-    const j = JSON.parse(fs.readFileSync(canonical, 'utf-8'));
+    const j = JSON.parse(fs.readFileSync(canonical, "utf-8"));
     nuggets = Array.isArray(j.nuggets) ? j.nuggets : [];
   } catch {
     nuggets = [];
@@ -190,11 +195,15 @@ function loadMemoryNuggets(sessionId: string | undefined): MemoryNugget[] {
   // session take the fast path. Best-effort; never fails the hook.
   if (sessionId && nuggets) {
     try {
-      const dir = path.join(sr, 'sessions', sessionId);
+      const dir = path.join(sr, "sessions", sessionId);
       fs.mkdirSync(dir, { recursive: true });
       fs.writeFileSync(
-        path.join(dir, 'memory-cache.json'),
-        JSON.stringify({ nuggets, cached_at: new Date().toISOString() }, null, 2),
+        path.join(dir, "memory-cache.json"),
+        JSON.stringify(
+          { nuggets, cached_at: new Date().toISOString() },
+          null,
+          2,
+        ),
       );
     } catch {
       // swallow
@@ -208,10 +217,18 @@ function loadMemoryNuggets(sessionId: string | undefined): MemoryNugget[] {
  * For a given signal_key, return up to N nuggets whose applies_to_signal_keys
  * include it. Sorted by recency (most-recently-applied first), capped.
  */
-function nuggetsForSignal(nuggets: MemoryNugget[], signalKey: string, max = 3): string[] {
+function nuggetsForSignal(
+  nuggets: MemoryNugget[],
+  signalKey: string,
+  max = 3,
+): string[] {
   return nuggets
-    .filter((n) => Array.isArray(n.applies_to_signal_keys) && n.applies_to_signal_keys.includes(signalKey))
-    .sort((a, b) => (b.applied_at || '').localeCompare(a.applied_at || ''))
+    .filter(
+      (n) =>
+        Array.isArray(n.applies_to_signal_keys) &&
+        n.applies_to_signal_keys.includes(signalKey),
+    )
+    .sort((a, b) => (b.applied_at || "").localeCompare(a.applied_at || ""))
     .slice(0, max)
     .map((n) => n.nugget);
 }
@@ -224,10 +241,10 @@ function loadRegistry(): Record<string, RegistryEntry> {
   try {
     // Hook lives at hosts/claude/hooks/; registry at scripts/question-registry.ts
     const here = path.dirname(new URL(import.meta.url).pathname);
-    const repoRoot = path.resolve(here, '..', '..', '..');
-    const regPath = path.join(repoRoot, 'scripts', 'question-registry.ts');
+    const repoRoot = path.resolve(here, "..", "..", "..");
+    const regPath = path.join(repoRoot, "scripts", "question-registry.ts");
     if (!fs.existsSync(regPath)) return registryCache;
-    const src = fs.readFileSync(regPath, 'utf-8');
+    const src = fs.readFileSync(regPath, "utf-8");
     // Cheap regex extraction so the hook doesn't need to import the TS file
     // (which would require bun resolving the module at hook-invocation time).
     // Matches entries like:
@@ -246,7 +263,7 @@ function loadRegistry(): Record<string, RegistryEntry> {
       const sk = block.match(/signal_key:\s*'([a-z0-9-]+)'/);
       registryCache[id] = {
         id,
-        door_type: door_type as 'one-way' | 'two-way',
+        door_type: door_type as "one-way" | "two-way",
         signal_key: sk ? sk[1] : undefined,
       };
     }
@@ -256,8 +273,12 @@ function loadRegistry(): Record<string, RegistryEntry> {
   return registryCache;
 }
 
-function optionLabels(opts: Array<string | { label?: string; description?: string }>): string[] {
-  return opts.map((o) => (typeof o === 'string' ? o : o.label || o.description || ''));
+function optionLabels(
+  opts: Array<string | { label?: string; description?: string }>,
+): string[] {
+  return opts.map((o) =>
+    typeof o === "string" ? o : o.label || o.description || "",
+  );
 }
 
 function extractRecommended(
@@ -266,9 +287,13 @@ function extractRecommended(
 ): { recommended: string | undefined; ambiguous: boolean } {
   const labelMatches = opts.filter((o) => RECOMMENDED_LABEL_RE.test(o));
   if (labelMatches.length === 1) {
-    return { recommended: labelMatches[0].replace(RECOMMENDED_LABEL_RE, '').trim(), ambiguous: false };
+    return {
+      recommended: labelMatches[0].replace(RECOMMENDED_LABEL_RE, "").trim(),
+      ambiguous: false,
+    };
   }
-  if (labelMatches.length > 1) return { recommended: undefined, ambiguous: true };
+  if (labelMatches.length > 1)
+    return { recommended: undefined, ambiguous: true };
 
   const m = questionText.match(/Recommendation:\s*([^\n]+)/i);
   if (!m) return { recommended: undefined, ambiguous: false };
@@ -276,8 +301,10 @@ function extractRecommended(
   const prefixMatches = opts.filter((o) =>
     o.toLowerCase().startsWith(recPhrase.toLowerCase().slice(0, 12)),
   );
-  if (prefixMatches.length === 1) return { recommended: prefixMatches[0], ambiguous: false };
-  if (prefixMatches.length > 1) return { recommended: undefined, ambiguous: true };
+  if (prefixMatches.length === 1)
+    return { recommended: prefixMatches[0], ambiguous: false };
+  if (prefixMatches.length > 1)
+    return { recommended: undefined, ambiguous: true };
   return { recommended: undefined, ambiguous: false };
 }
 
@@ -286,17 +313,20 @@ function slugFromCwd(cwd: string | undefined): string {
   // to git, which is too expensive on a hot hook path; the basename is close
   // enough for preference lookup (preferences are keyed by question_id, slug
   // is just the directory bucket).
-  if (!cwd) return 'unknown';
+  if (!cwd) return "unknown";
   return path.basename(cwd);
 }
 
-function markAutoDecided(sessionId: string | undefined, toolUseId: string | undefined): void {
+function markAutoDecided(
+  sessionId: string | undefined,
+  toolUseId: string | undefined,
+): void {
   if (!sessionId || !toolUseId) return;
   try {
     const sr = stateRoot();
-    const dir = path.join(sr, 'sessions', sessionId);
+    const dir = path.join(sr, "sessions", sessionId);
     fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(path.join(dir, `.auto-decided-${toolUseId}`), '');
+    fs.writeFileSync(path.join(dir, `.auto-decided-${toolUseId}`), "");
   } catch (e) {
     logHookError(`markAutoDecided failed: ${(e as Error).message}`);
   }
@@ -318,22 +348,22 @@ function logAutoDecided(
 ): void {
   try {
     const here = path.dirname(new URL(import.meta.url).pathname);
-    const repoRoot = path.resolve(here, '..', '..', '..');
-    const bin = path.join(repoRoot, 'bin', 'gstack-question-log');
+    const repoRoot = path.resolve(here, "..", "..", "..");
+    const bin = path.join(repoRoot, "bin", "gstack-question-log");
     const payload: Record<string, unknown> = {
-      skill: 'unknown',
+      skill: "unknown",
       question_id: questionId,
       question_summary: questionSummary.slice(0, 200),
       options_count: optionsCount,
       user_choice: recommended.slice(0, 64),
       recommended: recommended.slice(0, 64),
-      source: 'auto-decided',
+      source: "auto-decided",
       session_id: sessionId?.slice(0, 64),
       tool_use_id: toolUseId?.slice(0, 128),
     };
     spawnSync(bin, [JSON.stringify(payload)], {
-      encoding: 'utf-8',
-      stdio: ['ignore', 'pipe', 'pipe'],
+      encoding: "utf-8",
+      stdio: ["ignore", "pipe", "pipe"],
       timeout: 3000,
       // cwd of the originating tool call so gstack-slug resolves to the
       // project the user is actually in, not the hook script's location.
@@ -359,9 +389,9 @@ async function main(): Promise<void> {
     return;
   }
 
-  const toolName = stdin.tool_name || '';
+  const toolName = stdin.tool_name || "";
   if (
-    toolName !== 'AskUserQuestion' &&
+    toolName !== "AskUserQuestion" &&
     !toolName.match(/^mcp__.+__AskUserQuestion$/)
   ) {
     defer();
@@ -387,7 +417,7 @@ async function main(): Promise<void> {
   // relevant prior context either way.
   const contextNuggets: string[] = [];
   for (const q of questions) {
-    const qText = q.question || '';
+    const qText = q.question || "";
     const marker = qText.match(MARKER_RE);
     if (!marker) continue;
     const entry = registry[marker[1]];
@@ -398,7 +428,7 @@ async function main(): Promise<void> {
     }
   }
   const memoryContext = contextNuggets.length
-    ? '[plan-tune memory] Past answers suggest: ' + contextNuggets.join(' | ')
+    ? "[plan-tune memory] Past answers suggest: " + contextNuggets.join(" | ")
     : undefined;
 
   // Determine whether EVERY question is eligible for never-ask auto-decide.
@@ -410,22 +440,34 @@ async function main(): Promise<void> {
   const autoDecisions: Array<{ id: string; recommended: string }> = [];
   let fullyAutoDecidable = true;
   for (const q of questions) {
-    const qText = q.question || '';
+    const qText = q.question || "";
     const marker = qText.match(MARKER_RE);
-    if (!marker) { fullyAutoDecidable = false; break; }
+    if (!marker) {
+      fullyAutoDecidable = false;
+      break;
+    }
     const questionId = marker[1];
     const pref = lookupPreference(slug, questionId);
-    if (!pref.preference || pref.preference === 'always-ask') { fullyAutoDecidable = false; break; }
+    if (!pref.preference || pref.preference === "always-ask") {
+      fullyAutoDecidable = false;
+      break;
+    }
 
     const entry = registry[questionId];
-    const doorType = entry?.door_type || 'two-way';
+    const doorType = entry?.door_type || "two-way";
     // Safety override — even never-ask doesn't bypass one-way doors.
-    if (doorType === 'one-way') { fullyAutoDecidable = false; break; }
+    if (doorType === "one-way") {
+      fullyAutoDecidable = false;
+      break;
+    }
 
     const opts = optionLabels(q.options || []);
     const { recommended, ambiguous } = extractRecommended(qText, opts);
     // Refuse-on-ambiguous per D2 — fail safe.
-    if (!recommended || ambiguous) { fullyAutoDecidable = false; break; }
+    if (!recommended || ambiguous) {
+      fullyAutoDecidable = false;
+      break;
+    }
     autoDecisions.push({ id: questionId, recommended });
   }
 
@@ -438,16 +480,24 @@ async function main(): Promise<void> {
     for (let i = 0; i < autoDecisions.length; i++) {
       const d = autoDecisions[i];
       const q = questions[i];
-      const qText = (q.question || '').replace(MARKER_RE, '').trim();
+      const qText = (q.question || "").replace(MARKER_RE, "").trim();
       const opts = optionLabels(q.options || []);
-      logAutoDecided(d.id, qText, d.recommended, opts.length, stdin.session_id, stdin.tool_use_id, stdin.cwd);
+      logAutoDecided(
+        d.id,
+        qText,
+        d.recommended,
+        opts.length,
+        stdin.session_id,
+        stdin.tool_use_id,
+        stdin.cwd,
+      );
     }
 
     const reasonLines = autoDecisions.map(
       (d) =>
         `[plan-tune auto-decide] ${d.id} → ${d.recommended} (your never-ask preference). Proceed with that option without re-prompting. Change with /plan-tune.`,
     );
-    deny(reasonLines.join('\n'));
+    deny(reasonLines.join("\n"));
     return;
   }
 
@@ -459,14 +509,14 @@ async function main(): Promise<void> {
   // human via prose rather than the unreliable tool.
   if (isConductor()) {
     const conductorReason =
-      '[conductor] AskUserQuestion is unreliable in Conductor (native disabled, MCP variant flaky). ' +
-      'Do NOT call AskUserQuestion (native or any mcp__*__AskUserQuestion). Render this decision as a ' +
-      'PROSE decision brief now: a D<N> label, an ELI10 of the issue, a Recommendation line, then one ' +
-      'paragraph per choice carrying its `(recommended)` marker and `Completeness: X/10`; tell the user ' +
-      'to reply with a letter, then STOP. For a one-way/destructive confirmation, require an explicit ' +
-      'typed confirmation and do NOT proceed on a vague reply. Capture the decision with gstack-question-log ' +
-      '(PostToolUse will not fire on a prose path).' +
-      (memoryContext ? `\n${memoryContext}` : '');
+      "[conductor] AskUserQuestion is unreliable in Conductor (native disabled, MCP variant flaky). " +
+      "Do NOT call AskUserQuestion (native or any mcp__*__AskUserQuestion). Render this decision as a " +
+      "PROSE decision brief now: a D<N> label, an ELI10 of the issue, a Recommendation line, then one " +
+      "paragraph per choice carrying its `(recommended)` marker and `Completeness: X/10`; tell the user " +
+      "to reply with a letter, then STOP. For a one-way/destructive confirmation, require an explicit " +
+      "typed confirmation and do NOT proceed on a vague reply. Capture the decision with gstack-question-log " +
+      "(PostToolUse will not fire on a prose path)." +
+      (memoryContext ? `\n${memoryContext}` : "");
     deny(conductorReason);
     return;
   }

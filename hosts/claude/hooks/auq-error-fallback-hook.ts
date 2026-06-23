@@ -28,10 +28,10 @@
  *   - Never triggers on a successful answer (would corrupt a normal AUQ).
  *   - Errors land in ~/.gstack/hook-errors.log.
  */
-import * as fs from 'fs';
-import * as path from 'path';
-import * as os from 'os';
-import { spawnSync } from 'child_process';
+import * as fs from "fs";
+import * as path from "path";
+import * as os from "os";
+import { spawnSync } from "child_process";
 
 interface HookStdin {
   tool_name?: string;
@@ -43,7 +43,7 @@ function stateRoot(): string {
   return (
     process.env.GSTACK_STATE_ROOT ||
     process.env.GSTACK_HOME ||
-    path.join(os.homedir(), '.gstack')
+    path.join(os.homedir(), ".gstack")
   );
 }
 
@@ -52,7 +52,7 @@ function logHookError(msg: string): void {
     const sr = stateRoot();
     fs.mkdirSync(sr, { recursive: true });
     fs.appendFileSync(
-      path.join(sr, 'hook-errors.log'),
+      path.join(sr, "hook-errors.log"),
       `${new Date().toISOString()} auq-error-fallback-hook: ${msg}\n`,
     );
   } catch {
@@ -62,11 +62,11 @@ function logHookError(msg: string): void {
 
 function readStdin(): Promise<string> {
   return new Promise((resolve) => {
-    let buf = '';
-    process.stdin.setEncoding('utf-8');
-    process.stdin.on('data', (chunk) => (buf += chunk));
-    process.stdin.on('end', () => resolve(buf));
-    process.stdin.on('error', () => resolve(buf));
+    let buf = "";
+    process.stdin.setEncoding("utf-8");
+    process.stdin.on("data", (chunk) => (buf += chunk));
+    process.stdin.on("end", () => resolve(buf));
+    process.stdin.on("error", () => resolve(buf));
     setTimeout(() => resolve(buf), 2000);
   });
 }
@@ -74,7 +74,7 @@ function readStdin(): Promise<string> {
 /** No-op output — let the tool result stand untouched. */
 function defer(): void {
   process.stdout.write(
-    JSON.stringify({ hookSpecificOutput: { hookEventName: 'PostToolUse' } }),
+    JSON.stringify({ hookSpecificOutput: { hookEventName: "PostToolUse" } }),
   );
   process.exit(0);
 }
@@ -82,7 +82,7 @@ function defer(): void {
 function inject(additionalContext: string): void {
   process.stdout.write(
     JSON.stringify({
-      hookSpecificOutput: { hookEventName: 'PostToolUse', additionalContext },
+      hookSpecificOutput: { hookEventName: "PostToolUse", additionalContext },
     }),
   );
   process.exit(0);
@@ -95,27 +95,32 @@ function inject(additionalContext: string): void {
  */
 export function isErrorResponse(response: unknown): boolean {
   if (response === null || response === undefined) return true;
-  if (typeof response === 'string') {
+  if (typeof response === "string") {
     const s = response.trim();
-    if (s === '') return true;
+    if (s === "") return true;
     // Match ONLY the specific missing-result sentinel phrase, not any string that
     // merely contains "error" — a real answer like "Investigate the internal error"
     // must NOT trigger the fallback. (Codex review finding.)
     return /tool result missing/i.test(s);
   }
-  if (typeof response === 'object') {
+  if (typeof response === "object") {
     const rec = response as Record<string, unknown>;
     // Structured flag must be the boolean true — not the substring "is_error" inside
     // a serialized success payload like '{"is_error": false}'.
     if (rec.is_error === true || rec.isError === true) return true;
-    if (typeof rec.error === 'string' && rec.error.trim() !== '') return true;
+    if (typeof rec.error === "string" && rec.error.trim() !== "") return true;
     // Some hosts wrap the payload as { content: "..." } or { content: [{text}] }.
     const content = rec.content;
-    if (typeof content === 'string') return /tool result missing/i.test(content);
+    if (typeof content === "string")
+      return /tool result missing/i.test(content);
     if (Array.isArray(content)) {
       const text = content
-        .map((c) => (typeof c === 'string' ? c : (c as Record<string, unknown>)?.text ?? ''))
-        .join(' ');
+        .map((c) =>
+          typeof c === "string"
+            ? c
+            : ((c as Record<string, unknown>)?.text ?? ""),
+        )
+        .join(" ");
       return /tool result missing/i.test(text);
     }
   }
@@ -124,48 +129,60 @@ export function isErrorResponse(response: unknown): boolean {
 
 /** Resolve SESSION_KIND via the shared helper (same classification the preamble
  *  echoes). Falls back to 'interactive' (degrade-safe) on any failure. */
-export function sessionKind(cwd?: string): 'spawned' | 'headless' | 'interactive' {
+export function sessionKind(
+  cwd?: string,
+): "spawned" | "headless" | "interactive" {
   try {
     const here = path.dirname(new URL(import.meta.url).pathname);
-    const bin = path.resolve(here, '..', '..', '..', 'bin', 'gstack-session-kind');
+    const bin = path.resolve(
+      here,
+      "..",
+      "..",
+      "..",
+      "bin",
+      "gstack-session-kind",
+    );
     const res = spawnSync(bin, [], {
-      encoding: 'utf-8',
+      encoding: "utf-8",
       timeout: 3000,
       cwd: cwd && fs.existsSync(cwd) ? cwd : undefined,
     });
-    const out = (res.stdout || '').trim();
-    if (out === 'spawned' || out === 'headless' || out === 'interactive') return out;
+    const out = (res.stdout || "").trim();
+    if (out === "spawned" || out === "headless" || out === "interactive")
+      return out;
   } catch (e) {
     logHookError(`sessionKind failed: ${(e as Error).message}`);
   }
-  return 'interactive';
+  return "interactive";
 }
 
 /** The directive injected per session kind. Exported for unit testing. */
-export function directiveFor(kind: 'spawned' | 'headless' | 'interactive'): string {
+export function directiveFor(
+  kind: "spawned" | "headless" | "interactive",
+): string {
   const lead =
-    'The AskUserQuestion call did not return a usable answer (error / missing result). ' +
-    'Per the AskUserQuestion failure-fallback rule: ';
+    "The AskUserQuestion call did not return a usable answer (error / missing result). " +
+    "Per the AskUserQuestion failure-fallback rule: ";
   switch (kind) {
-    case 'spawned':
+    case "spawned":
       return (
         lead +
-        'SESSION_KIND=spawned — auto-choose the recommended option per the Spawned session block. ' +
-        'Do not emit prose, do not BLOCK.'
+        "SESSION_KIND=spawned — auto-choose the recommended option per the Spawned session block. " +
+        "Do not emit prose, do not BLOCK."
       );
-    case 'headless':
+    case "headless":
       return (
         lead +
-        'SESSION_KIND=headless — report `BLOCKED — AskUserQuestion unavailable` and stop; no human can answer.'
+        "SESSION_KIND=headless — report `BLOCKED — AskUserQuestion unavailable` and stop; no human can answer."
       );
-    case 'interactive':
+    case "interactive":
     default:
       return (
         lead +
-        'SESSION_KIND=interactive — render the decision as a PROSE message now: a clear ELI10 of the issue, ' +
-        'then a Recommendation line, then ONE paragraph per choice carrying its `(recommended)` marker, its ' +
-        '`Completeness: X/10`, and 2-4 sentences of reasoning. Tell the user to reply with a letter, then STOP. ' +
-        '(Retry the call once first only if no answer could have surfaced.)'
+        "SESSION_KIND=interactive — render the decision as a PROSE message now: a clear ELI10 of the issue, " +
+        "then a Recommendation line, then ONE paragraph per choice carrying its `(recommended)` marker, its " +
+        "`Completeness: X/10`, and 2-4 sentences of reasoning. Tell the user to reply with a letter, then STOP. " +
+        "(Retry the call once first only if no answer could have surfaced.)"
       );
   }
 }
@@ -182,8 +199,11 @@ async function main(): Promise<void> {
     return defer();
   }
 
-  const toolName = stdin.tool_name || '';
-  if (toolName !== 'AskUserQuestion' && !/^mcp__.+__AskUserQuestion$/.test(toolName)) {
+  const toolName = stdin.tool_name || "";
+  if (
+    toolName !== "AskUserQuestion" &&
+    !/^mcp__.+__AskUserQuestion$/.test(toolName)
+  ) {
     return defer();
   }
 

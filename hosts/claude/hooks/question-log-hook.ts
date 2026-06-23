@@ -32,11 +32,11 @@
  *
  * See docs/spikes/claude-code-hook-mutation.md for the protocol contract.
  */
-import * as crypto from 'crypto';
-import * as fs from 'fs';
-import * as path from 'path';
-import * as os from 'os';
-import { spawnSync } from 'child_process';
+import * as crypto from "crypto";
+import * as fs from "fs";
+import * as path from "path";
+import * as os from "os";
+import { spawnSync } from "child_process";
 
 interface HookStdin {
   session_id?: string;
@@ -73,10 +73,10 @@ function logHookError(msg: string): void {
     const stateRoot =
       process.env.GSTACK_STATE_ROOT ||
       process.env.GSTACK_HOME ||
-      path.join(os.homedir(), '.gstack');
+      path.join(os.homedir(), ".gstack");
     fs.mkdirSync(stateRoot, { recursive: true });
     fs.appendFileSync(
-      path.join(stateRoot, 'hook-errors.log'),
+      path.join(stateRoot, "hook-errors.log"),
       `${new Date().toISOString()} question-log-hook: ${msg}\n`,
     );
   } catch {
@@ -86,22 +86,26 @@ function logHookError(msg: string): void {
 
 function readStdin(): Promise<string> {
   return new Promise((resolve) => {
-    let buf = '';
-    process.stdin.setEncoding('utf-8');
-    process.stdin.on('data', (chunk) => (buf += chunk));
-    process.stdin.on('end', () => resolve(buf));
-    process.stdin.on('error', () => resolve(buf));
+    let buf = "";
+    process.stdin.setEncoding("utf-8");
+    process.stdin.on("data", (chunk) => (buf += chunk));
+    process.stdin.on("end", () => resolve(buf));
+    process.stdin.on("error", () => resolve(buf));
     // Hard cutoff so we don't hang the user's session waiting for stdin.
     setTimeout(() => resolve(buf), 2000);
   });
 }
 
-function hashQuestionId(skill: string, question: string, options: string[]): string {
-  const sorted = [...options].sort().join('|');
+function hashQuestionId(
+  skill: string,
+  question: string,
+  options: string[],
+): string {
+  const sorted = [...options].sort().join("|");
   const h = crypto
-    .createHash('sha1')
+    .createHash("sha1")
     .update(`${skill}::${question}::${sorted}`)
-    .digest('hex');
+    .digest("hex");
   return `hook-${h.slice(0, 10)}`;
 }
 
@@ -121,7 +125,7 @@ function extractQuestionId(
     return {
       id: match[1],
       marker_present: true,
-      stripped_question: questionText.replace(MARKER_RE, '').trim(),
+      stripped_question: questionText.replace(MARKER_RE, "").trim(),
     };
   }
   return {
@@ -131,23 +135,33 @@ function extractQuestionId(
   };
 }
 
-function optionLabels(opts: Array<string | { label?: string; description?: string }>): string[] {
-  return opts.map((o) => (typeof o === 'string' ? o : o.label || o.description || ''));
+function optionLabels(
+  opts: Array<string | { label?: string; description?: string }>,
+): string[] {
+  return opts.map((o) =>
+    typeof o === "string" ? o : o.label || o.description || "",
+  );
 }
 
 /**
  * Parse "(recommended)" label-first per D2; fall back to "Recommendation: X"
  * prose match; refuse (return undefined) if ambiguous.
  */
-function extractRecommended(questionText: string, opts: string[]): string | undefined {
+function extractRecommended(
+  questionText: string,
+  opts: string[],
+): string | undefined {
   const labelMatches = opts.filter((o) => RECOMMENDED_LABEL_RE.test(o));
-  if (labelMatches.length === 1) return labelMatches[0].replace(RECOMMENDED_LABEL_RE, '').trim();
+  if (labelMatches.length === 1)
+    return labelMatches[0].replace(RECOMMENDED_LABEL_RE, "").trim();
   if (labelMatches.length > 1) return undefined; // ambiguous
 
   const m = questionText.match(/Recommendation:\s*([^\n]+)/i);
   if (!m) return undefined;
   const recPhrase = m[1].trim();
-  const matchByPrefix = opts.find((o) => o.toLowerCase().startsWith(recPhrase.toLowerCase().slice(0, 12)));
+  const matchByPrefix = opts.find((o) =>
+    o.toLowerCase().startsWith(recPhrase.toLowerCase().slice(0, 12)),
+  );
   return matchByPrefix;
 }
 
@@ -163,7 +177,7 @@ function extractUserChoices(
 ): Array<{ choice: string; free_text?: string }> {
   const out: Array<{ choice: string; free_text?: string }> = [];
   if (!response) {
-    for (let i = 0; i < questionCount; i++) out.push({ choice: '__unknown__' });
+    for (let i = 0; i < questionCount; i++) out.push({ choice: "__unknown__" });
     return out;
   }
   // Shape A: { answers: [{option_label, free_text?}] }
@@ -173,24 +187,33 @@ function extractUserChoices(
   const rec = response as Record<string, unknown>;
   if (Array.isArray(rec.answers)) {
     for (const a of rec.answers as Array<Record<string, unknown>>) {
-      const choice = (a.option_label || a.label || a.choice || a.answer || '__unknown__') as string;
+      const choice = (a.option_label ||
+        a.label ||
+        a.choice ||
+        a.answer ||
+        "__unknown__") as string;
       const freeText = (a.free_text || a.other_text) as string | undefined;
       out.push(freeText ? { choice, free_text: freeText } : { choice });
     }
-    while (out.length < questionCount) out.push({ choice: '__unknown__' });
+    while (out.length < questionCount) out.push({ choice: "__unknown__" });
     return out;
   }
   if (Array.isArray(rec.questions)) {
     for (const q of rec.questions as Array<Record<string, unknown>>) {
-      const choice = (q.user_answer || q.answer || q.choice || '__unknown__') as string;
+      const choice = (q.user_answer ||
+        q.answer ||
+        q.choice ||
+        "__unknown__") as string;
       out.push({ choice });
     }
-    while (out.length < questionCount) out.push({ choice: '__unknown__' });
+    while (out.length < questionCount) out.push({ choice: "__unknown__" });
     return out;
   }
   // Fall back: stringify and log first 100 chars to help future debugging.
   for (let i = 0; i < questionCount; i++) {
-    out.push({ choice: `__response-shape-unknown:${JSON.stringify(response).slice(0, 80)}__` });
+    out.push({
+      choice: `__response-shape-unknown:${JSON.stringify(response).slice(0, 80)}__`,
+    });
   }
   return out;
 }
@@ -201,25 +224,27 @@ function detectSkill(cwd: string | undefined): string {
   // skill marker (<gstack-skill:NAME>) embedded in question text per
   // future plan-tune work is the durable path.
   void cwd;
-  return 'unknown';
+  return "unknown";
 }
 
 function spawnLog(payload: Record<string, unknown>, cwd?: string): void {
   // Locate the bin relative to this script's directory.
   const here = path.dirname(new URL(import.meta.url).pathname);
   // hosts/claude/hooks/ -> ../../../bin/
-  const repoRoot = path.resolve(here, '..', '..', '..');
-  const bin = path.join(repoRoot, 'bin', 'gstack-question-log');
+  const repoRoot = path.resolve(here, "..", "..", "..");
+  const bin = path.join(repoRoot, "bin", "gstack-question-log");
   const res = spawnSync(bin, [JSON.stringify(payload)], {
-    encoding: 'utf-8',
-    stdio: ['ignore', 'pipe', 'pipe'],
+    encoding: "utf-8",
+    stdio: ["ignore", "pipe", "pipe"],
     timeout: 3000,
     // Run from the originating tool call's cwd so gstack-slug resolves to
     // the project the user is actually in, not the hook script's location.
     cwd: cwd && fs.existsSync(cwd) ? cwd : undefined,
   });
   if (res.status !== 0) {
-    logHookError(`gstack-question-log exited ${res.status}: ${res.stderr || res.stdout}`);
+    logHookError(
+      `gstack-question-log exited ${res.status}: ${res.stderr || res.stdout}`,
+    );
   }
 }
 
@@ -236,9 +261,9 @@ async function main(): Promise<void> {
     process.exit(0);
   }
 
-  const toolName = stdin.tool_name || '';
+  const toolName = stdin.tool_name || "";
   if (
-    toolName !== 'AskUserQuestion' &&
+    toolName !== "AskUserQuestion" &&
     !toolName.match(/^mcp__.+__AskUserQuestion$/)
   ) {
     // Matcher should have filtered this out; defensive no-op.
@@ -255,14 +280,14 @@ async function main(): Promise<void> {
 
   for (let i = 0; i < questions.length; i++) {
     const q = questions[i];
-    const qText = q.question || '';
+    const qText = q.question || "";
     if (!qText) continue;
 
     const opts = optionLabels(q.options || []);
     const { id, stripped_question } = extractQuestionId(skill, qText, opts);
     const recommended = extractRecommended(stripped_question, opts);
     const summary = stripped_question.slice(0, 200);
-    const choice = choices[i] || { choice: '__unknown__' };
+    const choice = choices[i] || { choice: "__unknown__" };
 
     const payload: Record<string, unknown> = {
       skill,
@@ -270,7 +295,7 @@ async function main(): Promise<void> {
       question_summary: summary,
       options_count: opts.length,
       user_choice: String(choice.choice).slice(0, 64),
-      source: choice.free_text ? 'auq-other' : 'hook',
+      source: choice.free_text ? "auq-other" : "hook",
       session_id: stdin.session_id?.slice(0, 64),
       tool_use_id: stdin.tool_use_id?.slice(0, 128),
     };
