@@ -89,7 +89,7 @@ git commit -m "enable gstack skills for this project"
 
 `.gstack/profile.yaml` is committed — teammates get the same skill set automatically.
 `.claude/skills/` is gitignored — symlinks are local, generated from the profile on each machine.
-Note: the whole `.claude/skills/` directory is gitignored, so if you keep hand-written project skills there, add them back explicitly in `.gitignore` (e.g., `!.claude/skills/my-local-skill`) or place them elsewhere.
+Note: gstack ignores the whole `.claude/skills/` directory, and git won't re-include a file whose parent directory is excluded — a `!.claude/skills/my-local-skill` line in `.gitignore` won't work. Keep hand-written skills outside `.claude/skills/` (e.g., a sibling directory).
 
 **Other `gstack-profile` commands:**
 
