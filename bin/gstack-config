@@ -44,6 +44,9 @@ CONFIG_HEADER='# gstack configuration — edit freely, changes take effect on ne
 # skill_prefix: false       # true = namespace skills as /gstack-qa, /gstack-ship
 #                           # false = short names /qa, /ship
 #
+# skill_install_mode: global   # global = link all skills into ~/.claude/skills (default)
+#                              # per-project = opt-in; use gstack-profile per repo
+#
 # ─── Checkpoint ──────────────────────────────────────────────────────
 # checkpoint_mode: explicit # explicit | continuous
 #                           #   explicit   — commit only when you run /ship or /checkpoint
@@ -119,6 +122,7 @@ lookup_default() {
 	auto_upgrade) echo "false" ;;
 	update_check) echo "true" ;;
 	skill_prefix) echo "false" ;;
+	skill_install_mode) echo "global" ;; # global | per-project — per-project = opt-in skills via gstack-profile
 	checkpoint_mode) echo "explicit" ;;
 	checkpoint_push) echo "false" ;;
 	explain_level) echo "default" ;;
@@ -310,6 +314,10 @@ set)
 	if [ "$KEY" = "plan_tune_hooks" ] && [ "$VALUE" != "prompt" ] && [ "$VALUE" != "yes" ] && [ "$VALUE" != "no" ]; then
 		echo "Warning: plan_tune_hooks '$VALUE' not recognized. Valid values: prompt, yes, no. Using prompt." >&2
 		VALUE="prompt"
+	fi
+	if [ "$KEY" = "skill_install_mode" ] && [ "$VALUE" != "global" ] && [ "$VALUE" != "per-project" ]; then
+		echo "Warning: skill_install_mode '$VALUE' not recognized. Valid values: global, per-project. Using global." >&2
+		VALUE="global"
 	fi
 	# codex_reviews controls PAID Codex calls. Unlike the warn-and-default keys above,
 	# an invalid value is REJECTED and the existing setting is left unchanged — a typo
