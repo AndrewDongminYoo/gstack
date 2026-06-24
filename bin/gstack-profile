@@ -168,6 +168,10 @@ function materialize(
 ) {
   const link = linkName(name, prefix);
   const target = path.join(projectRoot, ".claude", "skills", link);
+  // If target is a pre-existing symlink (e.g. a symlinked project skill),
+  // remove the link itself — never follow it and write through to files
+  // outside the project.
+  if (isSymlink(target)) fs.rmSync(target, { force: true });
   fs.mkdirSync(target, { recursive: true });
   linkOrCopy(
     path.join(sourceDir, dir, "SKILL.md"),

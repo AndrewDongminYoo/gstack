@@ -312,3 +312,55 @@ describe("findProjectRoot — $HOME leak guard", () => {
     }
   });
 });
+
+describe("materialize — pre-existing symlink guard", () => {
+  // Regression: without the fix, fs.mkdirSync(target, {recursive:true}) was a
+  // no-op on a pre-existing directory symlink. linkOrCopy then deleted and
+  // re-wrote SKILL.md INSIDE the symlink's real target — outside the project.
+  // With the fix, the symlink is removed first, so a real dir is created and
+  // the external dir's SKILL.md is never touched.
+  test("sync does not write through a pre-existing symlink into external dirs", () => {
+    const src = makeSource();
+    const proj = fs.mkdtempSync(path.join(os.tmpdir(), "gsk-proj-"));
+    const external = fs.mkdtempSync(path.join(os.tmpdir(), "gsk-ext-"));
+    try {
+      // Create an external dir with a sentinel SKILL.md
+      const externalSkillMd = path.join(external, "SKILL.md");
+      fs.writeFileSync(
+        externalSkillMd,
+        "sentinel content — must not be modified\n",
+      );
+
+      // Make .claude/skills/ship a symlink to the external dir
+      const skillsDir = path.join(proj, ".claude", "skills");
+      fs.mkdirSync(skillsDir, { recursive: true });
+      const linkTarget = path.join(skillsDir, "ship");
+      fs.symlinkSync(external, linkTarget);
+
+      // Enable the "ship" skill (skill_prefix=false in fake config → link name = "ship")
+      writeProfile(proj, ["ship"]);
+
+      // sync should fix up the situation without touching the external dir
+      const r = run(["sync"], proj, src);
+      expect(r.status).toBe(0);
+
+      // (a) External dir's sentinel SKILL.md must be untouched
+      expect(fs.readFileSync(externalSkillMd, "utf-8")).toBe(
+        "sentinel content — must not be modified\n",
+      );
+
+      // (b) .claude/skills/ship must now be a real directory whose SKILL.md
+      //     is a symlink pointing into the source checkout
+      const skillLink = path.join(skillsDir, "ship");
+      expect(fs.lstatSync(skillLink).isSymbolicLink()).toBe(false);
+      expect(fs.lstatSync(skillLink).isDirectory()).toBe(true);
+      const mdLink = path.join(skillLink, "SKILL.md");
+      expect(fs.lstatSync(mdLink).isSymbolicLink()).toBe(true);
+      expect(fs.readlinkSync(mdLink)).toBe(path.join(src, "ship", "SKILL.md"));
+    } finally {
+      fs.rmSync(src, { recursive: true, force: true });
+      fs.rmSync(proj, { recursive: true, force: true });
+      fs.rmSync(external, { recursive: true, force: true });
+    }
+  });
+});
