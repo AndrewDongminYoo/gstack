@@ -762,6 +762,37 @@ cleanup_prefixed_claude_symlinks() {
 	fi
 }
 
+# ─── Helper: remove self-prefixed Claude skill entries (opt-in cleanup) ───────
+# cleanup_old/prefixed skip source dirs already named gstack-* (e.g.
+# gstack-upgrade) to avoid double-prefixing. When switching to per-project
+# (opt-in) mode those entries must ALSO be removed or they stay globally visible
+# and defeat opt-in. Provenance-checked: only remove entries whose SKILL.md
+# symlinks into the gstack source (or, on Windows, a real-dir name match).
+cleanup_self_prefixed_claude_symlinks() {
+	local gstack_dir="$1"
+	local skills_dir="$2"
+	local removed=()
+	for skill_dir in "$gstack_dir"/gstack-*/; do
+		[ -f "$skill_dir/SKILL.md" ] || continue
+		skill_name="$(basename "$skill_dir")"
+		target="$skills_dir/$skill_name"
+		if [ -d "$target" ] && [ -L "$target/SKILL.md" ]; then
+			case "$(readlink "$target/SKILL.md" 2>/dev/null || true)" in
+			*gstack*)
+				rm -rf "$target"
+				removed+=("$skill_name")
+				;;
+			esac
+		elif [ "$IS_WINDOWS" -eq 1 ] && [ -d "$target" ] && [ -f "$target/SKILL.md" ]; then
+			rm -rf "$target"
+			removed+=("$skill_name")
+		fi
+	done
+	if [ ${#removed[@]} -gt 0 ]; then
+		echo "  cleaned up self-prefixed entries: ${removed[*]}"
+	fi
+}
+
 # ─── Helper: link generated Codex skills into a skills parent directory ──
 # Installs from .agents/skills/gstack-* (the generated Codex-format skills)
 # instead of source dirs (which have Claude paths).
@@ -1049,6 +1080,7 @@ if [ "$INSTALL_CLAUDE" -eq 1 ]; then
 			# install so leftovers don't leak into every project.
 			cleanup_old_claude_symlinks "$SOURCE_GSTACK_DIR" "$INSTALL_SKILLS_DIR"
 			cleanup_prefixed_claude_symlinks "$SOURCE_GSTACK_DIR" "$INSTALL_SKILLS_DIR"
+			cleanup_self_prefixed_claude_symlinks "$SOURCE_GSTACK_DIR" "$INSTALL_SKILLS_DIR"
 			rm -rf "$INSTALL_SKILLS_DIR/_gstack-command"
 			# connect-chrome alias is a global skill too — drop both name variants.
 			rm -rf "$INSTALL_SKILLS_DIR/connect-chrome" "$INSTALL_SKILLS_DIR/gstack-connect-chrome"
@@ -1130,6 +1162,7 @@ if [ "$INSTALL_CLAUDE" -eq 1 ]; then
 				# global install so leftovers don't leak into every project.
 				cleanup_old_claude_symlinks "$SOURCE_GSTACK_DIR" "$INSTALL_SKILLS_DIR"
 				cleanup_prefixed_claude_symlinks "$SOURCE_GSTACK_DIR" "$INSTALL_SKILLS_DIR"
+				cleanup_self_prefixed_claude_symlinks "$SOURCE_GSTACK_DIR" "$INSTALL_SKILLS_DIR"
 				rm -rf "$INSTALL_SKILLS_DIR/_gstack-command"
 				rm -rf "$INSTALL_SKILLS_DIR/connect-chrome" "$INSTALL_SKILLS_DIR/gstack-connect-chrome"
 				log "gstack ready (per-project / opt-in)."
