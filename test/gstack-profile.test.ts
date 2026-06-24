@@ -364,3 +364,32 @@ describe("materialize — pre-existing symlink guard", () => {
     }
   });
 });
+
+describe("gstack-profile list shows descriptions", () => {
+  test("prints the cleaned description (quotes + (gstack) tag stripped) per skill", () => {
+    const src = fs.mkdtempSync(path.join(os.tmpdir(), "gsk-desc-"));
+    const proj = fs.mkdtempSync(path.join(os.tmpdir(), "gsk-proj-"));
+    try {
+      fs.mkdirSync(path.join(src, "ship"));
+      fs.writeFileSync(
+        path.join(src, "ship", "SKILL.md"),
+        `---\nname: ship\ndescription: "Ship workflow: tests, PR, etc. (gstack)"\n---\nbody\n`,
+      );
+      fs.mkdirSync(path.join(src, "bin"));
+      fs.writeFileSync(
+        path.join(src, "bin", "gstack-config"),
+        `#!/usr/bin/env bash\n[ "$1" = "get" ] && [ "$2" = "skill_prefix" ] && echo false\n`,
+      );
+      fs.chmodSync(path.join(src, "bin", "gstack-config"), 0o755);
+      const r = run(["list"], proj, src);
+      expect(r.status).toBe(0);
+      expect(r.stdout).toContain("ship");
+      expect(r.stdout).toContain("Ship workflow: tests, PR, etc.");
+      expect(r.stdout).not.toContain("(gstack)"); // host tag stripped
+      expect(r.stdout).not.toContain('"'); // surrounding quotes stripped
+    } finally {
+      fs.rmSync(src, { recursive: true, force: true });
+      fs.rmSync(proj, { recursive: true, force: true });
+    }
+  });
+});
