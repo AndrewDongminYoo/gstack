@@ -31,6 +31,7 @@ import {
 import { generateLakeIntro } from "./preamble/generate-lake-intro";
 import { generateTelemetryPrompt } from "./preamble/generate-telemetry-prompt";
 import { generateProactivePrompt } from "./preamble/generate-proactive-prompt";
+import { generateFirstRunGuidance } from "./preamble/generate-first-run-guidance";
 import { generateRoutingInjection } from "./preamble/generate-routing-injection";
 import { generateVendoringDeprecation } from "./preamble/generate-vendoring-deprecation";
 import { generateSpawnedSessionCheck } from "./preamble/generate-spawned-session-check";
@@ -95,6 +96,7 @@ export function generatePreamble(ctx: TemplateContext): string {
     generateLakeIntro(),
     generateTelemetryPrompt(ctx),
     generateProactivePrompt(ctx),
+    generateFirstRunGuidance(ctx),
     generateRoutingInjection(ctx),
     generateVendoringDeprecation(ctx),
     generateSpawnedSessionCheck(),

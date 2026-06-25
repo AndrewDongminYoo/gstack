@@ -125,9 +125,14 @@ Report what each command returned.`,
     testConcurrentIfSelected(
       "skillmd-setup-discovery",
       async () => {
-        const skillMd = fs.readFileSync(path.join(ROOT, "SKILL.md"), "utf-8");
+        // P2 (v1.2.0): the browse SETUP/binary-discovery block moved from the root
+        // router to browse/SKILL.md (end anchor is now ## Core QA Patterns).
+        const skillMd = fs.readFileSync(
+          path.join(ROOT, "browse", "SKILL.md"),
+          "utf-8",
+        );
         const setupStart = skillMd.indexOf("## SETUP");
-        const setupEnd = skillMd.indexOf("## IMPORTANT");
+        const setupEnd = skillMd.indexOf("## Core QA Patterns");
         const setupBlock = skillMd.slice(setupStart, setupEnd);
 
         // Guard: verify we extracted a valid setup block
@@ -168,9 +173,14 @@ Report whether it worked.`,
           path.join(os.tmpdir(), "skill-e2e-empty-"),
         );
 
-        const skillMd = fs.readFileSync(path.join(ROOT, "SKILL.md"), "utf-8");
+        // P2 (v1.2.0): the browse SETUP/binary-discovery block moved from the root
+        // router to browse/SKILL.md (end anchor is now ## Core QA Patterns).
+        const skillMd = fs.readFileSync(
+          path.join(ROOT, "browse", "SKILL.md"),
+          "utf-8",
+        );
         const setupStart = skillMd.indexOf("## SETUP");
-        const setupEnd = skillMd.indexOf("## IMPORTANT");
+        const setupEnd = skillMd.indexOf("## Core QA Patterns");
         const setupBlock = skillMd.slice(setupStart, setupEnd);
 
         const result = await runSkillTest({
@@ -216,9 +226,14 @@ Report the exact output. Do NOT try to fix or install anything — just report w
           path.join(os.tmpdir(), "skill-e2e-nogit-"),
         );
 
-        const skillMd = fs.readFileSync(path.join(ROOT, "SKILL.md"), "utf-8");
+        // P2 (v1.2.0): the browse SETUP/binary-discovery block moved from the root
+        // router to browse/SKILL.md (end anchor is now ## Core QA Patterns).
+        const skillMd = fs.readFileSync(
+          path.join(ROOT, "browse", "SKILL.md"),
+          "utf-8",
+        );
         const setupStart = skillMd.indexOf("## SETUP");
-        const setupEnd = skillMd.indexOf("## IMPORTANT");
+        const setupEnd = skillMd.indexOf("## Core QA Patterns");
         const setupBlock = skillMd.slice(setupStart, setupEnd);
 
         const result = await runSkillTest({
